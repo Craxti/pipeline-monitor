@@ -1,0 +1,69 @@
+general:
+  project_name: CI Monitor
+  default_lookback_days: 7
+  data_dir: data
+  log_level: INFO
+jenkins_instances:
+- name: Jenkins
+  enabled: false
+  url: https://jenkins.example.com/
+  username: ""
+  token: ""
+  jobs: []
+  max_builds: 10
+  parse_console: true
+  console_builds: 5
+  show_all_jobs: false
+  verify_ssl: true
+  parse_allure: false
+  show_all_limit_jobs: 25
+gitlab_instances:
+- name: GitLab
+  enabled: false
+  url: https://gitlab.example.com/
+  token: ""
+  projects: []
+  max_pipelines: 10
+  show_all_projects: false
+parsers:
+  pytest_xml_dirs: []
+  allure_json_dirs: []
+  top_failures: 100
+reports:
+  output_dir: data
+  csv_filename: ci_report.csv
+  html_filename: ci_report.html
+  console_mode: detailed
+notifications:
+  telegram:
+    enabled: false
+    bots: []
+docker_monitor:
+  enabled: true
+  show_all_containers: true
+  containers: []
+  http_checks:
+  - name: cicd - Settings
+    url: http://127.0.0.1:8000/
+  timeout_seconds: 5
+openai:
+  provider: ollama
+  api_key: ""
+  model: llama3.1:8b
+  base_url: http://127.0.0.1:11434/v1
+  cursor_proxy_autostart: false
+  cursor_agent_bin: ""
+  proxy:
+    enabled: false
+    type: socks5
+    host: ""
+    port: 0
+    username: ""
+    password: ""
+    url: ""
+web:
+  host: 0.0.0.0
+  port: 8000
+  live_reload: true
+  auto_collect: false
+  collect_interval_seconds: 300

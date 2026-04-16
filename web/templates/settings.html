@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="{{ ui_language|default('en') }}">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<title></title>
+<style>
+  :root{
+    --ok:#22c55e;--fail:#ef4444;--warn:#f59e0b;--info:#3b82f6;
+    --bg:#0f172a;--surface:#1e293b;--surface2:#263147;
+    --text:#e2e8f0;--muted:#94a3b8;--border:#334155;
+    --radius:.75rem;
+  }
+  html.light{
+    --bg:#f1f5f9;--surface:#ffffff;--surface2:#f8fafc;
+    --text:#0f172a;--muted:#64748b;--border:#cbd5e1;
+  }
+  html.light .snav-item:hover{background:rgba(0,0,0,.05);color:var(--text)}
+  html.light th{background:rgba(0,0,0,.04)}
+  html.light tr:hover td{background:rgba(0,0,0,.03)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:2rem}
+
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:20}
+  header h1{font-size:1.25rem;font-weight:700}
+  .pill{background:var(--surface2);color:var(--muted);border-radius:999px;font-size:.7rem;padding:.2rem .65rem;font-weight:600}
+
+  .btn{display:inline-flex;align-items:center;gap:.35rem;background:var(--info);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-size:.85rem;cursor:pointer;font-weight:600;text-decoration:none;transition:opacity .15s;white-space:nowrap}
+  .btn:hover{opacity:.85}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-ghost{background:var(--surface2)}
+  .btn-sm{padding:.3rem .7rem;font-size:.8rem}
+  .btn-icon{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .45rem;border-radius:.25rem;transition:color .15s;line-height:1}
+  .btn-icon:hover{color:var(--fail)}
+
+  .page{display:grid;grid-template-columns:210px 1fr;gap:1.5rem;max-width:1300px;margin:0 auto;padding:2rem}
+
+  .side-nav{position:sticky;top:5rem;align-self:start;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:.5rem;overflow:hidden}
+  .snav-item{display:flex;align-items:center;gap:.65rem;width:100%;padding:.65rem .9rem;border:none;background:transparent;color:var(--muted);font-size:.875rem;border-radius:.45rem;cursor:pointer;text-align:left;margin-bottom:.1rem;transition:all .15s}
+  .snav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  .snav-item.active{background:var(--surface2);color:var(--text);font-weight:600}
+  .snav-icon{font-size:1rem;width:1.3rem;text-align:center;flex-shrink:0}
+  .snav-divider{height:1px;background:var(--border);margin:.4rem 0}
+
+  /* ── Section header row (title + Add button) ── */
+  .sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+  .sec-header h2{font-size:1rem;font-weight:600;color:var(--muted)}
+
+  /* ── Instance card ── */
+  .inst-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden}
+  .inst-hdr{display:flex;align-items:center;gap:.75rem;padding:.8rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .inst-badge{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:.3rem;background:var(--info);color:#fff;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0}
+  .inst-badge.gl{background:#e2433e}
+  .inst-name-inp{background:transparent;border:none;color:var(--text);font-size:.95rem;font-weight:600;font-family:inherit;outline:none;flex:1;min-width:0}
+  .inst-name-inp::placeholder{color:var(--muted)}
+  .inst-name-inp:focus{border-bottom:1px solid var(--info)}
+  .inst-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+
+  /* ── Form fields ── */
+  .field-row{display:flex;flex-direction:column;gap:.3rem}
+  .field-label{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .field-hint{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+  .field-input{background:var(--surface2);border:1px solid var(--border);border-radius:.5rem;color:var(--text);padding:.55rem .8rem;font-size:.875rem;width:100%;outline:none;transition:border-color .15s;font-family:inherit}
+  .field-input:focus{border-color:var(--info)}
+  .field-input[type=number]{width:140px}
+  select.field-input{cursor:pointer}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+  .pw-wrap{display:flex;gap:.5rem;align-items:stretch}
+  .pw-wrap .field-input{flex:1}
+
+  /* ── Toggle ── */
+  .toggle{display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.875rem;user-select:none}
+  .toggle-track{position:relative;width:42px;height:24px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;flex-shrink:0;transition:background .2s,border-color .2s}
+  .toggle input{position:absolute;opacity:0;width:0;height:0}
+  .toggle input:checked + .toggle-track{background:var(--info);border-color:var(--info)}
+  .toggle input:checked + .toggle-track .toggle-knob{left:20px}
+  .toggle-knob{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;pointer-events:none}
+
+  /* ── Sub-section (jobs/projects within an instance) ── */
+  .sub-sec{border-top:1px solid var(--border);margin-top:.5rem;padding-top:1rem}
+  .sub-sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+
+  /* ── Tables ── */
+  table{width:100%;border-collapse:collapse;font-size:.875rem}
+  th{text-align:left;padding:.55rem .9rem;color:var(--muted);font-size:.73rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15)}
+  th.c{text-align:center}
+  td{padding:.45rem .9rem;border-bottom:1px solid var(--border);vertical-align:middle}
+  td.c{text-align:center}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .tbl-input{background:transparent;border:1px solid transparent;border-radius:.35rem;color:var(--text);padding:.3rem .5rem;font-size:.875rem;width:100%;outline:none;transition:border-color .15s,background .15s;font-family:inherit}
+  .tbl-input:hover{border-color:var(--border)}
+  .tbl-input:focus{border-color:var(--info);background:var(--surface2)}
+  .empty-row td{text-align:center;color:var(--muted);padding:1.5rem 1rem!important;font-style:italic}
+
+  /* ── General/Notifications/Docker panels ── */
+  .panel{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:1.25rem;overflow:hidden}
+  .panel-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .panel-header h2{font-size:.95rem;font-weight:600}
+  .form-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+
+  /* ── Empty instance placeholder ── */
+  .empty-card{border:2px dashed var(--border);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:1rem}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:76px;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.8rem 1.25rem;font-size:.875rem;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;z-index:100;pointer-events:none;max-width:380px}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast.ok{border-left:4px solid var(--ok)}
+  .toast.warn{border-left:4px solid var(--warn)}
+  .toast.err{border-left:4px solid var(--fail)}
+
+  .section{display:none}.section.active{display:block}
+  a{color:var(--info);text-decoration:none}a:hover{text-decoration:underline}
+  .lang-toggle{display:inline-flex;border:1px solid var(--border);border-radius:.4rem;overflow:hidden;flex-shrink:0;margin-right:.35rem}
+  .lang-toggle button{background:var(--surface2);border:none;color:var(--muted);padding:.35rem .55rem;font-size:.72rem;cursor:pointer;font-weight:600}
+  .lang-toggle button:hover{background:rgba(255,255,255,.05);color:var(--text)}
+  .lang-toggle button.active{background:var(--info);color:#fff}
+  .breadcrumb-strip{max-width:1300px;margin:0 auto;padding:.35rem 2rem 0;font-size:.82rem;color:var(--muted)}
+  .breadcrumb-strip a{color:var(--info);text-decoration:none}
+  .breadcrumb-strip a:hover{text-decoration:underline}
+  .page-lede{max-width:1300px;margin:0 auto 1rem;padding:0 2rem;font-size:.9rem;color:var(--muted);line-height:1.55}
+</style>
+</head>
+<body data-page="settings">
+
+{% include 'partials/i18n_core.html' %}
+
+<header>
+  <span style="font-size:1.4rem">&#9881;</span>
+  <h1 data-i18n="st.title">Settings</h1>
+  <span class="pill" data-i18n="dash.app_title">CI/CD Monitor</span>
+  <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">
+    <button type="button" class="btn btn-ghost" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" style="padding:.35rem .55rem;font-size:1rem;line-height:1" data-i18n-aria-label="dash.theme" aria-label="">&#9681;</button>
+    <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
+      <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
+      <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
+    </div>
+    <span id="save-status-hdr" style="font-size:.8rem;color:var(--muted)"></span>
+    <a href=".." class="btn btn-ghost" data-i18n="st.back">&#8592; Dashboard</a>
+    <button class="btn" id="save-btn-hdr" onclick="saveSettings()" style="background:#16a34a">
+      &#10003;&nbsp;<span data-i18n="st.save">Save Settings</span>
+    </button>
+  </div>
+</header>
+
+<nav class="breadcrumb-strip" aria-label="Breadcrumb">
+  <a href=".." data-i18n="st.breadcrumb_dashboard">Dashboard</a> <span aria-hidden="true">/</span> <span data-i18n="st.title">Settings</span>
+</nav>
+<p class="page-lede" data-i18n="st.page_subtitle"></p>
+
+<div class="page">
+
+  <!-- ── Side nav ── -->
+  <nav class="side-nav">
+    <button class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
+      <span class="snav-icon">&#128296;</span><span data-i18n="st.nav_jenkins">Jenkins</span>
+    </button>
+    <button class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <span class="snav-icon">&#129347;</span><span data-i18n="st.nav_gitlab">GitLab</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="general" onclick="showSec('general')">
+      <span class="snav-icon">&#9881;</span><span data-i18n="st.nav_general">General</span>
+    </button>
+    <button class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
+      <span class="snav-icon">&#128276;</span><span data-i18n="st.nav_notifications">Notifications</span>
+    </button>
+    <button class="snav-item" data-sec="docker" onclick="showSec('docker')">
+      <span class="snav-icon">&#128051;</span><span data-i18n="st.nav_docker">Docker / HTTP</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="ai" onclick="showSec('ai')">
+      <span class="snav-icon">&#129302;</span><span data-i18n="st.nav_ai">AI Assistant</span>
+    </button>
+  </nav>
+
+  <main>
+
+    <!-- ═══ JENKINS ════════════════════════════════════════════ -->
+    <div id="sec-jenkins" class="section active">
+      <div class="sec-header">
+        <h2>&#128296; <span data-i18n="st.sec_jenkins">Jenkins Instances</span></h2>
+        <button class="btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
+      </div>
+      <div id="jenkins-instances"></div>
+    </div>
+
+    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
+    <div id="sec-gitlab" class="section">
+      <div class="sec-header">
+        <h2>&#129347; <span data-i18n="st.sec_gitlab">GitLab Instances</span></h2>
+        <button class="btn" onclick="addGitlabInst()" data-i18n="st.add_gitlab">+ Add GitLab</button>
+      </div>
+      <div id="gitlab-instances"></div>
+    </div>
+
+    <!-- ═══ GENERAL ════════════════════════════════════════════ -->
+    <div id="sec-general" class="section">
+      <div class="panel">
+        <div class="panel-header"><h2>&#9881; <span data-i18n="st.auto_collect">Auto-Collection</span></h2></div>
+        <div class="form-body">
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.auto_collect_on">Auto Collect on Startup</div>
+            <label class="toggle">
+              <input type="checkbox" id="w-auto-collect">
+              <div class="toggle-track"><div class="toggle-knob"></div></div>
+              <span data-i18n="st.auto_collect_hint">Automatically fetch data when the web server starts</span>
+            </label>
+          </div>
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label" data-i18n="st.interval">Collect Interval (seconds)</div>
+              <input type="number" id="w-interval" class="field-input" min="60" max="86400">
+              <div class="field-hint" data-i18n="st.interval_hint">60 = 1 min &nbsp;·&nbsp; 300 = 5 min &nbsp;·&nbsp; 3600 = 1 h</div>
+            </div>
+            <div class="field-row">
+              <div class="field-label" data-i18n="st.lookback">Default Lookback (days)</div>
+              <input type="number" id="g-lookback" class="field-input" min="1" max="90">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>&#128202; <span data-i18n="st.display">Display</span></h2></div>
+        <div class="form-body">
+          <div class="two-col">
+            <div class="field-row">
+              <div class="field-label" data-i18n="st.top_failures">Top N Failing Tests</div>
+              <input type="number" id="g-top-failures" class="field-input" min="5" max="100">
+            </div>
+            <div class="field-row">
+              <div class="field-label" data-i18n="st.log_level">Log Level</div>
+              <select id="g-log-level" class="field-input">
+                <option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NOTIFICATIONS ══════════════════════════════════════ -->
+    <div id="sec-notifications" class="section">
+      <div class="sec-header">
+        <h2>&#128276; <span data-i18n="st.tg_title">Telegram</span></h2>
+        <button type="button" class="btn" onclick="addTgBot()" data-i18n="st.add_telegram">+ Add Telegram bot</button>
+      </div>
+      <div class="panel">
+        <div class="form-body">
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.tg_status">Status</div>
+            <label class="toggle">
+              <input type="checkbox" id="tg-enabled">
+              <div class="toggle-track"><div class="toggle-knob"></div></div>
+              <span data-i18n="st.tg_send">Send Telegram alerts on failures</span>
+            </label>
+          </div>
+          <p class="field-hint" style="margin-top:.25rem" data-i18n="st.tg_bots_hint">Add one or more bots (different tokens or chats).</p>
+          <div id="telegram-bots"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ DOCKER ══════════════════════════════════════════════ -->
+    <div id="sec-docker" class="section">
+      <div class="panel">
+        <div class="panel-header"><h2>&#128051; <span data-i18n="st.dm_title">Docker Monitor</span></h2></div>
+        <div class="form-body">
+          <div class="field-row">
+            <label class="toggle">
+              <input type="checkbox" id="dm-enabled" onchange="updateDockerUI()">
+              <div class="toggle-track"><div class="toggle-knob"></div></div>
+              <span data-i18n="st.dm_enable">Enable Docker container monitoring</span>
+            </label>
+          </div>
+          <div id="dm-settings" style="display:flex;flex-direction:column;gap:1rem">
+            <div class="field-row">
+              <div class="field-label" data-i18n="st.dm_timeout">Timeout (seconds)</div>
+              <input type="number" id="dm-timeout" class="field-input" min="1" max="60">
+            </div>
+            <div class="field-row">
+              <label class="toggle">
+                <input type="checkbox" id="dm-show-all" onchange="updateDockerUI()">
+                <div class="toggle-track"><div class="toggle-knob"></div></div>
+                <span data-i18n="st.dm_show_all">Show all running containers on this machine</span>
+              </label>
+              <div class="field-hint" id="dm-show-all-hint"></div>
+            </div>
+            <div id="dm-containers-panel">
+              <div class="sub-sec">
+                <div class="sub-sec-hdr">
+                  <span class="field-label" data-i18n="st.dm_containers">Containers to Monitor</span>
+                  <button class="btn btn-sm" onclick="addContainer()" data-i18n="st.dm_add">+ Add</button>
+                </div>
+                <table>
+                  <thead><tr>
+                    <th data-i18n="st.th_container">Container Name</th>
+                    <th style="width:44px"></th>
+                  </tr></thead>
+                  <tbody id="containers-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h2 data-i18n="st.http_title">HTTP Health Checks</h2>
+          <button class="btn btn-sm" onclick="addHttpCheck()" data-i18n="st.http_add">+ Add</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="width:180px" data-i18n="st.th_http_name">Name</th><th data-i18n="st.th_url">URL</th><th style="width:44px"></th>
+          </tr></thead>
+          <tbody id="httpchecks-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ AI ASSISTANT ════════════════════════════════════════ -->
+    <div id="sec-ai" class="section">
+      <div class="panel">
+        <div class="panel-header"><h2>&#129302; <span data-i18n="st.ai_title">AI Assistant</span></h2></div>
+        <div class="form-body">
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.ai_provider">Provider</div>
+            <select id="ai-provider" class="field-input" onchange="updateProviderUI()">
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini (free tier available)</option>
+              <option value="openrouter">OpenRouter (many free models)</option>
+              <option value="cursor">Cursor (local proxy)</option>
+              <option value="ollama">Ollama (local)</option>
+              <option value="custom">Custom OpenAI-compatible</option>
+            </select>
+            <div class="field-hint" id="ai-provider-hint"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.ai_api_key">API Key</div>
+            <div class="pw-wrap">
+              <input type="password" id="ai-api-key" class="field-input" placeholder="sk-...">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)" data-i18n="st.show">Show</button>
+            </div>
+            <div class="field-hint" id="ai-key-hint"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.ai_model">Model</div>
+            <select id="ai-model" class="field-input">
+              <optgroup label="OpenAI" id="ai-models-openai">
+                <option value="gpt-4o-mini">gpt-4o-mini (fast, cheap)</option>
+                <option value="gpt-4o">gpt-4o (powerful)</option>
+                <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+                <option value="gpt-4.1">gpt-4.1</option>
+                <option value="o4-mini">o4-mini (reasoning)</option>
+              </optgroup>
+              <optgroup label="Google Gemini" id="ai-models-gemini">
+                <option value="gemini-2.0-flash">gemini-2.0-flash (free, fast)</option>
+                <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (free, fastest)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash (free)</option>
+                <option value="gemini-2.5-pro-preview-03-25">gemini-2.5-pro (paid, powerful)</option>
+              </optgroup>
+              <optgroup label="OpenRouter" id="ai-models-openrouter">
+                <option value="google/gemini-2.0-flash-exp:free">gemini-2.0-flash (free via OR)</option>
+                <option value="deepseek/deepseek-chat-v3-0324:free">deepseek-v3 (free via OR)</option>
+                <option value="meta-llama/llama-4-maverick:free">llama-4-maverick (free via OR)</option>
+                <option value="qwen/qwen-2.5-72b-instruct:free">qwen-2.5-72b (free via OR)</option>
+              </optgroup>
+              <optgroup label="Cursor (via cursor-api-proxy)" id="ai-models-cursor">
+                <option value="auto">auto (default, routed by Cursor)</option>
+                <option value="gpt-5.2">gpt-5.2 (example — see agent --list-models)</option>
+              </optgroup>
+              <optgroup label="Ollama (local)" id="ai-models-ollama">
+                <option value="llama3.1:8b">llama3.1:8b</option>
+                <option value="llama3.2">llama3.2</option>
+                <option value="llama3.1">llama3.1</option>
+                <option value="mistral">mistral</option>
+                <option value="codellama">codellama</option>
+                <option value="qwen2.5">qwen2.5</option>
+                <option value="gpt-oss">gpt-oss (if pulled)</option>
+              </optgroup>
+            </select>
+            <div class="field-hint" data-i18n="st.ai_model_hint">Choose a model.</div>
+          </div>
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.ai_base_url">API base URL</div>
+            <input type="text" id="ai-base-url" class="field-input" placeholder="auto-filled by provider">
+            <div class="field-hint" data-i18n="st.ai_base_hint">Auto-set when you pick a provider.</div>
+          </div>
+          <div class="field-row" id="ai-cursor-autostart-row" style="display:none">
+            <label class="toggle" style="align-items:flex-start">
+              <input type="checkbox" id="ai-cursor-autostart" checked>
+              <div class="toggle-track"><div class="toggle-knob"></div></div>
+              <span data-i18n="st.ai_cursor_autostart">Automatically start cursor-api-proxy (npx) on save and when the server starts</span>
+            </label>
+            <div class="field-hint" style="margin-top:.35rem;margin-left:0" data-i18n="st.ai_cursor_autostart_hint">Uncheck if you already run the proxy manually in another terminal.</div>
+          </div>
+          <div class="field-row" id="ai-cursor-agent-bin-row" style="display:none">
+            <div class="field-label" data-i18n="st.ai_cursor_agent_label">Path to Cursor Agent (optional)</div>
+            <input type="text" id="ai-cursor-agent-bin" class="field-input" data-i18n-placeholder="st.ai_cursor_agent_ph" placeholder="">
+            <div class="field-hint" data-i18n-html="st.ai_cursor_agent_hint_html"></div>
+          </div>
+
+          <div class="panel" style="margin-top:1rem;border:1px solid var(--border);border-radius:var(--radius)">
+            <div class="panel-header" style="flex-wrap:wrap;gap:.5rem">
+              <h2>&#128279; <span data-i18n="st.ai_proxy_title">OpenAI proxy (VPN)</span></h2>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="testOpenaiProxyEgress()" data-i18n-title="st.proxy_test_egress_title" title="">Test egress IP</button>
+            </div>
+            <div class="form-body">
+              <div class="field-row">
+                <label class="toggle">
+                  <input type="checkbox" id="ai-proxy-enabled" onchange="updateProxyUI()">
+                  <div class="toggle-track"><div class="toggle-knob"></div></div>
+                  <span data-i18n="st.ai_proxy_enable">Route OpenAI API through a proxy (for unsupported regions, corporate network, etc.)</span>
+                </label>
+              </div>
+              <div id="ai-proxy-fields" style="display:none;flex-direction:column;gap:1rem">
+                <div class="field-row" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem">
+                  <div class="field-label" style="margin-bottom:.4rem">How to fill in the fields</div>
+                  <div class="field-hint" style="line-height:1.6;font-size:.82rem;color:var(--text)">
+                    <p style="margin:0 0 .5rem"><b>Manual entry</b> (if you are not using quick paste):</p>
+                    <ul style="margin:0 0 .65rem 1.15rem;padding:0">
+                      <li><b>Type</b> — <code>SOCKS5</code> / <code>SOCKS5h</code> for a SOCKS proxy (often port 1080); <code>HTTP</code> or <code>HTTPS</code> if your provider gave you an HTTP proxy (CONNECT).</li>
+                      <li><b>Host</b> — IP address or hostname of the proxy server.</li>
+                      <li><b>Port</b> — proxy port on that host.</li>
+                      <li><b>Username / Password</b> — credentials if the proxy requires auth; otherwise leave blank.</li>
+                      <li><b>Full URL</b> — a single line that overrides host/port/type below, e.g. <code>socks5://user:pass@host:1080</code>.</li>
+                    </ul>
+                    <p style="margin:0 0 .35rem"><b>String format 1</b> (SOCKS5, test data only — not a real service):</p>
+                    <code style="display:block;font-size:.72rem;word-break:break-all;margin:0 0 .5rem;padding:.45rem .55rem;background:var(--surface);border-radius:.35rem;border:1px solid var(--border)">socks5server=198.51.100.10&amp;port=1080&amp;user=vpn_user&amp;pass=vpn_pass</code>
+                    <p style="margin:0 0 .35rem;color:var(--muted)">Mapping: <code>socks5server</code> (or <code>server</code>) → <b>Host</b>; <code>port</code> → <b>Port</b>; <code>user</code> → <b>Username</b>; <code>pass</code> → <b>Password</b>. After pasting, click <b>Parse into fields</b>; type will switch to SOCKS5.</p>
+                    <p style="margin:0 0 .35rem"><b>String format 2</b> (often an HTTP proxy, test example):</p>
+                    <code style="display:block;font-size:.72rem;word-break:break-all;margin:0 0 .5rem;padding:.45rem .55rem;background:var(--surface);border-radius:.35rem;border:1px solid var(--border)">proxyserver=203.0.113.50&amp;port=8443&amp;secret=dGVzdC1zZWNyZXQtdG9rZW4tZXhhbXBsZQ</code>
+                    <p style="margin:0;color:var(--muted)">Mapping: <code>proxyserver</code> → <b>Host</b>; <code>port</code> → <b>Port</b>; <code>secret</code> is copied to <b>Password</b> (add <b>Username</b> yourself if required). Choose <b>HTTP</b> or <b>HTTPS</b> per your provider. A long <code>secret</code> from clients like VLESS is not a SOCKS/HTTP proxy by itself — run a local proxy (e.g. <code>127.0.0.1:1080</code>) and enter <em>that</em> endpoint here.</p>
+                    <p style="margin:.55rem 0 0;color:var(--muted)"><b>Ping</b> (ICMP) to the proxy host does not prove SOCKS works for HTTPS — use <b>Test egress IP</b>. If OpenAI still returns <code>unsupported_country_region_territory</code>, <b>Via proxy</b> must show an IP in a supported country (often US/EU) and differ from <b>Direct</b>. The app uses <b>socks5h</b> (remote DNS) when you choose SOCKS5. As a last resort, set <b>API base URL</b> to an OpenAI-compatible provider (e.g. OpenRouter) in an allowed region.</p>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Quick paste (optional)</div>
+                  <textarea id="ai-proxy-paste" class="field-input" rows="2" style="resize:vertical;font-family:monospace;font-size:.78rem"
+                    placeholder="socks5server=198.51.100.10&amp;port=1080&amp;user=vpn_user&amp;pass=vpn_pass"></textarea>
+                  <button type="button" class="btn btn-sm" onclick="applyProxyPaste()" style="align-self:flex-start">Parse into fields</button>
+                  <div class="field-hint">Keys: <code>server</code>, <code>socks5server</code>, <code>proxyserver</code>, <code>port</code>, <code>user</code>, <code>pass</code> / <code>password</code>, <code>secret</code>. A line containing <code>socks5server</code> sets type to SOCKS5.</div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Or full URL (overrides host/port below)</div>
+                  <input type="text" id="ai-proxy-url" class="field-input" placeholder="socks5://vpn_user:vpn_pass@198.51.100.10:1080">
+                  <div class="field-hint">Leave empty to use Type / Host / Port below. Otherwise one line: <code>socks5://…</code>, <code>http://…</code>.</div>
+                </div>
+                <div class="two-col">
+                  <div class="field-row">
+                    <div class="field-label">Type</div>
+                    <select id="ai-proxy-type" class="field-input">
+                      <option value="socks5">SOCKS5 (sent as socks5h — DNS via proxy)</option>
+                      <option value="socks5h">SOCKS5h (DNS via proxy)</option>
+                      <option value="http">HTTP</option>
+                      <option value="https">HTTPS</option>
+                    </select>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">Port</div>
+                    <input type="number" id="ai-proxy-port" class="field-input" min="1" max="65535" placeholder="1080">
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Host</div>
+                  <input type="text" id="ai-proxy-host" class="field-input" placeholder="198.51.100.10 or proxy.example.com">
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Username</div>
+                  <input type="text" id="ai-proxy-user" class="field-input" placeholder="if required by proxy">
+                </div>
+                <div class="field-row">
+                  <div class="field-label">Password</div>
+                  <div class="pw-wrap">
+                    <input type="password" id="ai-proxy-password" class="field-input" placeholder="if required by proxy">
+                    <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">Show</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let _ji = [];   // jenkins instances
+let _gi = [];   // gitlab instances
+let _tgBots = []; // telegram bot rows
+let _hc = [];   // http checks
+let _dc = [];   // docker container names
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function showSec(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelectorAll('.snav-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.sec === name)
+  );
+}
+
+// ── Tiny helpers ───────────────────────────────────────────────────────────────
+const $   = id => document.getElementById(id);
+const gV  = id => $(id).value;
+const sV  = (id, v) => { if ($(id)) $(id).value = v ?? ''; };
+const gC  = id => $(id).checked;
+const sC  = (id, v) => { if ($(id)) $(id).checked = !!v; };
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const toInt = v => parseInt(v) || 0;
+
+function apiUrl(path) {
+  const p = path.startsWith('/') ? path.slice(1) : path;
+  const base = window.location.origin + window.location.pathname;
+  return new URL(p, base).href;
+}
+
+function togglePwdEl(btn) {
+  const inp = btn.previousElementSibling || btn.parentElement.querySelector('input');
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? t('st.show') : t('st.hide');
+}
+
+function _applyTheme(theme) {
+  document.documentElement.classList.toggle('light', theme === 'light');
+  const btn = document.getElementById('btn-theme');
+  if (btn) {
+    btn.setAttribute('title', theme === 'light' ? t('dash.theme_light_hint') : t('dash.theme_dark_hint'));
+    btn.textContent = theme === 'light' ? '🌙' : '☀';
+  }
+}
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('light') ? 'dark' : 'light';
+  localStorage.setItem('cimon-theme', next);
+  _applyTheme(next);
+}
+
+function setUILang(code) {
+  if (code !== 'ru' && code !== 'en') return;
+  localStorage.setItem('cimon-ui-lang', code);
+  applyUITexts();
+  _applyTheme(localStorage.getItem('cimon-theme') === 'light' ? 'light' : 'dark');
+  renderJInsts();
+  renderGInsts();
+  renderTgBots();
+  renderHttpChecks();
+  renderContainers();
+  updateDockerUI();
+  updateProviderUI();
+  updateProxyUI();
+}
+
+const _providerDefaults = {
+  openai:     { base: '',                                        placeholder: 'sk-...',         hint: 'OpenAI API key. Get one at platform.openai.com/api-keys' },
+  gemini:     { base: 'https://generativelanguage.googleapis.com/v1beta/openai/', placeholder: 'AIzaSy...',      hint: 'Google AI Studio key (free). Get one at aistudio.google.com/apikey' },
+  openrouter: { base: 'https://openrouter.ai/api/v1',           placeholder: 'sk-or-v1-...',   hint: 'OpenRouter key (free tier). Get one at openrouter.ai/keys' },
+  cursor:     { base: 'http://127.0.0.1:8765/v1',               placeholder: 'unused / bridge / любой', hint: 'Токен crsr из дашборда сюда не «бьёт» в облако Cursor для чата — публичного chat API нет. Для моделей Cursor нужен cursor-api-proxy + CURSOR_API_KEY в окружении процесса прокси. Поле API Key — для прокси (часто unused).' },
+  ollama:     { base: 'http://127.0.0.1:11434/v1',               placeholder: 'optional',       hint: 'Run `ollama serve` locally. Pull a model (`ollama pull llama3.2`). API key is usually not required.' },
+  custom:     { base: '',                                        placeholder: 'your-api-key',   hint: 'API key for your custom OpenAI-compatible endpoint.' },
+};
+
+function updateProviderUI() {
+  const prov = gV('ai-provider');
+  const def = _providerDefaults[prov] || _providerDefaults.custom;
+  $('ai-api-key').placeholder = def.placeholder;
+  const keyHintMap = {
+    openai: 'st.ai_key_hint_openai',
+    gemini: 'st.ai_key_hint_gemini',
+    openrouter: 'st.ai_key_hint_openrouter',
+    cursor: 'st.ai_key_hint_cursor_key',
+    ollama: 'st.ai_key_hint_ollama',
+    custom: 'st.ai_key_hint_custom',
+  };
+  const hk = keyHintMap[prov] ? t(keyHintMap[prov]) : def.hint;
+  $('ai-key-hint').textContent = hk + ' ' + t('st.ai_key_stored');
+
+  const curBase = gV('ai-base-url').trim();
+  const knownBases = Object.values(_providerDefaults).map(d => d.base).filter(Boolean);
+  if (!curBase || knownBases.includes(curBase)) {
+    sV('ai-base-url', def.base);
+  }
+
+  document.querySelectorAll('#ai-model optgroup').forEach(g => g.style.display = 'none');
+  const groupId = 'ai-models-' + prov;
+  const grp = $(groupId);
+  if (grp) {
+    grp.style.display = '';
+    const curModel = gV('ai-model');
+    const opts = grp.querySelectorAll('option');
+    const inGroup = [...opts].some(o => o.value === curModel);
+    if (!inGroup && opts.length) $('ai-model').value = opts[0].value;
+  } else {
+    document.querySelectorAll('#ai-model optgroup').forEach(g => g.style.display = '');
+  }
+
+  const phint = $('ai-provider-hint');
+  if (prov === 'gemini') phint.innerHTML = t('st.ai_hint_gemini_html');
+  else if (prov === 'openrouter') phint.innerHTML = t('st.ai_hint_openrouter_html');
+  else if (prov === 'openai') phint.textContent = t('st.ai_hint_openai');
+  else if (prov === 'cursor') phint.innerHTML = t('st.ai_hint_cursor_html');
+  else if (prov === 'ollama') phint.textContent = t('st.ai_hint_ollama');
+  else phint.textContent = t('st.ai_hint_custom');
+  const curAu = $('ai-cursor-autostart-row');
+  if (curAu) curAu.style.display = prov === 'cursor' ? '' : 'none';
+  const curAb = $('ai-cursor-agent-bin-row');
+  if (curAb) curAb.style.display = prov === 'cursor' ? '' : 'none';
+}
+
+function updateProxyUI() {
+  const el = $('ai-proxy-fields');
+  if (el) el.style.display = gC('ai-proxy-enabled') ? 'flex' : 'none';
+}
+
+async function testOpenaiProxyEgress() {
+  try {
+    const r = await fetch(apiUrl('api/proxy-check'));
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      showToast(t('st.egress_fail') + ' ' + (d.detail || r.statusText || r.status), 'err');
+      return;
+    }
+    const dir = d.direct || {};
+    const via = d.via_proxy;
+    let msg = t('st.egress_config') + ' ' + (d.config_path || '—') + '\n\n';
+    msg += t('st.egress_direct') + ' ' + (dir.ip || dir.error || '—') + '\n';
+    if (via) {
+      msg += t('st.egress_via') + ' ' + (via.ip || via.error || '—');
+    } else {
+      msg += t('st.egress_via') + ' ' + t('st.egress_via_off');
+    }
+    alert(msg);
+    if (via && via.ok && dir.ok && via.ip && dir.ip && via.ip === dir.ip) {
+      showToast(t('st.egress_proxy_same_ip'), 'err');
+    } else {
+      showToast(t('st.egress_done'), 'ok');
+    }
+  } catch (e) {
+    showToast(e.message || t('st.egress_req_fail'), 'err');
+  }
+}
+
+function applyProxyPaste() {
+  const raw = gV('ai-proxy-paste').trim();
+  if (!raw) return;
+  const low = raw.toLowerCase();
+  if (low.includes('socks5server')) $('ai-proxy-type').value = 'socks5';
+  else if (low.includes('proxyserver') || low.includes('httpserver')) {
+    if (!$('ai-proxy-type').value || $('ai-proxy-type').value === 'socks5')
+      $('ai-proxy-type').value = 'http';
+  }
+  let host = '', port = '', user = '', pass = '';
+  raw.replace(/\?/g, '&').split('&').forEach(part => {
+    const eq = part.indexOf('=');
+    if (eq < 0) return;
+    const k = part.slice(0, eq).trim().toLowerCase();
+    const v = part.slice(eq + 1).trim();
+    if (k === 'socks5server' || k === 'proxyserver' || k === 'httpserver') host = v;
+    else if (k === 'server') host = v;
+    else if (k === 'port') port = v;
+    else if (k === 'user' || k === 'username') user = v;
+    else if (k === 'pass' || k === 'password' || k === 'secret') pass = v;
+  });
+  if (host) sV('ai-proxy-host', host);
+  if (port) sV('ai-proxy-port', port);
+  if (user) sV('ai-proxy-user', user);
+  if (pass) sV('ai-proxy-password', pass);
+  sC('ai-proxy-enabled', true);
+  updateProxyUI();
+}
+
+function showToast(msg, type = 'ok') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// JENKINS INSTANCES
+// ══════════════════════════════════════════════════════════════════════════════
+
+function jJobsHtml(ii) {
+  const jobs = _ji[ii].jobs || [];
+  if (!jobs.length) return `<tr class="empty-row"><td colspan="4">${esc(t('st.j_empty_jobs'))}</td></tr>`;
+  return jobs.map((job, ji) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(job.name)}" placeholder="${esc(t('st.j_placeholder_job'))}"
+          oninput="_ji[${ii}].jobs[${ji}].name=this.value"></td>
+      <td class="c"><input type="checkbox" ${job.critical ? 'checked' : ''}
+          onchange="_ji[${ii}].jobs[${ji}].critical=this.checked"></td>
+      <td class="c"><input type="checkbox" ${job.parse_console !== false ? 'checked' : ''}
+          onchange="_ji[${ii}].jobs[${ji}].parse_console=this.checked"></td>
+      <td><button class="btn-icon" onclick="removeJJob(${ii},${ji})" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function renderJJobs(ii) {
+  const tb = $(`jj-${ii}`);
+  if (tb) tb.innerHTML = jJobsHtml(ii);
+}
+
+function addJJob(ii) {
+  if (!_ji[ii].jobs) _ji[ii].jobs = [];
+  _ji[ii].jobs.push({ name: '', critical: true, parse_console: true });
+  renderJJobs(ii);
+  $(`jj-${ii}`)?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+function removeJJob(ii, ji) { _ji[ii].jobs.splice(ji, 1); renderJJobs(ii); }
+
+function jInstHtml(ii) {
+  const inst = _ji[ii];
+  return `
+  <div class="inst-card" id="ji-card-${ii}">
+    <div class="inst-hdr">
+      <span class="inst-badge">Jenkins</span>
+      <input class="inst-name-inp" value="${esc(inst.name)}" placeholder="${esc(t('st.j_inst_placeholder'))}"
+             oninput="_ji[${ii}].name=this.value">
+      <label class="toggle" style="margin-left:auto;margin-right:.5rem">
+        <input type="checkbox" ${inst.enabled !== false ? 'checked' : ''}
+               onchange="_ji[${ii}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+        <span style="font-size:.8rem;color:var(--muted)">${esc(t('st.active'))}</span>
+      </label>
+      <button class="btn-icon" onclick="removeJInst(${ii})" title="${esc(t('st.remove'))}">&#10005;</button>
+    </div>
+    <div class="inst-body">
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.j_server_url'))}</div>
+        <input type="url" class="field-input" value="${esc(inst.url||'')}" placeholder="https://jenkins.example.com"
+               oninput="_ji[${ii}].url=this.value">
+      </div>
+      <div class="two-col">
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.j_username'))}</div>
+          <input type="text" class="field-input" value="${esc(inst.username||'')}" placeholder="admin"
+                 autocomplete="off" oninput="_ji[${ii}].username=this.value">
+        </div>
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.j_token'))}</div>
+          <div class="pw-wrap">
+            <input type="password" class="field-input" value="${esc(inst.token||'')}"
+                   autocomplete="new-password" oninput="_ji[${ii}].token=this.value">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
+          </div>
+        </div>
+      </div>
+      <div class="three-col">
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.j_max_builds'))}</div>
+          <input type="number" class="field-input" value="${inst.max_builds??10}" min="0" max="5000"
+                 oninput="_ji[${ii}].max_builds=parseInt(this.value)">
+          <div class="field-hint">${esc(t('st.j_max_builds_hint'))}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.j_console_builds'))}</div>
+          <input type="number" class="field-input" value="${inst.console_builds??5}" min="0" max="5000"
+                 oninput="_ji[${ii}].console_builds=parseInt(this.value)">
+          <div class="field-hint">${esc(t('st.j_console_builds_hint'))}</div>
+        </div>
+        <div class="field-row" style="justify-content:flex-end;padding-top:1.3rem">
+          <label class="toggle">
+            <input type="checkbox" ${inst.parse_console ? 'checked' : ''}
+                   onchange="_ji[${ii}].parse_console=this.checked">
+            <div class="toggle-track"><div class="toggle-knob"></div></div>
+            ${esc(t('st.parse_console'))}
+          </label>
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.parse_allure ? 'checked' : ''}
+                 onchange="_ji[${ii}].parse_allure=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc('Allure')}</span>
+        </label>
+        <div class="field-hint">Parse Allure report from Jenkins (…/allure). Recommended for test_gu_* jobs.</div>
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.verify_ssl !== false ? 'checked' : ''}
+                 onchange="_ji[${ii}].verify_ssl=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc(t('st.verify_ssl'))}</span>
+        </label>
+        <div class="field-hint">${esc(t('st.verify_ssl_hint'))}</div>
+      </div>
+
+      <div class="sub-sec">
+        <div class="field-row" style="margin-bottom:.6rem">
+          <label class="toggle">
+            <input type="checkbox" id="j-show-all-${ii}" ${inst.show_all_jobs ? 'checked' : ''}
+                   onchange="_ji[${ii}].show_all_jobs=this.checked;toggleJJobs(${ii})">
+            <div class="toggle-track"><div class="toggle-knob"></div></div>
+            ${esc(t('st.j_show_all'))}
+          </label>
+          <div class="field-hint" id="j-all-hint-${ii}">
+            ${inst.show_all_jobs
+              ? esc(t('st.j_hint_all'))
+              : esc(t('st.j_hint_list'))}
+          </div>
+        </div>
+        <div class="field-row" style="display:${inst.show_all_jobs ? '' : 'none'}" id="j-all-limit-row-${ii}">
+          <div class="field-label">${esc(t('st.j_show_all_limit'))}</div>
+          <input type="number" class="field-input" value="${inst.show_all_limit_jobs ?? 50}" min="0" max="5000"
+                 oninput="_ji[${ii}].show_all_limit_jobs=parseInt(this.value)">
+          <div class="field-hint">${esc(t('st.j_show_all_limit_hint'))}</div>
+        </div>
+        <div id="j-jobs-panel-${ii}" style="display:${inst.show_all_jobs ? 'none' : ''}">
+          <div class="sub-sec-hdr">
+            <span class="field-label">${esc(t('st.j_jobs_monitor'))}</span>
+            <button class="btn btn-sm" onclick="addJJob(${ii})">${esc(t('st.j_add_job'))}</button>
+          </div>
+          <table>
+            <thead><tr>
+              <th>${esc(t('st.th_job_name'))}</th>
+              <th class="c" style="width:90px">${esc(t('st.th_critical'))}</th>
+              <th class="c" style="width:130px">${esc(t('st.th_parse_console'))}</th>
+              <th style="width:44px"></th>
+            </tr></thead>
+            <tbody id="jj-${ii}">${jJobsHtml(ii)}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleJJobs(ii) {
+  const showAll = _ji[ii].show_all_jobs;
+  const panel = $('j-jobs-panel-' + ii);
+  const hint  = $('j-all-hint-' + ii);
+  const lim   = $('j-all-limit-row-' + ii);
+  if (panel) panel.style.display = showAll ? 'none' : '';
+  if (lim) lim.style.display = showAll ? '' : 'none';
+  if (hint)  hint.textContent = showAll
+    ? t('st.j_hint_all')
+    : t('st.j_hint_list');
+}
+
+function renderJInsts() {
+  const c = $('jenkins-instances');
+  if (!_ji.length) {
+    c.innerHTML = `<div class="empty-card">${esc(t('st.j_empty'))}</div>`;
+    return;
+  }
+  c.innerHTML = _ji.map((_, i) => jInstHtml(i)).join('');
+}
+
+function addJenkinsInst() {
+  _ji.push({ name: `Jenkins ${_ji.length + 1}`, enabled: true, url: '', username: '', token: '',
+             jobs: [], max_builds: 10, parse_console: true, parse_allure: false, console_builds: 5,
+             verify_ssl: true, show_all_jobs: false, show_all_limit_jobs: 50 });
+  renderJInsts();
+  $(`ji-card-${_ji.length-1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function removeJInst(ii) {
+  if (!confirm(tf('st.j_confirm_remove', { name: _ji[ii].name }))) return;
+  _ji.splice(ii, 1);
+  renderJInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GITLAB INSTANCES
+// ══════════════════════════════════════════════════════════════════════════════
+
+function gProjHtml(gi) {
+  const projs = _gi[gi].projects || [];
+  if (!projs.length) return `<tr class="empty-row"><td colspan="3">${esc(t('st.g_empty_proj'))}</td></tr>`;
+  return projs.map((p, pi) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(p.id)}" placeholder="${esc(t('st.g_placeholder_proj'))}"
+          oninput="_gi[${gi}].projects[${pi}].id=this.value"></td>
+      <td class="c"><input type="checkbox" ${p.critical ? 'checked' : ''}
+          onchange="_gi[${gi}].projects[${pi}].critical=this.checked"></td>
+      <td><button class="btn-icon" onclick="removeGProj(${gi},${pi})" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function renderGProjs(gi) {
+  const tb = $(`gp-${gi}`);
+  if (tb) tb.innerHTML = gProjHtml(gi);
+}
+
+function addGProj(gi) {
+  if (!_gi[gi].projects) _gi[gi].projects = [];
+  _gi[gi].projects.push({ id: '', critical: true });
+  renderGProjs(gi);
+  $(`gp-${gi}`)?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+function removeGProj(gi, pi) { _gi[gi].projects.splice(pi, 1); renderGProjs(gi); }
+
+function gInstHtml(gi) {
+  const inst = _gi[gi];
+  return `
+  <div class="inst-card" id="gi-card-${gi}">
+    <div class="inst-hdr">
+      <span class="inst-badge gl">GitLab</span>
+      <input class="inst-name-inp" value="${esc(inst.name)}" placeholder="${esc(t('st.g_inst_placeholder'))}"
+             oninput="_gi[${gi}].name=this.value">
+      <label class="toggle" style="margin-left:auto;margin-right:.5rem">
+        <input type="checkbox" ${inst.enabled !== false ? 'checked' : ''}
+               onchange="_gi[${gi}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+        <span style="font-size:.8rem;color:var(--muted)">${esc(t('st.active'))}</span>
+      </label>
+      <button class="btn-icon" onclick="removeGInst(${gi})" title="${esc(t('st.remove'))}">&#10005;</button>
+    </div>
+    <div class="inst-body">
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.g_url'))}</div>
+        <input type="url" class="field-input" value="${esc(inst.url||'')}" placeholder="https://gitlab.com"
+               oninput="_gi[${gi}].url=this.value">
+      </div>
+      <div class="two-col">
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.g_token'))}</div>
+          <div class="pw-wrap">
+            <input type="password" class="field-input" value="${esc(inst.token||'')}"
+                   autocomplete="new-password" oninput="_gi[${gi}].token=this.value">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.g_max_pipes'))}</div>
+          <input type="number" class="field-input" value="${inst.max_pipelines??10}" min="1" max="200"
+                 oninput="_gi[${gi}].max_pipelines=parseInt(this.value)">
+        </div>
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.verify_ssl !== false ? 'checked' : ''}
+                 onchange="_gi[${gi}].verify_ssl=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc(t('st.verify_ssl'))}</span>
+        </label>
+        <div class="field-hint">${esc(t('st.g_verify_ssl_hint'))}</div>
+      </div>
+
+      <div class="sub-sec">
+        <div class="field-row" style="margin-bottom:.6rem">
+          <label class="toggle">
+            <input type="checkbox" id="g-show-all-${gi}" ${inst.show_all_projects ? 'checked' : ''}
+                   onchange="_gi[${gi}].show_all_projects=this.checked;toggleGProjs(${gi})">
+            <div class="toggle-track"><div class="toggle-knob"></div></div>
+            ${esc(t('st.g_show_all'))}
+          </label>
+          <div class="field-hint" id="g-all-hint-${gi}">
+            ${inst.show_all_projects
+              ? esc(t('st.g_hint_all'))
+              : esc(t('st.g_hint_list'))}
+          </div>
+        </div>
+        <div id="g-projs-panel-${gi}" style="display:${inst.show_all_projects ? 'none' : ''}">
+          <div class="sub-sec-hdr">
+            <span class="field-label">${esc(t('st.g_projects_monitor'))}</span>
+            <button class="btn btn-sm" onclick="addGProj(${gi})">${esc(t('st.g_add_proj'))}</button>
+          </div>
+          <table>
+            <thead><tr>
+              <th>${esc(t('st.th_project_id'))}</th>
+              <th class="c" style="width:90px">${esc(t('st.th_critical'))}</th>
+              <th style="width:44px"></th>
+            </tr></thead>
+            <tbody id="gp-${gi}">${gProjHtml(gi)}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleGProjs(gi) {
+  const showAll = _gi[gi].show_all_projects;
+  const panel = $('g-projs-panel-' + gi);
+  const hint  = $('g-all-hint-' + gi);
+  if (panel) panel.style.display = showAll ? 'none' : '';
+  if (hint)  hint.textContent = showAll
+    ? t('st.g_hint_all')
+    : t('st.g_hint_list');
+}
+
+function renderGInsts() {
+  const c = $('gitlab-instances');
+  if (!_gi.length) {
+    c.innerHTML = `<div class="empty-card">${esc(t('st.g_empty'))}</div>`;
+    return;
+  }
+  c.innerHTML = _gi.map((_, i) => gInstHtml(i)).join('');
+}
+
+function addGitlabInst() {
+  _gi.push({ name: `GitLab ${_gi.length + 1}`, enabled: true, url: '', token: '',
+             projects: [], max_pipelines: 10, verify_ssl: true });
+  renderGInsts();
+  $(`gi-card-${_gi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function removeGInst(gi) {
+  if (!confirm(tf('st.g_confirm_remove', { name: _gi[gi].name }))) return;
+  _gi.splice(gi, 1);
+  renderGInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TELEGRAM BOTS (multiple)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function tgBotHtml(i) {
+  const b = _tgBots[i];
+  return `
+  <div class="inst-card" id="tg-card-${i}">
+    <div class="inst-hdr">
+      <span class="inst-badge" style="background:#0088cc">TG</span>
+      <input class="inst-name-inp" value="${esc(b.name)}" placeholder="${esc(t('st.tg_inst_placeholder'))}"
+             oninput="_tgBots[${i}].name=this.value">
+      <label class="toggle" style="margin-left:auto;margin-right:.5rem">
+        <input type="checkbox" ${b.enabled !== false ? 'checked' : ''}
+               onchange="_tgBots[${i}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+        <span style="font-size:.8rem;color:var(--muted)">${esc(t('st.active'))}</span>
+      </label>
+      <button type="button" class="btn-icon" onclick="removeTgBot(${i})" title="${esc(t('st.remove'))}">&#10005;</button>
+    </div>
+    <div class="inst-body">
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.tg_api_base'))}</div>
+        <input type="text" class="field-input" value="${esc(b.api_base_url||'')}" placeholder="https://api.telegram.org"
+               oninput="_tgBots[${i}].api_base_url=this.value">
+        <div class="field-hint">${esc(t('st.tg_api_base_hint'))}</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.bot_token'))}</div>
+        <div class="pw-wrap">
+          <input type="password" class="field-input" value="${esc(b.bot_token||'')}"
+                 autocomplete="new-password" oninput="_tgBots[${i}].bot_token=this.value">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.chat_id'))}</div>
+        <input type="text" class="field-input" value="${esc(b.chat_id||'')}" placeholder="-1001234567890"
+               oninput="_tgBots[${i}].chat_id=this.value">
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${b.critical_only !== false ? 'checked' : ''}
+                 onchange="_tgBots[${i}].critical_only=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc(t('st.tg_critical'))}</span>
+        </label>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTgBots() {
+  const c = $('telegram-bots');
+  if (!c) return;
+  if (!_tgBots.length) {
+    c.innerHTML = `<div class="empty-card">${esc(t('st.tg_empty'))}</div>`;
+    return;
+  }
+  c.innerHTML = _tgBots.map((_, i) => tgBotHtml(i)).join('');
+}
+
+function addTgBot() {
+  _tgBots.push({
+    name: `Telegram ${_tgBots.length + 1}`,
+    enabled: true,
+    api_base_url: '',
+    bot_token: '',
+    chat_id: '',
+    critical_only: true,
+  });
+  renderTgBots();
+  $(`tg-card-${_tgBots.length - 1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function removeTgBot(i) {
+  if (!confirm(tf('st.tg_confirm_remove', { name: _tgBots[i].name || 'Telegram' }))) return;
+  _tgBots.splice(i, 1);
+  renderTgBots();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HTTP CHECKS (Docker)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DOCKER CONTAINERS
+// ══════════════════════════════════════════════════════════════════════════════
+
+function updateDockerUI() {
+  const enabled  = gC('dm-enabled');
+  const showAll  = gC('dm-show-all');
+  $('dm-settings').style.display = enabled ? '' : 'none';
+  $('dm-containers-panel').style.display = (enabled && !showAll) ? '' : 'none';
+  const hint = $('dm-show-all-hint');
+  if (hint) hint.textContent = showAll
+    ? t('st.dm_hint_all')
+    : t('st.dm_hint_list');
+}
+
+function renderContainers() {
+  const tb = $('containers-body');
+  if (!tb) return;
+  if (!_dc.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="2">${esc(t('st.dm_empty_cont'))}</td></tr>`;
+    return;
+  }
+  tb.innerHTML = _dc.map((name, i) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(name)}" placeholder="${esc(t('st.dm_placeholder_cont'))}"
+          oninput="_dc[${i}]=this.value"></td>
+      <td><button class="btn-icon" onclick="_dc.splice(${i},1);renderContainers()" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function addContainer() {
+  _dc.push('');
+  renderContainers();
+  $('containers-body')?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+function renderHttpChecks() {
+  const tb = $('httpchecks-body');
+  if (!_hc.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="3">${esc(t('st.http_empty'))}</td></tr>`;
+    return;
+  }
+  tb.innerHTML = _hc.map((c, i) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(c.name)}" placeholder="${esc(t('st.th_http_name'))}"
+          oninput="_hc[${i}].name=this.value"></td>
+      <td><input class="tbl-input" value="${esc(c.url)}" placeholder="http://..."
+          oninput="_hc[${i}].url=this.value"></td>
+      <td><button class="btn-icon" onclick="_hc.splice(${i},1);renderHttpChecks()" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function addHttpCheck() {
+  _hc.push({ name: '', url: '' });
+  renderHttpChecks();
+  $('httpchecks-body')?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LOAD & POPULATE
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function loadSettings() {
+  const res = await fetch(apiUrl('api/settings')).catch(() => null);
+  if (!res || !res.ok) { showToast(t('st.load_failed'), 'err'); return; }
+  populateForm(await res.json());
+}
+
+function populateForm(cfg) {
+  _ji = JSON.parse(JSON.stringify(cfg.jenkins_instances || []));
+  _gi = JSON.parse(JSON.stringify(cfg.gitlab_instances  || []));
+  renderJInsts();
+  renderGInsts();
+
+  const g  = cfg.general        || {};
+  const w  = cfg.web            || {};
+  const p  = cfg.parsers        || {};
+  const tg = (cfg.notifications || {}).telegram || {};
+  const dm = cfg.docker_monitor || {};
+
+  sV('g-lookback',      g.default_lookback_days ?? 7);
+  sV('g-log-level',     g.log_level             || 'INFO');
+  sV('g-top-failures',  p.top_failures           ?? 10);
+  sC('w-auto-collect',  w.auto_collect            ?? true);
+  sV('w-interval',      w.collect_interval_seconds ?? 300);
+  _tgBots = Array.isArray(tg.bots) ? JSON.parse(JSON.stringify(tg.bots)) : [];
+  if (!_tgBots.length && ((tg.bot_token && String(tg.bot_token).trim()) || (tg.chat_id && String(tg.chat_id).trim()))) {
+    _tgBots = [{
+      name: 'Default',
+      enabled: tg.enabled !== false,
+      api_base_url: (tg.api_base_url || '').trim(),
+      bot_token: tg.bot_token || '',
+      chat_id: tg.chat_id || '',
+      critical_only: tg.critical_only !== false,
+    }];
+  }
+  sC('tg-enabled', tg.enabled ?? false);
+  renderTgBots();
+  sC('dm-enabled',      dm.enabled              ?? false);
+  sC('dm-show-all',     dm.show_all_containers  ?? false);
+  sV('dm-timeout',      dm.timeout_seconds      ?? 5);
+  _hc = JSON.parse(JSON.stringify(dm.http_checks || []));
+  _dc = JSON.parse(JSON.stringify((dm.containers || []).map(c => String(c))));
+  renderHttpChecks();
+  renderContainers();
+  updateDockerUI();
+
+  const ai = cfg.openai || {};
+  sV('ai-provider', ai.provider || 'openai');
+  sV('ai-api-key', ai.api_key || '');
+  sV('ai-base-url', (ai.base_url || '').trim());
+  updateProviderUI();
+  sV('ai-model', ai.model || (
+    (ai.provider || '') === 'cursor' ? 'auto'
+      : (ai.provider || '') === 'ollama' ? 'llama3.1:8b'
+      : 'gpt-4o-mini'));
+  sC('ai-cursor-autostart', ai.cursor_proxy_autostart !== false);
+  sV('ai-cursor-agent-bin', (ai.cursor_agent_bin || '').trim());
+  const px = ai.proxy || {};
+  sC('ai-proxy-enabled', px.enabled ?? false);
+  sV('ai-proxy-type',    px.type || 'socks5');
+  sV('ai-proxy-host',    px.host || '');
+  sV('ai-proxy-port',    px.port ? String(px.port) : '');
+  sV('ai-proxy-user',    px.username || '');
+  sV('ai-proxy-password', px.password || '');
+  sV('ai-proxy-url',     px.url || '');
+  sV('ai-proxy-paste',   '');
+  updateProxyUI();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COLLECT & SAVE
+// ══════════════════════════════════════════════════════════════════════════════
+
+function collectForm() {
+  return {
+    general: {
+      project_name: 'CI Monitor',
+      default_lookback_days: toInt(gV('g-lookback')),
+      data_dir: 'data',
+      log_level: gV('g-log-level'),
+    },
+    jenkins_instances: _ji,
+    gitlab_instances:  _gi,
+    parsers: {
+      pytest_xml_dirs:  [],
+      allure_json_dirs: [],
+      top_failures: toInt(gV('g-top-failures')),
+    },
+    reports: {
+      output_dir: 'data', csv_filename: 'ci_report.csv',
+      html_filename: 'ci_report.html', console_mode: 'detailed',
+    },
+    notifications: {
+      telegram: {
+        enabled: gC('tg-enabled'),
+        bots: _tgBots.map((b) => ({
+          name: (b.name && String(b.name).trim()) ? String(b.name).trim().slice(0, 120) : `Telegram`,
+          enabled: b.enabled !== false,
+          api_base_url: (b.api_base_url || '').trim().slice(0, 500),
+          bot_token: b.bot_token || '',
+          chat_id: b.chat_id || '',
+          critical_only: b.critical_only !== false,
+        })),
+      },
+    },
+    docker_monitor: {
+      enabled:              gC('dm-enabled'),
+      show_all_containers:  gC('dm-show-all'),
+      containers:           _dc.filter(c => c.trim()),
+      http_checks:          _hc,
+      timeout_seconds:      toInt(gV('dm-timeout')),
+    },
+    openai: {
+      provider: gV('ai-provider'),
+      api_key: gV('ai-api-key'),
+      model:   gV('ai-model'),
+      base_url: gV('ai-base-url').trim(),
+      cursor_proxy_autostart: gC('ai-cursor-autostart'),
+      cursor_agent_bin: gV('ai-cursor-agent-bin').trim(),
+      proxy: {
+        enabled:  gC('ai-proxy-enabled'),
+        type:     gV('ai-proxy-type'),
+        host:     gV('ai-proxy-host'),
+        port:     toInt(gV('ai-proxy-port')),
+        username: gV('ai-proxy-user'),
+        password: gV('ai-proxy-password'),
+        url:      gV('ai-proxy-url').trim(),
+      },
+    },
+    web: {
+      host: '0.0.0.0', port: 8000, live_reload: true,
+      auto_collect:             gC('w-auto-collect'),
+      collect_interval_seconds: toInt(gV('w-interval')),
+    },
+  };
+}
+
+async function saveSettings() {
+  const btn = $('save-btn-hdr'), st = $('save-status-hdr');
+  if (btn) { btn.disabled = true; btn.textContent = t('st.saving'); }
+  if (st)  { st.textContent = ''; }
+
+  const res = await fetch(apiUrl('api/settings'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(collectForm()),
+  }).catch(() => null);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '&#10003;&nbsp;<span data-i18n="st.save"></span>';
+    applyUITexts();
+  }
+
+  if (res && res.ok) {
+    const ts = new Date().toLocaleTimeString();
+    if (st) st.textContent = t('st.saved_prefix') + ' ' + ts;
+    const j = await res.json().catch(() => ({}));
+    const cp = j.cursor_proxy;
+    let toastType = 'ok';
+    if (cp && cp.ok === false) toastType = cp.warning ? 'warn' : 'err';
+    showToast(j.message || t('st.saved_toast'), toastType);
+  } else {
+    showToast(t('st.save_failed'), 'err');
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  applyUITexts();
+  _applyTheme(localStorage.getItem('cimon-theme') || 'dark');
+  loadSettings();
+});
+</script>
+</body>
+</html>
