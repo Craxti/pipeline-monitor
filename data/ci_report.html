@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CI/CD Monitor Report</title>
+<style>
+  :root{--ok:#22c55e;--fail:#ef4444;--warn:#f59e0b;--info:#3b82f6;--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--muted:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);padding:2rem}
+  h1{font-size:1.8rem;margin-bottom:.25rem}
+  .subtitle{color:var(--muted);margin-bottom:2rem;font-size:.9rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+  .card{background:var(--card);border-radius:.75rem;padding:1.25rem;text-align:center}
+  .card .num{font-size:2rem;font-weight:700}
+  .card .label{color:var(--muted);font-size:.8rem;margin-top:.25rem}
+  .ok{color:var(--ok)}.fail{color:var(--fail)}.warn{color:var(--warn)}.info{color:var(--info)}
+  section{background:var(--card);border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem}
+  h2{font-size:1.1rem;margin-bottom:1rem;border-bottom:1px solid #334155;padding-bottom:.5rem}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th{text-align:left;padding:.5rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid #334155}
+  td{padding:.45rem .75rem;border-bottom:1px solid #1e293b}
+  tr:hover td{background:#263147}
+  .badge{display:inline-block;padding:.15rem .6rem;border-radius:999px;font-size:.75rem;font-weight:600}
+  .badge-ok{background:#14532d;color:var(--ok)}
+  .badge-fail{background:#450a0a;color:var(--fail)}
+  .badge-warn{background:#451a03;color:var(--warn)}
+  .badge-info{background:#1e3a5f;color:var(--info)}
+  a{color:var(--info);text-decoration:none}a:hover{text-decoration:underline}
+  .anomaly{background:#450a0a22;border-left:3px solid var(--fail);padding:.5rem .75rem;border-radius:.25rem;margin:.25rem 0;font-size:.85rem}
+</style>
+</head>
+<body>
+<h1>CI/CD Monitor Report</h1>
+<p class="subtitle">Generated: 2026-03-31 14:03 UTC | Lookback: since 2026-03-24</p>
+
+<!-- ── Summary cards ── -->
+<div class="grid">
+  <div class="card"><div class="num info">0</div><div class="label">Total Builds</div></div>
+  <div class="card"><div class="num ok">0</div><div class="label">Successful Builds</div></div>
+  <div class="card"><div class="num fail">0</div><div class="label">Failed Builds</div></div>
+  <div class="card"><div class="num info">25</div><div class="label">Tests Parsed</div></div>
+  <div class="card"><div class="num fail">8</div><div class="label">Test Failures</div></div>
+  <div class="card"><div class="num warn">3</div><div class="label">Skipped Tests</div></div>
+</div>
+
+
+
+<!-- ── Build status ── -->
+<section>
+  <h2>Build / Pipeline Status</h2>
+  <table>
+    <thead><tr><th>Source</th><th>Job / Project</th><th>#</th><th>Status</th><th>Branch</th><th>Started</th><th>Duration</th><th>Link</th></tr></thead>
+    <tbody>
+    
+    <tr><td colspan="8" style="color:var(--muted);text-align:center">No build data</td></tr>
+    
+    </tbody>
+  </table>
+</section>
+
+<!-- ── Top failures ── -->
+
+<section>
+  <h2>Top Failing Tests</h2>
+  <table>
+    <thead><tr><th>Test Name</th><th>Suite</th><th>Failures</th><th>Last Message</th></tr></thead>
+    <tbody>
+    
+    <tr>
+      <td>test_login_wrong_password</td>
+      <td>tests.api.test_auth</td>
+      <td class="fail"><strong>2</strong></td>
+      <td style="max-width:400px;word-break:break-word">AssertionError: Expected 401, got 200</td>
+    </tr>
+    
+    <tr>
+      <td>test_oauth_flow</td>
+      <td>tests.api.test_auth</td>
+      <td class="fail"><strong>2</strong></td>
+      <td style="max-width:400px;word-break:break-word">ConnectionRefusedError: OAuth provider unreachable</td>
+    </tr>
+    
+    <tr>
+      <td>test_payment_checkout</td>
+      <td>E2E Checkout</td>
+      <td class="fail"><strong>2</strong></td>
+      <td style="max-width:400px;word-break:break-word">TimeoutException: Payment gateway did not respond within 8s</td>
+    </tr>
+    
+    <tr>
+      <td>test_delete_user</td>
+      <td>tests.api.test_users</td>
+      <td class="fail"><strong>1</strong></td>
+      <td style="max-width:400px;word-break:break-word">AssertionError: Expected 204, got 500</td>
+    </tr>
+    
+    <tr>
+      <td>test_coupon_validation</td>
+      <td>E2E Checkout</td>
+      <td class="fail"><strong>1</strong></td>
+      <td style="max-width:400px;word-break:break-word">AssertionError: Discount not applied. Expected 10%, got 0%</td>
+    </tr>
+    
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ── Service status ── -->
+
+
+</body>
+</html>

@@ -369,13 +369,26 @@ def web(ctx: click.Context) -> None:
     click.echo(f"[web] Starting dashboard at http://{host}:{port}")
     reload = bool(w_cfg.get("live_reload", True))
     if reload:
-        click.echo("[web] live_reload is on — saving .py files reloads the server (uvicorn --reload)")
+        click.echo(
+            "[web] live_reload is on (uvicorn --reload). "
+            "Only the `web/` tree is watched — edits under `parsers/`, `data/`, etc. do not reload the server."
+        )
+        click.echo(
+            "[web] If the browser never loads or keeps spinning, set `web.live_reload: false` in config.yaml "
+            "(constant reloads from IDE/indexers interrupt connections)."
+        )
         uvicorn.run(
             "web.app:app",
             host=host,
             port=port,
             reload=True,
-            reload_dirs=[str(proj_root)],
+            reload_dirs=[str(proj_root / "web")],
+            reload_excludes=[
+                "**/__pycache__/**",
+                "**/.pytest_cache/**",
+                "**/.git/**",
+                "**/*.pyc",
+            ],
         )
     else:
         from web.app import app as fastapi_app

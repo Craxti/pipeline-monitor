@@ -1,6 +1,48 @@
 # CI/CD Monitor
 
+**Одна панель для CI + тестов + сервисов.** · EN: *One panel for CI + tests + services.*
+
 A practical Python tool for DevOps and QA engineers that collects CI/CD pipeline statuses, parses test reports, generates reports, and optionally sends Telegram alerts and monitors Docker services.
+
+---
+
+## Layout (high level)
+
+```text
+cicd_mon/
+├── clients/           # Jenkins / GitLab API clients
+├── parsers/           # JUnit, Allure, console parsers
+├── docker_monitor/    # Container + HTTP checks
+├── models/            # Shared domain models (snapshot, tests, …)
+├── notifications/   # Telegram
+├── reports/           # Rich / CSV / HTML reports
+├── web/
+│   ├── app.py         # FastAPI app, middleware, most HTTP handlers
+│   ├── db.py          # Optional SQLite persistence
+│   ├── schemas.py     # Pydantic: health, readiness, general, incident bundle
+│   ├── routes/
+│   │   ├── ops.py           # GET /health, /ready
+│   │   ├── incident.py      # /api/incident*, /api/export/incident*
+│   │   ├── collect.py       # (stub) collect — handlers still in app.py
+│   │   ├── builds.py        # (stub) builds
+│   │   ├── tests.py         # (stub) tests / failures
+│   │   ├── services.py      # (stub) services
+│   │   ├── settings.py      # (stub) settings
+│   │   └── chat.py          # (stub) chat
+│   ├── services/
+│   │   ├── incident_bundle.py
+│   │   ├── aggregation.py   # (stub)
+│   │   └── exports.py       # (stub)
+│   ├── static/
+│   │   ├── app.css          # entry: @import dashboard.css
+│   │   ├── app.js           # thin entry; logic in dashboard.js
+│   │   ├── dashboard.js
+│   │   └── dashboard.css
+│   └── templates/     # Jinja2 (index, settings, partials)
+├── tools/             # Small maintenance scripts
+├── ci_monitor.py      # CLI entrypoint
+└── config.yaml        # Instance configuration
+```
 
 ---
 
@@ -49,7 +91,7 @@ gitlab_instances:
   - name: "GitLab"
     enabled: true
     url: "https://gitlab.example.com"
-    token: "<your-gitlab-access-token>"
+    token: "glpat-xxxxxxxxxxxx"
     projects:
       - id: "mygroup/myrepo"
         critical: true
@@ -96,6 +138,8 @@ py ci_monitor.py report --format csv
 py ci_monitor.py web
 # open http://127.0.0.1:8000 (or whatever web.host/web.port are)
 ```
+
+If the page never finishes loading while `web.live_reload` is `true`, set it to `false` in `config.yaml`. Uvicorn’s `--reload` restarts the worker when files under `web/` change; rapid restarts (IDE, formatters) can interrupt the browser. Reload mode watches only the `web/` tree, not the whole repo.
 
 The dashboard shows:
 - Builds / pipelines (Jenkins & GitLab)
@@ -167,7 +211,7 @@ collect options:
 
 ```yaml
 general:
-  project_name: "My CI Monitor"
+  project_name: "CI/CD Monitor"
   default_lookback_days: 7
   data_dir: "data"
   log_level: "INFO"

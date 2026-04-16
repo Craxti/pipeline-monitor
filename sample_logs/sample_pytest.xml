@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites>
+  <testsuite name="tests.api.test_auth" tests="6" errors="0" failures="2" skipped="1" time="3.421" timestamp="2026-03-30T09:15:00">
+    <testcase classname="tests.api.test_auth" name="test_login_success" time="0.412"/>
+    <testcase classname="tests.api.test_auth" name="test_login_wrong_password" time="0.311">
+      <failure message="AssertionError: Expected 401, got 200">
+        assert response.status_code == 401
+        AssertionError: Expected 401, got 200
+      </failure>
+    </testcase>
+    <testcase classname="tests.api.test_auth" name="test_token_refresh" time="0.524"/>
+    <testcase classname="tests.api.test_auth" name="test_logout" time="0.189"/>
+    <testcase classname="tests.api.test_auth" name="test_rate_limiting" time="0.000">
+      <skipped message="Rate limiting not implemented yet"/>
+    </testcase>
+    <testcase classname="tests.api.test_auth" name="test_oauth_flow" time="1.985">
+      <failure message="ConnectionRefusedError: OAuth provider unreachable">
+        ConnectionRefusedError: [Errno 111] Connection refused
+        at oauth_client.py:42
+      </failure>
+    </testcase>
+  </testsuite>
+
+  <testsuite name="tests.api.test_users" tests="4" errors="0" failures="1" skipped="0" time="2.100" timestamp="2026-03-30T09:15:05">
+    <testcase classname="tests.api.test_users" name="test_create_user" time="0.620"/>
+    <testcase classname="tests.api.test_users" name="test_get_user_profile" time="0.310"/>
+    <testcase classname="tests.api.test_users" name="test_delete_user" time="0.880">
+      <failure message="AssertionError: Expected 204, got 500">
+        Database constraint violation on cascade delete.
+      </failure>
+    </testcase>
+    <testcase classname="tests.api.test_users" name="test_list_users_pagination" time="0.290"/>
+  </testsuite>
+
+  <testsuite name="tests.integration.test_pipeline" tests="3" errors="0" failures="0" skipped="0" time="8.750" timestamp="2026-03-30T09:15:10">
+    <testcase classname="tests.integration.test_pipeline" name="test_full_build_flow" time="4.100"/>
+    <testcase classname="tests.integration.test_pipeline" name="test_artifact_upload" time="2.350"/>
+    <testcase classname="tests.integration.test_pipeline" name="test_notification_trigger" time="2.300"/>
+  </testsuite>
+
+  <!-- Simulating repeated failures for flakiness detection -->
+  <testsuite name="tests.api.test_auth" tests="6" errors="0" failures="2" skipped="1" time="3.500" timestamp="2026-03-29T09:15:00">
+    <testcase classname="tests.api.test_auth" name="test_login_success" time="0.400"/>
+    <testcase classname="tests.api.test_auth" name="test_login_wrong_password" time="0.300">
+      <failure message="AssertionError: Expected 401, got 200">Same bug as yesterday</failure>
+    </testcase>
+    <testcase classname="tests.api.test_auth" name="test_token_refresh" time="0.500"/>
+    <testcase classname="tests.api.test_auth" name="test_logout" time="0.200"/>
+    <testcase classname="tests.api.test_auth" name="test_rate_limiting" time="0.000">
+      <skipped message="Rate limiting not implemented yet"/>
+    </testcase>
+    <testcase classname="tests.api.test_auth" name="test_oauth_flow" time="2.100">
+      <failure message="ConnectionRefusedError: OAuth provider unreachable">Recurring issue.</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

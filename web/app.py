@@ -32,6 +32,8 @@ import yaml
 from fastapi import FastAPI, Request, HTTPException, Depends, Header
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles
+
 
 from models.models import (
     CISnapshot,
@@ -42,6 +44,7 @@ from models.models import (
 )
 
 from config_migrations import migrate_telegram_notifications
+from web.schemas import MonitorGeneralConfig
 
 logger = logging.getLogger(__name__)
 
@@ -521,7 +524,7 @@ def _public_settings_payload(cfg: dict) -> dict:
             sqlite_ok = False
     return {
         "ui_language": g.get("ui_language", "en"),
-        "project_name": g.get("project_name", "CI Monitor"),
+        "project_name": g.get("project_name", "CI/CD Monitor"),
         "web": {
             "host": w.get("host", "0.0.0.0"),
             "port": int(w.get("port", 8000)),
@@ -2098,6 +2101,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CI/CD Monitor", version="1.0.0", lifespan=lifespan)
 
+_static_dir = Path(__file__).resolve().parent / "static"
+if _static_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
 
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
@@ -2114,32 +2121,7 @@ def _rid(request: Request | None) -> str:
     return getattr(request.state, "request_id", "-")
 
 
-# ── Health / Readiness ────────────────────────────────────────────────────
 
-@app.get("/health", tags=["ops"])
-async def health():
-    """Liveness probe — always returns 200 if the process is up."""
-    return {
-        "status": "ok",
-        "ts": datetime.now(tz=timezone.utc).isoformat(),
-        "version": "1.0.0",
-        "app_build": _APP_BUILD,
-        "app_path": str(Path(__file__).resolve()),
-    }
-
-
-@app.get("/ready", tags=["ops"])
-async def ready():
-    """Readiness probe — returns 200 only when a snapshot has been collected."""
-    if _DATA_FILE.exists():
-        snap_age: float | None = None
-        snap = _load_snapshot()
-        if snap:
-            snap_age = (datetime.now(tz=timezone.utc) - snap.collected_at.replace(
-                tzinfo=timezone.utc if snap.collected_at.tzinfo is None else snap.collected_at.tzinfo
-            )).total_seconds()
-        return {"status": "ready", "snapshot_age_seconds": snap_age}
-    raise HTTPException(503, "No snapshot collected yet — service not ready")
 
 
 # ── REST endpoints ────────────────────────────────────────────────────────
@@ -2218,7 +2200,6 @@ async def api_status():
     return data
 
 
-@app.get("/api/builds", response_class=JSONResponse)
 async def api_builds(
     page: int = 1,
     per_page: int = 20,
@@ -2359,7 +2340,6 @@ async def api_builds(
     }
 
 
-@app.get("/api/instances", response_class=JSONResponse)
 async def api_instances():
     """Return enabled instance names (for filter dropdowns)."""
     cfg = _load_yaml_config()
@@ -2375,7 +2355,6 @@ async def api_instances():
     return out
 
 
-@app.get("/api/builds/history", response_class=JSONResponse)
 async def api_builds_history(
     page: int = 1,
     per_page: int = 50,
@@ -2490,7 +2469,6 @@ async def api_dashboard_summary():
     return _dashboard_summary_payload()
 
 
-@app.get("/api/instances/health", response_class=JSONResponse)
 async def api_instances_health():
     """Last collect: Jenkins / GitLab / Docker poll latency and errors."""
     return {
@@ -2693,7 +2671,6 @@ def _tests_breakdown_real_vs_synth(items: list[Any]) -> dict[str, int]:
         "synthetic_failed": syn_failed,
     }
 
-@app.get("/api/tests", response_class=JSONResponse)
 async def api_tests(
     page: int = 1,
     per_page: int = 30,
@@ -2761,7 +2738,6 @@ async def api_tests(
     }
 
 
-@app.get("/api/tests/top-failures", response_class=JSONResponse)
 async def api_top_failures(
     n: int = 50,
     page: int = 1,
@@ -2871,7 +2847,6 @@ async def api_top_failures(
     }
 
 
-@app.get("/api/services", response_class=JSONResponse)
 async def api_services(page: int = 1, per_page: int = 50, status: str = ""):
     snap = await _load_snapshot_async()
     if snap is None:
@@ -3066,7 +3041,6 @@ def _to_xlsx_bytes(headers: list[str], rows: list[list], sheet_name: str = "Data
     return buf.getvalue()
 
 
-@app.get("/api/export/builds")
 async def export_builds(
     fmt: str = "csv",
     source: str = "",
@@ -3111,7 +3085,6 @@ async def export_builds(
     )
 
 
-@app.get("/api/export/tests")
 async def export_tests(
     fmt: str = "csv",
     status: str = "",
@@ -3159,7 +3132,6 @@ async def export_tests(
     )
 
 
-@app.get("/api/export/failures")
 async def export_failures(
     fmt: str = "csv",
     n: int = 500,
@@ -3203,348 +3175,6 @@ async def export_failures(
     )
 
 
-def _incident_accepts_browser_html(request: Request) -> bool:
-    """Browsers send Accept starting with text/html; APIs/curl often use */* or application/json."""
-    if request.query_params.get("raw") == "1":
-        return False
-    accept = (request.headers.get("accept") or "*/*").strip()
-    if not accept:
-        return False
-    first = accept.split(",")[0].strip().split(";")[0].strip().lower()
-    return first == "text/html"
-
-
-def _incident_tab_hrefs(request: Request) -> tuple[str, str]:
-    p = request.url.path
-    if "/export/" in p:
-        return "/api/export/incident/json", "/api/export/incident/md"
-    return "/api/incident.json", "/api/incident.md"
-
-
-def _markdown_to_html(md_text: str) -> str:
-    try:
-        import markdown as md_pkg
-
-        return md_pkg.markdown(
-            md_text,
-            extensions=["extra", "nl2br", "sane_lists"],
-        )
-    except Exception as exc:
-        logger.debug("Incident markdown render fallback: %s", exc)
-        return f"<pre>{html.escape(md_text)}</pre>"
-
-
-def _incident_browser_page(
-    *,
-    request: Request,
-    title: str,
-    active: str,
-    main_html: str,
-) -> str:
-    json_href, md_href = _incident_tab_hrefs(request)
-    raw_href = f"{request.url.path}?raw=1"
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(title)}</title>
-<style>
-:root {{
-  --bg: #0d1117;
-  --surface: #161b22;
-  --fg: #e6edf3;
-  --muted: #8b949e;
-  --accent: #58a6ff;
-  --border: #30363d;
-  --ok: #3fb950;
-}}
-* {{ box-sizing: border-box; }}
-body {{
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--fg);
-  margin: 0;
-  min-height: 100vh;
-}}
-header {{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 0.85rem 1.35rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}}
-header h1 {{
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.02em;
-}}
-nav.tabs {{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-}}
-nav.tabs a {{
-  color: var(--muted);
-  text-decoration: none;
-  font-size: 0.82rem;
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-}}
-nav.tabs a:hover {{ color: var(--fg); background: rgba(255,255,255,.06); }}
-nav.tabs a.active {{
-  border-color: var(--border);
-  background: rgba(88, 166, 255, 0.12);
-  color: var(--accent);
-}}
-nav.tabs a.raw {{ color: var(--ok); }}
-main {{ max-width: 56rem; margin: 0 auto; }}
-pre.json {{
-  margin: 0;
-  padding: 1.25rem 1.35rem 2rem;
-  overflow: auto;
-  font-size: 13px;
-  line-height: 1.55;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  white-space: pre-wrap;
-  word-break: break-word;
-}}
-.prose {{
-  padding: 1.25rem 1.35rem 2.5rem;
-  line-height: 1.6;
-  font-size: 0.95rem;
-}}
-.prose h1 {{ font-size: 1.45rem; margin: 0 0 1rem; font-weight: 650; }}
-.prose h2 {{ font-size: 1.1rem; margin: 1.5rem 0 0.65rem; color: var(--fg); }}
-.prose p {{ margin: 0.5rem 0; color: var(--muted); }}
-.prose ul {{ margin: 0.4rem 0; padding-left: 1.35rem; }}
-.prose li {{ margin: 0.25rem 0; }}
-.prose code {{
-  background: rgba(255,255,255,.08);
-  padding: 0.12em 0.4em;
-  border-radius: 4px;
-  font-size: 0.9em;
-}}
-.prose a {{ color: var(--accent); }}
-.prose strong {{ color: var(--fg); }}
-</style>
-</head>
-<body>
-<header>
-  <h1>{html.escape(title)}</h1>
-  <nav class="tabs" aria-label="Incident views">
-    <a href="{html.escape(json_href)}" class="{'active' if active == 'json' else ''}">JSON</a>
-    <a href="{html.escape(md_href)}" class="{'active' if active == 'md' else ''}">Markdown</a>
-    <a href="{html.escape(raw_href)}" class="raw">Raw</a>
-    <a href="/">Dashboard</a>
-  </nav>
-</header>
-<main>
-{main_html}
-</main>
-</body>
-</html>"""
-
-
-def _build_incident_bundle() -> tuple[dict, str]:
-    """Return JSON-serializable payload and Markdown text."""
-    snap = _load_snapshot()
-    if not snap:
-        now = datetime.now(tz=timezone.utc).isoformat()
-        payload = {
-            "generated_at_utc": now,
-            "snapshot_collected_at_utc": None,
-            "summary": {
-                "failed_builds": 0,
-                "failed_tests_in_snapshot": 0,
-                "services_down": 0,
-            },
-            "failed_builds": [],
-            "top_failed_tests": [],
-            "services_down": [],
-            "note": "no_snapshot_yet",
-        }
-        md = "\n".join(
-            [
-                "# CI Monitor incident snapshot",
-                "",
-                "_No snapshot loaded yet — run Collect or `ci_monitor.py collect`._",
-                "",
-                f"- Generated (UTC): `{now}`",
-            ]
-        )
-        return payload, md
-
-    failed_builds = [
-        {
-            "source": b.source,
-            "job_name": b.job_name,
-            "build_number": b.build_number,
-            "status": _status_str(b.status),
-            "branch": b.branch,
-            "started_at": b.started_at.isoformat() if b.started_at else None,
-            "url": b.url,
-            "critical": b.critical,
-        }
-        for b in snap.builds
-        if b.status_normalized in ("failure", "unstable")
-    ]
-
-    counter: Counter = Counter()
-    for t in snap.tests:
-        if t.status_normalized in ("failed", "error"):
-            counter[t.test_name] += 1
-    top_tests = [
-        {"test_name": name, "count": cnt}
-        for name, cnt in counter.most_common(25)
-    ]
-
-    down_svcs = [
-        {"name": s.name, "kind": s.kind, "status": s.status, "detail": s.detail}
-        for s in snap.services
-        if s.status_normalized == "down"
-    ]
-
-    ca = snap.collected_at
-    if ca.tzinfo is None:
-        ca = ca.replace(tzinfo=timezone.utc)
-    else:
-        ca = ca.astimezone(timezone.utc)
-
-    payload = {
-        "generated_at_utc": datetime.now(tz=timezone.utc).isoformat(),
-        "snapshot_collected_at_utc": ca.isoformat(),
-        "summary": {
-            "failed_builds": len(failed_builds),
-            "failed_tests_in_snapshot": sum(
-                1 for t in snap.tests if t.status_normalized in ("failed", "error")
-            ),
-            "services_down": len(down_svcs),
-        },
-        "failed_builds": failed_builds,
-        "top_failed_tests": top_tests,
-        "services_down": down_svcs,
-    }
-
-    lines = [
-        "# CI Monitor incident snapshot",
-        "",
-        f"- Generated (UTC): `{payload['generated_at_utc']}`",
-        f"- Snapshot collected (UTC): `{payload['snapshot_collected_at_utc']}`",
-        "",
-        "## Summary",
-        "",
-        f"- Failed builds: **{payload['summary']['failed_builds']}**",
-        f"- Failed test records in snapshot: **{payload['summary']['failed_tests_in_snapshot']}**",
-        f"- Services down: **{payload['summary']['services_down']}**",
-        "",
-        "## Failed builds",
-        "",
-    ]
-    for b in failed_builds[:50]:
-        lines.append(
-            f"- `{b['source']}` **{b['job_name']}** #{b['build_number']} — {b['status']}"
-            + (f" — [{b['url']}]({b['url']})" if b.get("url") else "")
-        )
-    lines.extend(["", "## Top failing tests (aggregated)", ""])
-    for t in top_tests[:25]:
-        lines.append(f"- `{t['test_name']}` — {t['count']}×")
-    if down_svcs:
-        lines.extend(["", "## Services down", ""])
-        for s in down_svcs:
-            lines.append(f"- `{s['name']}` ({s['kind']}) — {s['detail'] or s['status']}")
-    return payload, "\n".join(lines)
-
-
-async def _export_incident_response(fmt: str, request: Request | None = None) -> Response:
-    """Compact incident bundle: failed builds, top test failures, down services — for tickets / chat."""
-    payload, md_text = _build_incident_bundle()
-    fl = fmt.lower()
-    is_md = fl in ("md", "markdown")
-
-    if request is not None and _incident_accepts_browser_html(request):
-        if is_md:
-            body = f'<article class="prose">{_markdown_to_html(md_text)}</article>'
-            page = _incident_browser_page(
-                request=request,
-                title="Incident — CI Monitor",
-                active="md",
-                main_html=body,
-            )
-            return HTMLResponse(page)
-        pretty = json.dumps(payload, indent=2, ensure_ascii=False)
-        body = f'<pre class="json">{html.escape(pretty)}</pre>'
-        page = _incident_browser_page(
-            request=request,
-            title="Incident (JSON) — CI Monitor",
-            active="json",
-            main_html=body,
-        )
-        return HTMLResponse(page)
-
-    if is_md:
-        return PlainTextResponse(md_text, media_type="text/markdown; charset=utf-8")
-    raw_json = json.dumps(payload, indent=2, ensure_ascii=False)
-    return Response(
-        content=raw_json.encode("utf-8"),
-        media_type="application/json; charset=utf-8",
-    )
-
-
-@app.get("/api/export/incident.md")
-async def export_incident_md_path(request: Request):
-    """Markdown incident bundle without query string (works if ?fmt= is stripped)."""
-    return await _export_incident_response("md", request)
-
-
-@app.get("/api/export/incident.json")
-async def export_incident_json_path(request: Request):
-    """JSON incident bundle without query string."""
-    return await _export_incident_response("json", request)
-
-
-@app.get("/api/export/incident/json")
-async def export_incident_json_segment(request: Request):
-    """Same as incident.json — avoids proxies that mishandle dotted paths."""
-    return await _export_incident_response("json", request)
-
-
-@app.get("/api/export/incident/md")
-async def export_incident_md_segment(request: Request):
-    """Same as incident.md — avoids proxies that mishandle dotted paths."""
-    return await _export_incident_response("md", request)
-
-
-@app.get("/api/incident.json")
-async def export_incident_json_flat(request: Request):
-    """Short URL (no /export/); same payload as /api/export/incident?fmt=json."""
-    return await _export_incident_response("json", request)
-
-
-@app.get("/api/incident.md")
-async def export_incident_md_flat(request: Request):
-    """Short URL (no /export/); same payload as /api/export/incident?fmt=md."""
-    return await _export_incident_response("md", request)
-
-
-@app.get("/api/incident")
-async def export_incident_short(request: Request, fmt: str = "json"):
-    """Short alias for /api/export/incident — same ?fmt=md|json|markdown."""
-    return await _export_incident_response(fmt, request)
-
-
-@app.get("/api/export/incident")
-async def export_incident(request: Request, fmt: str = "json"):
-    return await _export_incident_response(fmt, request)
-
-
-@app.get("/api/collect/status", response_class=JSONResponse)
 async def collect_status():
     """Return background collection state."""
     # When auto-collect was enabled but we haven't collected yet, estimate ETA from enable time.
@@ -3574,7 +3204,6 @@ async def collect_status():
     }
 
 
-@app.post("/api/collect/auto", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def set_auto_collect(request: Request):
     """
     Enable/disable the background auto-collect loop (server-wide).
@@ -3602,7 +3231,6 @@ async def set_auto_collect(request: Request):
     return {"ok": True, "enabled": bool(_auto_collect_enabled)}
 
 
-@app.get("/api/collect/logs", response_class=JSONResponse)
 async def collect_logs(limit: int = 400, offset: int = 0):
     """
     Recent collect progress lines for UI live log view.
@@ -3624,7 +3252,6 @@ async def collect_logs(limit: int = 400, offset: int = 0):
     return {"items": items, "total": total}
 
 
-@app.get("/api/collect/slow", response_class=JSONResponse)
 async def collect_slow(limit: int = 10):
     """Top slow (job/build) operations observed during current collect."""
     try:
@@ -3636,7 +3263,6 @@ async def collect_slow(limit: int = 10):
     return {"items": items[:lim]}
 
 
-@app.post("/api/collect", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def trigger_collect(request: Request):
     """Manually trigger a data collection."""
     rid = _rid(request)
@@ -3656,19 +3282,16 @@ async def trigger_collect(request: Request):
     return {"ok": True, "message": "Collection started."}
 
 
-@app.get("/api/settings", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def api_get_settings():
     """Return config for the settings UI — secrets are masked; use POST with same shape to save."""
     return _mask_settings_for_response(_load_yaml_config())
 
 
-@app.get("/api/settings/public", response_class=JSONResponse)
 async def api_get_settings_public():
     """Minimal non-secret fields (safe for embedding / diagnostics)."""
     return _public_settings_payload(_load_yaml_config())
 
 
-@app.post("/api/settings", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def api_save_settings(request: Request):
     """Persist new settings to config.yaml and restart the collect loop."""
     global _collect_task
@@ -3722,12 +3345,11 @@ async def api_save_settings(request: Request):
 
 def _ui_lang_from_config() -> str:
     cfg = _load_yaml_config()
-    raw = (cfg.get("general") or {}).get("ui_language", "en")
-    lang = str(raw).strip().lower()[:5]
+    gen = MonitorGeneralConfig.model_validate(cfg.get("general") or {})
+    lang = str(gen.ui_language).strip().lower()[:5]
     return lang if lang in ("ru", "en") else "en"
 
 
-@app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     resp = templates.TemplateResponse(
         "settings.html",
@@ -4275,7 +3897,6 @@ async def _http_probe_public_ip(client: httpx.AsyncClient) -> tuple[str | None, 
     return None, last_err
 
 
-@app.post("/api/chat", dependencies=[Depends(require_shared_token)])
 async def api_chat(request: Request):
     """Stream an AI-assistant response powered by OpenAI (or compatible API)."""
     cfg = _load_yaml_config()
@@ -4414,7 +4035,6 @@ async def api_chat(request: Request):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-@app.get("/api/chat/status", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def api_chat_status():
     """Check whether AI chat is configured (without exposing the key)."""
     cfg = _load_yaml_config()
@@ -4443,8 +4063,6 @@ async def api_chat_status():
     }
 
 
-@app.get("/api/chat/proxy-check", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
-@app.get("/api/proxy-check", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def api_chat_proxy_check():
     """Compare public IP with vs without the configured OpenAI proxy (debug VPN routing)."""
     _check_rate_limit("chat:proxy-check", window=10.0)
@@ -4489,6 +4107,28 @@ async def api_chat_proxy_check():
 
     return out
 
+
+
+from web.routes.builds import router as _builds_router
+from web.routes.chat import router as _chat_router
+from web.routes.collect import router as _collect_router
+from web.routes.incident import router as _incident_router
+from web.routes.ops import router as _ops_router
+from web.routes.services import router as _services_router
+from web.routes.settings import router as _settings_router
+from web.routes.tests import router as _tests_router
+
+for __r in (
+    _ops_router,
+    _incident_router,
+    _collect_router,
+    _builds_router,
+    _tests_router,
+    _services_router,
+    _settings_router,
+    _chat_router,
+):
+    app.include_router(__r)
 
 # ── Dashboard HTML ────────────────────────────────────────────────────────
 
