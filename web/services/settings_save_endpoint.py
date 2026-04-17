@@ -7,6 +7,11 @@ from typing import Any, Awaitable, Callable
 
 from fastapi import Request
 
+from web.services.collect_task_lifecycle import (
+    clear_auto_collect_runtime,
+    prime_auto_collect_for_web_config,
+)
+
 
 async def api_save_settings(
     request: Request,
@@ -39,10 +44,15 @@ async def api_save_settings(
         collect_state["interval_seconds"] = int(w_cfg.get("collect_interval_seconds", 300))
 
     def _restart_collect_after_save(merged: dict) -> None:
+        import logging
+
+        _log = logging.getLogger(__name__)
         w_cfg = merged.get("web", {})
         if w_cfg.get("auto_collect", True):
+            prime_auto_collect_for_web_config(w_cfg, logger=_log)
             collect_loop_task_ref["task"] = create_collect_loop_task(merged)
         else:
+            clear_auto_collect_runtime(logger=_log)
             create_do_collect_task(merged)
 
     return await settings_api_save(

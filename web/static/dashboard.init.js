@@ -181,11 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const chkLive = document.getElementById('chk-live-mode');
   if (chkLive) {
     chkLive.checked = localStorage.getItem('cimon-live') === '1';
-    _liveMode = chkLive.checked;
-    document.body.classList.toggle('dashboard-live', _liveMode);
-    const liveWrap = document.getElementById('live-toggle-wrap');
-    if (liveWrap) liveWrap.classList.toggle('is-live', _liveMode);
     chkLive.addEventListener('change', () => setLiveMode(chkLive.checked));
+    // If LIVE is on: POST so server matches (e.g. after restart). If off: do not POST — would disable headless web.auto_collect.
+    setLiveMode(chkLive.checked, { skipInitialFullRefresh: true }, chkLive.checked);
+  } else {
+    applyLivePollingIntervals({ skipInitialFullRefresh: true });
   }
-  applyLivePollingIntervals({ skipInitialFullRefresh: true });
 });
