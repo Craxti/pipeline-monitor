@@ -5,9 +5,7 @@ Looks for a "Результаты выполнения" summary block printed by
 scripts and turns each line into a TestRecord.
 
 Expected console format (printed via `echo`):
-    ====== 📋 Результаты выполнения ======
-    №114 Создание OIM интеграции: ✅ Успешно
-    №29  Кластеризации DBSCAN:     ❌ Ошибка: test_29 #20 completed with status UNSTABLE ...
+
 """
 
 from __future__ import annotations
@@ -71,8 +69,16 @@ def _strip_pipeline_echo(line: str) -> str:
     return _PIPELINE_PREFIX.sub("", line).strip()
 
 
-def _collect_pytest_e_lines(lines: list[str], start: int, *, max_lines: int = 48) -> tuple[str, int]:
-    """Gather consecutive 'E   ' assertion lines after a failure; return (joined, next_index)."""
+def _collect_pytest_e_lines(
+    lines: list[str],
+    start: int,
+    *,
+    max_lines: int = 48,
+) -> tuple[str, int]:
+    """Gather consecutive `E   ` lines after a failure.
+
+    Returns `(joined, next_index)`.
+    """
     parts: list[str] = []
     j = start
     while j < len(lines) and j < start + max_lines:
@@ -91,10 +97,15 @@ def _collect_pytest_e_lines(lines: list[str], start: int, *, max_lines: int = 48
     return (" ".join(parts).strip(), j)
 
 
-def extract_pytest_failure_messages(console_text: str, *, max_each: int = _FAILURE_MSG_MAX) -> dict[str, str]:
-    """
-    Build map: pytest function name (last segment after ::) -> best failure text
-    from FAILED/ERROR lines and following E-lines, plus ______ test ______ sections.
+def extract_pytest_failure_messages(
+    console_text: str,
+    *,
+    max_each: int = _FAILURE_MSG_MAX,
+) -> dict[str, str]:
+    """Extract pytest failure messages from a console text blob.
+
+    Builds a map: pytest function name (last segment after `::`) -> best failure
+    text from FAILED/ERROR lines, following `E   ` lines, and section headers.
     """
     raw_lines = console_text.splitlines()
     lines = [_strip_pipeline_echo(x) for x in raw_lines]
@@ -252,11 +263,26 @@ class JenkinsConsoleParser:
             try:
                 import time
                 t0 = time.monotonic()
-                r = requests.get(url, auth=self.auth, timeout=self.timeout, verify=self.verify_ssl)
+                r = requests.get(
+                    url,
+                    auth=self.auth,
+                    timeout=self.timeout,
+                    verify=self.verify_ssl,
+                )
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
-                if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:
+                if (
+                    r.status_code >= 400
+                    and self._should_retry_status(r.status_code)
+                    and attempt < self.retries
+                ):
                     delay = self.backoff_seconds * (2 ** attempt)
-                    logger.warning("ConsoleParser: %s -> %d (%dms), retry in %.1fs", url, r.status_code, elapsed_ms, delay)
+                    logger.warning(
+                        "ConsoleParser: %s -> %d (%dms), retry in %.1fs",
+                        url,
+                        r.status_code,
+                        elapsed_ms,
+                        delay,
+                    )
                     try:
                         time.sleep(delay)
                     except Exception:
@@ -302,7 +328,10 @@ class JenkinsConsoleParser:
         if int(self.max_builds) <= 0:
             url = f"{self.base_url}{jp}/api/json?tree=builds[number]"
         else:
-            url = f"{self.base_url}{jp}/api/json?tree=builds[number]{{0,{int(self.max_builds)}}}"
+            url = (
+                f"{self.base_url}{jp}/api/json?"
+                f"tree=builds[number]{{0,{int(self.max_builds)}}}"
+            )
         try:
             r = self._get_with_retry(url)
             if not r:
@@ -312,12 +341,18 @@ class JenkinsConsoleParser:
                     except Exception:
                         pass
                 return []
-            return [b["number"] for b in (r.json().get("builds", []) or []) if "number" in b]
+            return [
+                b["number"]
+                for b in (r.json().get("builds", []) or [])
+                if "number" in b
+            ]
         except Exception as exc:
             logger.warning("ConsoleParser: cannot list builds for '%s': %s", job_name, exc)
             if self.progress_cb:
                 try:
-                    self.progress_cb(f"Console: {job_name} build list error: {str(exc)[:160]}")
+                    self.progress_cb(
+                        f"Console: {job_name} build list error: {str(exc)[:160]}"
+                    )
                 except Exception:
                     pass
             return []
@@ -341,7 +376,9 @@ class JenkinsConsoleParser:
             )
             if self.progress_cb:
                 try:
-                    self.progress_cb(f"Console: {job_name} #{build_number} error: {str(exc)[:160]}")
+                    self.progress_cb(
+                        f"Console: {job_name} #{build_number} error: {str(exc)[:160]}"
+                    )
                 except Exception:
                     pass
             return ""
@@ -356,7 +393,10 @@ class JenkinsConsoleParser:
         into ``_parse_console`` so the Tests table does not show whole-pipeline time on every row.
         """
         jp = JenkinsClient.job_path(job_name)
-        url = f"{self.base_url}{jp}/{int(build_number)}/api/json?tree=timestamp,duration,estimatedDuration"
+        url = (
+            f"{self.base_url}{jp}/{int(build_number)}/api/json?"
+            "tree=timestamp,duration,estimatedDuration"
+        )
         try:
             r = self._get_with_retry(url)
             if not r:
@@ -376,7 +416,8 @@ class JenkinsConsoleParser:
                     duration_seconds = float(duration_ms) / 1000.0
                 except (TypeError, ValueError):
                     duration_seconds = None
-            # Some Jenkins variants omit duration; estimatedDuration is ms (same as Run.getEstimatedDuration).
+            # Some Jenkins variants omit duration; estimatedDuration is ms
+            # (same as Run.getEstimatedDuration).
             if duration_seconds is None:
                 est_ms = j.get("estimatedDuration")
                 if est_ms is not None:
@@ -423,18 +464,27 @@ class JenkinsConsoleParser:
                         msg = None
                         if " - " in rest:
                             test_id, msg = rest.split(" - ", 1)
-                        records.append(TestRecord(
-                            source="jenkins_console",
-                            suite=job_name,
-                            test_name=test_id.strip(),
-                            status="error" if kind == "error" else "failed",
-                            duration_seconds=duration_seconds,
-                            failure_message=(msg or "").strip()[:_FAILURE_MSG_MAX] if msg else None,
-                            timestamp=ts,
-                        ))
+                        failure_message = (
+                            (msg or "").strip()[:_FAILURE_MSG_MAX]
+                            if msg
+                            else None
+                        )
+                        records.append(
+                            TestRecord(
+                                source="jenkins_console",
+                                suite=job_name,
+                                test_name=test_id.strip(),
+                                status="error" if kind == "error" else "failed",
+                                duration_seconds=duration_seconds,
+                                failure_message=failure_message,
+                                timestamp=ts,
+                            )
+                        )
                         continue
                     # Stop when we hit the final summary/footer separators
-                    if line.startswith("===") or line.startswith("FAILED") or line.startswith("ERROR"):
+                    if line.startswith("===") or line.startswith("FAILED") or line.startswith(
+                        "ERROR"
+                    ):
                         continue
                     if not line and records:
                         # after some summary lines, blank usually indicates end
@@ -448,28 +498,32 @@ class JenkinsConsoleParser:
             # Passed
             m = _PASSED_RE.match(line)
             if m:
-                records.append(TestRecord(
-                    source="jenkins_console",
-                    suite=job_name,
-                    test_name=m.group(1).strip(),
-                    status="passed",
-                    duration_seconds=duration_seconds,
-                    timestamp=ts,
-                ))
+                records.append(
+                    TestRecord(
+                        source="jenkins_console",
+                        suite=job_name,
+                        test_name=m.group(1).strip(),
+                        status="passed",
+                        duration_seconds=duration_seconds,
+                        timestamp=ts,
+                    )
+                )
                 continue
 
             # Failed / error
             m = _FAILED_RE.match(line)
             if m:
-                records.append(TestRecord(
-                    source="jenkins_console",
-                    suite=job_name,
-                    test_name=m.group(1).strip(),
-                    status="failed",
-                    duration_seconds=duration_seconds,
-                    failure_message=m.group(2).strip()[:_FAILURE_MSG_MAX],
-                    timestamp=ts,
-                ))
+                records.append(
+                    TestRecord(
+                        source="jenkins_console",
+                        suite=job_name,
+                        test_name=m.group(1).strip(),
+                        status="failed",
+                        duration_seconds=duration_seconds,
+                        failure_message=m.group(2).strip()[:_FAILURE_MSG_MAX],
+                        timestamp=ts,
+                    )
+                )
 
         enrich_jenkins_console_failure_messages(records, text)
         return records

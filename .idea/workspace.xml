@@ -4,23 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="pep8 + docs + unittests">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="pep8">
+      <change beforePath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/bug_report.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/bug_report.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/config.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/config.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/feature_request.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/feature_request.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/question.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/question.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/PULL_REQUEST_TEMPLATE.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/PULL_REQUEST_TEMPLATE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LICENSE" beforeDir="false" afterPath="$PROJECT_DIR$/LICENSE" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data/snapshot.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/snapshot.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/allure_failure_text.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/allure_failure_text.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/patch_index_onclick.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/patch_index_onclick.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/strip_dashboard_inline.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/strip_dashboard_inline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/strip_moved_route_decorators.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/strip_moved_route_decorators.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/cursor_proxy.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/cursor_proxy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/exports.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/exports.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/logs_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/notification_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/notification_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/USER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/USER_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/WORKFLOW.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/WORKFLOW.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_auth_and_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_auth_and_config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_snapshot_trends_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_snapshot_trends_cache.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_sqlite_history.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sqlite_history.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_web_services_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_web_services_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/auth.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -190,7 +192,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776449581222</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="pep8">
+      <created>1776450535354</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1776450535354</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -216,6 +225,7 @@
     <MESSAGE value="fix dashboard, cache, request_id, api, fresh" />
     <MESSAGE value="fix moduls arch" />
     <MESSAGE value="pep8 + docs + unittests" />
-    <option name="LAST_COMMIT_MESSAGE" value="pep8 + docs + unittests" />
+    <MESSAGE value="pep8" />
+    <option name="LAST_COMMIT_MESSAGE" value="pep8" />
   </component>
 </project>
