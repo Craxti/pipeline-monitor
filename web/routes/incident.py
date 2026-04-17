@@ -167,9 +167,9 @@ pre.json {{
 
 
 async def _export_incident_response(fmt: str, request: Optional[Request] = None) -> Response:
-    from web.app import _load_snapshot
+    from web.core.snapshot_cache import load_snapshot
 
-    snap = _load_snapshot()
+    snap = load_snapshot()
     payload, md_text = build_incident_bundle(snap)
     fl = fmt.lower()
     is_md = fl in ("md", "markdown")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
-from web.app import require_shared_token
+from web.core.auth import require_shared_token
 
 router = APIRouter(tags=["settings"])
 

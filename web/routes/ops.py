@@ -26,11 +26,11 @@ async def health() -> HealthResponse:
 
 @router.get("/ready", response_model=ReadyResponse)
 async def ready() -> ReadyResponse:
-    from web.app import _DATA_FILE, _load_snapshot
+    from web.core.snapshot_cache import SNAPSHOT_PATH, load_snapshot
 
-    if _DATA_FILE.exists():
+    if SNAPSHOT_PATH.exists():
         snap_age: float | None = None
-        snap = _load_snapshot()
+        snap = load_snapshot()
         if snap:
             snap_age = (
                 datetime.now(tz=timezone.utc)

@@ -8,9 +8,6 @@ Or via:    python ci_monitor.py web
 from __future__ import annotations
 
 import asyncio
-import csv
-import html
-import io
 import json
 import logging
 import os
@@ -20,20 +17,28 @@ import subprocess
 import sys
 import threading
 import time
-from collections import Counter, defaultdict, deque
+from collections import Counter
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
-from urllib.parse import quote, urljoin, urlparse
+from typing import Any
+from urllib.parse import urlparse
 
 import httpx
-import yaml
-from fastapi import FastAPI, Request, HTTPException, Depends, Header
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
+from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from starlette.staticfiles import StaticFiles
 
+
+from web.routes.builds import router as _builds_router
+from web.routes.chat import router as _chat_router
+from web.routes.collect import router as _collect_router
+from web.routes.incident import router as _incident_router
+from web.routes.ops import router as _ops_router
+from web.routes.services import router as _services_router
+from web.routes.settings import router as _settings_router
+from web.routes.tests import router as _tests_router
 
 from models.models import (
     CISnapshot,
@@ -43,64 +48,14 @@ from models.models import (
     normalize_test_status,
 )
 
-from config_migrations import migrate_telegram_notifications
 from web.schemas import MonitorGeneralConfig
 
+from web.core.paths import REPO_ROOT as _REPO_ROOT
+from web.core.config import config_yaml_path as _config_yaml_path, load_yaml_config as _load_yaml_config
+from web.core.auth import require_shared_token
+from web.core import snapshot_cache as _snapshot_cache_mod
+
 logger = logging.getLogger(__name__)
-
-# ── Shared token auth (optional) ────────────────────────────────────────────
-
-def _shared_api_token(cfg: Optional[dict] = None) -> str:
-    """
-    Shared token for protecting sensitive endpoints.
-    Sources (highest priority first):
-    - env: CICD_MON_API_TOKEN
-    - config.yaml: web.api_token
-    If empty, auth is considered disabled (backwards-compatible).
-    """
-    env_tok = (os.getenv("CICD_MON_API_TOKEN") or "").strip()
-    if env_tok:
-        return env_tok
-    if not cfg:
-        try:
-            cfg = _load_yaml_config()
-        except Exception:
-            cfg = None
-    if cfg:
-        w = cfg.get("web", {}) or {}
-        tok = (w.get("api_token") or "").strip()
-        if tok:
-            return tok
-    return ""
-
-
-def _token_from_headers(x_api_token: Optional[str], authorization: Optional[str]) -> str:
-    if x_api_token:
-        return str(x_api_token).strip()
-    if authorization:
-        raw = str(authorization).strip()
-        if raw.lower().startswith("bearer "):
-            return raw.split(" ", 1)[1].strip()
-    return ""
-
-
-async def require_shared_token(
-    request: Request,
-    x_api_token: Optional[str] = Header(default=None, alias="X-API-Token"),
-    authorization: Optional[str] = Header(default=None, alias="Authorization"),
-) -> None:
-    cfg = None
-    try:
-        cfg = _load_yaml_config()
-    except Exception:
-        cfg = None
-    expected = _shared_api_token(cfg)
-    if not expected:
-        # Backwards-compatible: if token is not configured, do not block.
-        return
-    provided = _token_from_headers(x_api_token, authorization)
-    if not provided or provided != expected:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 # Bumped when API surface changes; visible in /api/chat/status so you know the process reloaded.
 _APP_BUILD = "2026-04-03+multi-telegram-ollama"
@@ -149,217 +104,48 @@ except ImportError:
         logger.debug("SQLite module (db.py) not found — running without persistent history")
 
 # ── data helpers ──────────────────────────────────────────────────────────
-_REPO_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
-_DATA_FILE = Path("data") / "snapshot.json"
-_EVENT_FEED_FILE = Path("data") / "event_feed.json"
-_EVENT_FEED_MAX = 500
+_DATA_FILE = _snapshot_cache_mod.SNAPSHOT_PATH
+from web.core import event_feed as _event_feed_mod
+from web.core import trends as _trends_mod
 
-# In-memory snapshot cache: short TTL + invalidation on _data_revision / file mtime (less disk I/O on polling).
-_SNAPSHOT_CACHE_TTL_SEC = 2.0
-_snapshot_cache_snap: CISnapshot | None = None
-_snapshot_cache_rev: int = -1
-_snapshot_cache_mtime: float | None = None
-_snapshot_cache_expires_mono: float = 0.0
+from web.services.build_filters import (
+    config_instance_label as _config_instance_label,
+    inst_label_for_build_with_cfg as _inst_label_for_build_with_cfg,
+    is_snapshot_build_enabled as _is_snapshot_build_enabled,
+)
+from web.services import tests_analytics as _tests_analytics
+from web.services import build_analytics as _build_analytics
+from web.services import trends_uptime as _trends_uptime
+from web.services import correlation as _correlation
+from web.services import exports as _exports
+from web.services.notification_state import NotificationState as _NotificationState
+from web.services.collect_state import CollectState as _CollectState
+from web.services import collect_api as _collect_api
+from web.services import collect_triggers as _collect_triggers
+from web.services import settings_api as _settings_api
+from web.services import ops_actions as _ops_actions
+from web.services import logs_api as _logs_api
+from web.services import webhooks as _webhooks
+from web.services import ai_helpers as _ai_helpers
 
-
-def _invalidate_snapshot_cache() -> None:
-    global _snapshot_cache_snap, _snapshot_cache_rev, _snapshot_cache_mtime, _snapshot_cache_expires_mono
-    _snapshot_cache_snap = None
-    _snapshot_cache_rev = -1
-    _snapshot_cache_mtime = None
-    _snapshot_cache_expires_mono = 0.0
-
-
-def _prime_snapshot_cache(snapshot: CISnapshot, mtime: float | None = None) -> None:
-    global _snapshot_cache_snap, _snapshot_cache_rev, _snapshot_cache_mtime, _snapshot_cache_expires_mono
-    _snapshot_cache_snap = snapshot
-    _snapshot_cache_rev = _data_revision
-    if mtime is None:
-        try:
-            _snapshot_cache_mtime = _DATA_FILE.stat().st_mtime
-        except OSError:
-            _snapshot_cache_mtime = None
-    else:
-        _snapshot_cache_mtime = mtime
-    _snapshot_cache_expires_mono = time.monotonic() + _SNAPSHOT_CACHE_TTL_SEC
+_EVENT_FEED_FILE = _event_feed_mod.EVENT_FEED_PATH
+_EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
 
 
-def _config_yaml_path() -> Path:
-    """Resolve config.yaml: prefer repo root (next to web/), else CWD (uvicorn odd cwd)."""
-    root_cfg = _REPO_ROOT / "config.yaml"
-    if root_cfg.is_file():
-        return root_cfg
-    cwd_cfg = Path("config.yaml")
-    if cwd_cfg.is_file():
-        return cwd_cfg.resolve()
-    return root_cfg
-
-
-def _load_snapshot() -> CISnapshot | None:
-    if not _DATA_FILE.exists():
-        _invalidate_snapshot_cache()
-        return None
-    try:
-        st = _DATA_FILE.stat()
-    except OSError:
-        _invalidate_snapshot_cache()
-        return None
-    mtime = st.st_mtime
-    mon = time.monotonic()
-    if (
-        _snapshot_cache_snap is not None
-        and _snapshot_cache_rev == _data_revision
-        and _snapshot_cache_mtime == mtime
-        and mon < _snapshot_cache_expires_mono
-    ):
-        return _snapshot_cache_snap
-    try:
-        snap = CISnapshot.model_validate_json(_DATA_FILE.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error("Failed to load snapshot: %s", exc)
-        _invalidate_snapshot_cache()
-        return None
-    _prime_snapshot_cache(snap, mtime)
-    return snap
-
-
-async def _load_snapshot_async() -> CISnapshot | None:
-    # Snapshot read+parse can be expensive; keep event loop responsive.
-    return await asyncio.to_thread(_load_snapshot)
-
-
-_HISTORY_FILE = Path("data") / "trends.json"
-_HISTORY_MAX_DAYS = 30
+_HISTORY_FILE = _trends_mod.HISTORY_PATH
+_HISTORY_MAX_DAYS = _trends_mod.HISTORY_MAX_DAYS
 
 
 def _append_trends(snapshot: CISnapshot) -> None:
-    """Append a daily summary bucket to trends.json (one entry per day)."""
-    now = datetime.now(tz=timezone.utc)
-    day_key = now.strftime("%Y-%m-%d")
-
-    try:
-        history: list[dict] = json.loads(_HISTORY_FILE.read_text(encoding="utf-8")) if _HISTORY_FILE.exists() else []
-    except Exception:
-        history = []
-
-    # Remove today's existing entry (will be replaced with fresh data)
-    history = [e for e in history if e.get("date") != day_key]
-
-    # Build per-job failure map
-    job_failures: dict[str, int] = {}
-    job_totals: dict[str, int] = {}
-    for b in snapshot.builds:
-        j = b.job_name
-        job_totals[j] = job_totals.get(j, 0) + 1
-        if b.status_normalized in ("failure", "unstable"):
-            job_failures[j] = job_failures.get(j, 0) + 1
-
-    # Per-test failure counts
-    test_failures: dict[str, int] = {}
-    for t in snapshot.tests:
-        if t.status_normalized in ("failed", "error"):
-            test_failures[t.test_name] = test_failures.get(t.test_name, 0) + 1
-
-    # Per-source breakdowns (for UI filters in Trends)
-    builds_by_source: dict[str, dict[str, int]] = {}
-    builds_by_instance: dict[str, dict[str, int]] = {}
-    cfg_for_inst = None
-    try:
-        cfg_for_inst = _load_yaml_config()
-    except Exception:
-        cfg_for_inst = None
-
-    def _inst_label_for_build_trends(b: object) -> str | None:
-        if not cfg_for_inst:
-            return None
-        return _inst_label_for_build_with_cfg(b, cfg_for_inst)
-
-    for b in snapshot.builds:
-        src = str(getattr(b, "source", "") or "").strip().lower() or "unknown"
-        st = str(getattr(b, "status_normalized", "") or "").strip().lower()
-        rec = builds_by_source.setdefault(src, {"total": 0, "failed": 0})
-        rec["total"] += 1
-        if st in ("failure", "unstable"):
-            rec["failed"] += 1
-
-        inst = _inst_label_for_build_trends(b)
-        if inst:
-            k = f"{src}|{inst}"
-            ir = builds_by_instance.setdefault(k, {"total": 0, "failed": 0})
-            ir["total"] += 1
-            if st in ("failure", "unstable"):
-                ir["failed"] += 1
-
-    def _test_source_group(raw: object) -> str:
-        s = str(raw or "").strip().lower()
-        if not s:
-            return "unknown"
-        # Most test data comes from Jenkins console/allure parsers in this project.
-        if s.startswith("jenkins"):
-            return "jenkins"
-        if s.startswith("gitlab"):
-            return "gitlab"
-        return s
-
-    tests_by_source: dict[str, dict[str, int]] = {}
-    test_failures_by_source: dict[str, dict[str, int]] = {}
-    for t in snapshot.tests:
-        src = _test_source_group(getattr(t, "source", None))
-        st = str(getattr(t, "status_normalized", "") or "").strip().lower()
-        rec = tests_by_source.setdefault(src, {"total": 0, "failed": 0})
-        rec["total"] += 1
-        if st in ("failed", "error"):
-            rec["failed"] += 1
-            tf = test_failures_by_source.setdefault(src, {})
-            name = str(getattr(t, "test_name", "") or "")
-            tf[name] = tf.get(name, 0) + 1
-
-    # Per-service status snapshot (for uptime history)
-    service_health = {s.name: s.status for s in snapshot.services}
-
-    services_down_by_kind: dict[str, int] = {"docker": 0, "http": 0, "other": 0}
-    for s in snapshot.services:
-        if normalize_service_status(s.status) != "down":
-            continue
-        kind = str(getattr(s, "kind", "") or "").strip().lower()
-        if kind == "docker":
-            services_down_by_kind["docker"] += 1
-        elif kind == "http":
-            services_down_by_kind["http"] += 1
-        else:
-            services_down_by_kind["other"] += 1
-
-    history.append({
-        "date": day_key,
-        "ts": now.isoformat(),
-        "builds_total": len(snapshot.builds),
-        "builds_failed": sum(1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")),
-        "tests_total": len(snapshot.tests),
-        "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
-        "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
-        "services_down_by_kind": services_down_by_kind,
-        "service_health": service_health,
-        "builds_by_source": builds_by_source,
-        "builds_by_instance": builds_by_instance,
-        "tests_by_source": tests_by_source,
-        "job_failures": job_failures,
-        "job_totals": job_totals,
-        "top_test_failures": sorted(test_failures.items(), key=lambda x: -x[1])[:20],
-        "top_test_failures_by_source": {
-            src: sorted(m.items(), key=lambda x: -x[1])[:20]
-            for src, m in test_failures_by_source.items()
-        },
-    })
-
-    # Keep only last N days
-    cutoff = (now - timedelta(days=_HISTORY_MAX_DAYS)).strftime("%Y-%m-%d")
-    history = [e for e in history if e.get("date", "") >= cutoff]
-    history.sort(key=lambda e: e.get("date", ""))
-
-    _HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _HISTORY_FILE.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    return _trends_mod.append_trends(
+        snapshot,
+        history_path=_HISTORY_FILE,
+        history_max_days=_HISTORY_MAX_DAYS,
+        load_cfg=_load_yaml_config,
+        inst_label_for_build=_inst_label_for_build_with_cfg,
+    )
 
 
 def save_snapshot(snapshot: CISnapshot) -> None:
@@ -436,85 +222,6 @@ def _maybe_save_partial(snapshot: CISnapshot, *, min_interval_s: float = 2.0, fo
         logger.debug("Partial snapshot save skipped: %s", exc)
 
 
-def _normalize_config(cfg: dict) -> dict:
-    """Migrate legacy single jenkins/gitlab keys to multi-instance lists."""
-    if "jenkins" in cfg and "jenkins_instances" not in cfg:
-        inst = dict(cfg.pop("jenkins"))
-        inst.setdefault("name", "Jenkins")
-        cfg["jenkins_instances"] = [inst]
-    if "gitlab" in cfg and "gitlab_instances" not in cfg:
-        inst = dict(cfg.pop("gitlab"))
-        inst.setdefault("name", "GitLab")
-        cfg["gitlab_instances"] = [inst]
-    migrate_telegram_notifications(cfg)
-    return cfg
-
-
-def _load_yaml_config() -> dict:
-    p = _config_yaml_path()
-    if p.is_file():
-        with p.open(encoding="utf-8") as fh:
-            return _normalize_config(yaml.safe_load(fh) or {})
-    return {}
-
-
-_SETTINGS_SECRET_MASK = "••••••••"
-
-
-def _is_secret_settings_key(key: str) -> bool:
-    lk = key.lower()
-    if lk in ("token", "password", "api_key", "bot_token", "private_token", "secret"):
-        return True
-    if lk == "username":
-        return False
-    for frag in ("password", "api_key", "secret", "token"):
-        if frag in lk:
-            return True
-    return False
-
-
-def _mask_settings_for_response(obj: Any) -> Any:
-    if isinstance(obj, dict):
-        out: dict[str, Any] = {}
-        for k, v in obj.items():
-            if _is_secret_settings_key(k) and isinstance(v, str) and v.strip():
-                out[k] = _SETTINGS_SECRET_MASK
-            else:
-                out[k] = _mask_settings_for_response(v)
-        return out
-    if isinstance(obj, list):
-        return [_mask_settings_for_response(x) for x in obj]
-    return obj
-
-
-def _merge_settings_secrets(incoming: Any, saved: Any) -> Any:
-    """Keep previous secret values when the client sends the mask placeholder or empty."""
-    if isinstance(incoming, dict) and isinstance(saved, dict):
-        out: dict[str, Any] = {}
-        for k, v in incoming.items():
-            sv = saved.get(k)
-            if _is_secret_settings_key(k) and isinstance(v, str):
-                if v == _SETTINGS_SECRET_MASK or (not v.strip() and isinstance(sv, str) and sv.strip()):
-                    out[k] = sv if isinstance(sv, str) else v
-                else:
-                    out[k] = v
-            elif isinstance(v, dict) and isinstance(sv, dict):
-                out[k] = _merge_settings_secrets(v, sv)
-            elif isinstance(v, list) and isinstance(sv, list):
-                merged: list[Any] = []
-                for i, item in enumerate(v):
-                    s_item = sv[i] if i < len(sv) else None
-                    if isinstance(item, dict) and isinstance(s_item, dict):
-                        merged.append(_merge_settings_secrets(item, s_item))
-                    else:
-                        merged.append(item)
-                out[k] = merged
-            else:
-                out[k] = v
-        return out
-    return incoming
-
-
 def _public_settings_payload(cfg: dict) -> dict:
     """Minimal non-secret fields for UI bootstrapping."""
     g = cfg.get("general") or {}
@@ -542,66 +249,15 @@ def _public_settings_payload(cfg: dict) -> dict:
 
 # ── background collection state ───────────────────────────────────────────
 
-_collect_state: dict = {
-    "is_collecting": False,
-    "last_collected_at": None,   # ISO string or None
-    "last_error": None,          # string or None
-    "interval_seconds": 300,
-    # Live progress (best-effort; updated during collect)
-    "started_at": None,          # ISO string or None
-    "phase": None,               # jenkins_builds | jenkins_console | jenkins_allure | gitlab | docker | done
-    "progress_main": None,       # short line for UI
-    "progress_sub": None,        # optional extra line
-    "progress_counts": {},       # {"builds": int, "tests": int, "services": int}
-}
-
-# Ring buffer of recent collect progress lines for the "Logs" dashboard tab.
-_collect_logs: deque[dict[str, Any]] = deque(maxlen=2500)
-_collect_slow: deque[dict[str, Any]] = deque(maxlen=800)
+# Single runtime container for collect status + logs.
+_collect_rt = _CollectState()
+_collect_state = _collect_rt.state
+_collect_logs = _collect_rt.logs
+_collect_slow = _collect_rt.slow
 
 
 def _push_collect_log(phase: str, main: str, sub: str | None = None, level: str = "info") -> None:
-    try:
-        lvl = (level or "info").strip().lower()
-        if lvl not in ("info", "warn", "error"):
-            lvl = "info"
-        instance: str | None = None
-        job: str | None = None
-        m = (main or "").strip()
-        if m.startswith("Jenkins: "):
-            instance = m[len("Jenkins: "):].strip()
-        elif m.startswith("GitLab: "):
-            instance = m[len("GitLab: "):].strip()
-        s = (sub or "").strip()
-        if s.startswith("Console: "):
-            rest = s[len("Console: "):]
-            if " #" in rest:
-                job = rest.split(" #", 1)[0].strip()
-            else:
-                job = rest.strip()
-        elif s.startswith("Allure: "):
-            rest = s[len("Allure: "):]
-            if " #" in rest:
-                job = rest.split(" #", 1)[0].strip()
-            else:
-                job = rest.strip()
-        elif s.startswith("Builds: "):
-            # Format: "Builds: i/total job_name"
-            parts = s.split(" ", 2)
-            if len(parts) == 3:
-                job = parts[2].strip()
-        _collect_logs.append({
-            "ts": datetime.now(tz=timezone.utc).isoformat(),
-            "level": lvl,
-            "phase": phase,
-            "main": main,
-            "sub": sub,
-            "instance": instance,
-            "job": job,
-            "counts": dict(_collect_state.get("progress_counts") or {}),
-        })
-    except Exception:
-        pass
+    return _collect_rt.push_log(phase, main, sub, level)
 # Last collect: per-source health (Jenkins / GitLab / Docker monitor)
 _instance_health: list[dict[str, Any]] = []
 _collect_task: asyncio.Task | None = None
@@ -612,6 +268,10 @@ _auto_collect_enabled_at_iso: str | None = None
 
 # Bumped on each successful save_snapshot — ETag / cache invalidation / SSE clients
 _data_revision: int = 0
+_snapshot_cache_mod.set_snapshot_revision_accessor(lambda: _data_revision)
+_load_snapshot = _snapshot_cache_mod.load_snapshot
+_load_snapshot_async = _snapshot_cache_mod.load_snapshot_async
+_prime_snapshot_cache = _snapshot_cache_mod.prime_snapshot_cache
 _main_loop: asyncio.AbstractEventLoop | None = None
 _sse_queues: set[asyncio.Queue] = set()
 _MEM_CACHE: dict[str, tuple[float, Any]] = {}
@@ -649,126 +309,32 @@ async def _sse_broadcast_async(payload: dict) -> None:
 
 
 def _status_str(b: object) -> str:
-    if isinstance(b, str):
-        return b
-    return getattr(b, "value", str(b))
+    return _build_analytics.status_str(b)
 
 
 def _job_build_analytics(snapshot: CISnapshot) -> dict[str, dict]:
-    """Per job: consecutive failures from latest run, last successful build number."""
-    from collections import defaultdict
-
-    by_job: dict[str, list] = defaultdict(list)
-    for b in snapshot.builds:
-        by_job[b.job_name].append(b)
-
-    out: dict[str, dict] = {}
-    for job, builds in by_job.items():
-
-        def sort_key(bn: object) -> tuple[float, int]:
-            sa = bn.started_at
-            if sa is None:
-                return (0.0, bn.build_number or 0)
-            if sa.tzinfo is None:
-                sa = sa.replace(tzinfo=timezone.utc)
-            return (sa.timestamp(), bn.build_number or 0)
-
-        builds_sorted = sorted(builds, key=sort_key, reverse=True)
-        streak = 0
-        for b in builds_sorted:
-            if b.status_normalized in ("failure", "unstable"):
-                streak += 1
-            else:
-                break
-        last_success_number = None
-        for b in builds_sorted:
-            if b.status_normalized == "success":
-                last_success_number = b.build_number
-                break
-        latest = builds_sorted[0] if builds_sorted else None
-        out[job] = {
-            "consecutive_failures": streak,
-            "last_success_build_number": last_success_number,
-            "latest_status": _status_str(latest.status) if latest else None,
-        }
-    return out
+    return _build_analytics.job_build_analytics(snapshot)
 
 
 def _correlation_last_hour() -> dict:
-    """Build counts + service state-change events in the last hour (from event_feed)."""
-    now = datetime.now(tz=timezone.utc)
-    cutoff = now - timedelta(hours=1)
-    n_builds = 0
-    snap = _load_snapshot()
-    if snap:
-        for b in snap.builds:
-            if not b.started_at:
-                continue
-            st = b.started_at
-            if st.tzinfo is None:
-                st = st.replace(tzinfo=timezone.utc)
-            else:
-                st = st.astimezone(timezone.utc)
-            if st >= cutoff:
-                n_builds += 1
-    n_svc_events = 0
-    for e in _event_feed_load(500):
-        ts_raw = e.get("ts")
-        if not ts_raw:
-            continue
-        try:
-            et = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-            if et.tzinfo is None:
-                et = et.replace(tzinfo=timezone.utc)
-            else:
-                et = et.astimezone(timezone.utc)
-        except Exception:
-            continue
-        if et < cutoff:
-            continue
-        k = str(e.get("kind") or "")
-        if k.startswith("svc_"):
-            n_svc_events += 1
-    return {
-        "pipelines_started_last_hour": n_builds,
-        "service_events_last_hour": n_svc_events,
-    }
+    return _correlation.correlation_last_hour(
+        load_snapshot=_load_snapshot,
+        load_events=_event_feed_load,
+        events_limit=500,
+    )
 
 
 def _trends_compute(days: int) -> list:
-    if not _HISTORY_FILE.exists():
-        return []
-    try:
-        history = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error("Failed to load trends: %s", exc)
-        return []
-    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
-    return [e for e in history if e.get("date", "") >= cutoff]
+    return _trends_uptime.trends_compute(days, history_path=_HISTORY_FILE)
 
 
 def _uptime_compute(days: int) -> dict:
-    if _SQLITE_AVAILABLE:
-        try:
-            result = _db_svc_uptime(days)
-            if result:
-                return result
-        except Exception:
-            pass
-    if not _HISTORY_FILE.exists():
-        return {}
-    try:
-        history = json.loads(_HISTORY_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
-    recent = [e for e in history if e.get("date", "") >= cutoff]
-    result: dict[str, list[dict]] = {}
-    for entry in recent:
-        sh = entry.get("service_health", {})
-        for name, status in sh.items():
-            result.setdefault(name, []).append({"date": entry["date"], "status": status})
-    return result
+    return _trends_uptime.uptime_compute(
+        days,
+        history_path=_HISTORY_FILE,
+        sqlite_available=_SQLITE_AVAILABLE,
+        db_svc_uptime=_db_svc_uptime if _SQLITE_AVAILABLE else None,
+    )
 
 # ── Embedded cursor-api-proxy (Node / npx) ────────────────────────────────
 _cursor_proxy_lock = threading.Lock()
@@ -1359,185 +925,28 @@ def _check_rate_limit(key: str, window: float = _RATE_LIMIT_SECONDS) -> None:
 
 
 # ── State-change notifications ────────────────────────────────────────────
-_notifications: list[dict] = []          # ring-buffer, newest last
-_prev_build_statuses: dict[str, str] = {}
-_prev_svc_statuses: dict[str, str] = {}
-_prev_incident_active: bool = False
-_prev_incident_sig: tuple[int, int, int, bool] = (0, 0, 0, False)  # (failed_builds, failed_tests, down_svcs, has_critical)
-_NOTIFY_MAX = 200
-_notify_id_seq = 0
+_notify_state = _NotificationState(notify_max=200)
 
 
 def _event_feed_slim(entry: dict) -> dict:
-    """Compact record for disk (matches in-app notification shape)."""
-    out: dict = {
-        "id": entry.get("id"),
-        "ts": entry.get("ts"),
-        "kind": entry.get("kind"),
-        "level": entry.get("level"),
-        "title": entry.get("title"),
-        "detail": entry.get("detail"),
-    }
-    if entry.get("url"):
-        out["url"] = entry["url"]
-    if entry.get("critical"):
-        out["critical"] = True
-    return out
+    return _event_feed_mod.slim_event(entry)
 
 
 def _event_feed_append(entries: list[dict]) -> None:
-    """Append state-change events to data/event_feed.json (capped)."""
-    if not entries:
-        return
-    try:
-        _EVENT_FEED_FILE.parent.mkdir(parents=True, exist_ok=True)
-        cur: list = []
-        if _EVENT_FEED_FILE.exists():
-            raw = _EVENT_FEED_FILE.read_text(encoding="utf-8").strip()
-            if raw:
-                cur = json.loads(raw)
-            if not isinstance(cur, list):
-                cur = []
-        for e in entries:
-            cur.append(_event_feed_slim(e))
-        if len(cur) > _EVENT_FEED_MAX:
-            cur = cur[-_EVENT_FEED_MAX :]
-        _EVENT_FEED_FILE.write_text(json.dumps(cur, ensure_ascii=False), encoding="utf-8")
-    except Exception as exc:
-        logger.warning("event_feed append failed: %s", exc)
+    return _event_feed_mod.append_events(entries, path=_EVENT_FEED_FILE, max_entries=_EVENT_FEED_MAX)
 
 
 def _event_feed_load(limit: int = 300) -> list[dict]:
-    """Read newest *limit* persisted events (already chronological in file)."""
-    if not _EVENT_FEED_FILE.exists():
-        return []
-    try:
-        cur = json.loads(_EVENT_FEED_FILE.read_text(encoding="utf-8"))
-        if not isinstance(cur, list):
-            return []
-        return cur[-limit:] if limit > 0 else cur
-    except Exception as exc:
-        logger.debug("event_feed load failed: %s", exc)
-        return []
+    return _event_feed_mod.load_events(limit, path=_EVENT_FEED_FILE)
 
 
 def _detect_state_changes(snapshot: "CISnapshot") -> None:
-    """Diff current snapshot vs previous; append entries to _notifications."""
-    global _prev_build_statuses, _prev_svc_statuses, _prev_incident_active, _prev_incident_sig, _notify_id_seq
-    now_iso = datetime.now(tz=timezone.utc).isoformat()
-    fail_st = {"failure", "unstable"}
-    ok_st = {"success"}
-
-    # Latest build per job (snapshot.builds newest-first)
-    latest: dict[str, object] = {}
-    for b in reversed(snapshot.builds):
-        latest[b.job_name] = b
-
-    for job_name, b in latest.items():
-        prev = _prev_build_statuses.get(job_name)
-        curr = b.status if isinstance(b.status, str) else b.status.value
-        if prev is not None and prev != curr:
-            if curr in fail_st and prev in ok_st:
-                _notify_id_seq += 1
-                ev = {
-                    "id": _notify_id_seq,
-                    "ts": now_iso,
-                    "kind": "build_fail",
-                    "level": "error",
-                    "title": f"Job FAILED: {job_name}",
-                    "detail": f"Status changed {prev} → {curr}",
-                    "url": b.url,
-                    "critical": b.critical,
-                }
-                _notifications.append(ev)
-                _event_feed_append([ev])
-            elif curr in ok_st and prev in fail_st:
-                _notify_id_seq += 1
-                ev = {
-                    "id": _notify_id_seq,
-                    "ts": now_iso,
-                    "kind": "build_recovered",
-                    "level": "ok",
-                    "title": f"Job RECOVERED: {job_name}",
-                    "detail": f"Status changed {prev} → {curr}",
-                    "url": b.url,
-                    "critical": b.critical,
-                }
-                _notifications.append(ev)
-                _event_feed_append([ev])
-        _prev_build_statuses[job_name] = curr
-
-    for svc in snapshot.services:
-        prev = _prev_svc_statuses.get(svc.name)
-        curr = svc.status
-        if prev is not None and prev != curr:
-            if curr == "down" and prev in ("up", "degraded"):
-                _notify_id_seq += 1
-                ev = {
-                    "id": _notify_id_seq,
-                    "ts": now_iso,
-                    "kind": "svc_down",
-                    "level": "error",
-                    "title": f"Service DOWN: {svc.name}",
-                    "detail": f"Was {prev}, now down. {svc.detail or ''}",
-                }
-                _notifications.append(ev)
-                _event_feed_append([ev])
-            elif curr == "up" and prev == "down":
-                _notify_id_seq += 1
-                ev = {
-                    "id": _notify_id_seq,
-                    "ts": now_iso,
-                    "kind": "svc_recovered",
-                    "level": "ok",
-                    "title": f"Service UP: {svc.name}",
-                    "detail": f"Recovered from {prev}",
-                }
-                _notifications.append(ev)
-                _event_feed_append([ev])
-        _prev_svc_statuses[svc.name] = curr
-
-    # Incident (aggregate) notification: emit once when an incident first appears.
-    try:
-        failed_builds = sum(1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st)
-        failed_tests = sum(1 for t in snapshot.tests if getattr(t, "status_normalized", None) in ("failed", "error"))
-        down_svcs = sum(1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down")
-        has_critical = any(
-            getattr(b, "critical", False) and getattr(b, "status_normalized", None) in fail_st
-            for b in snapshot.builds
-        )
-        active = (failed_builds > 0) or (failed_tests > 0) or (down_svcs > 0)
-        sig = (failed_builds, failed_tests, down_svcs, bool(has_critical))
-        if active and not _prev_incident_active:
-            _notify_id_seq += 1
-            lvl = "error" if (down_svcs > 0 or has_critical) else "warn"
-            ev = {
-                "id": _notify_id_seq,
-                "ts": now_iso,
-                "kind": "incident",
-                "level": lvl,
-                "title": "Incident detected",
-                "detail": f"Failed builds: {failed_builds}, failed tests: {failed_tests}, services down: {down_svcs}",
-                "url": "/?tab=incidents",
-                "critical": bool(has_critical) or (down_svcs > 0),
-            }
-            _notifications.append(ev)
-            _event_feed_append([ev])
-        _prev_incident_active = active
-        _prev_incident_sig = sig
-    except Exception:
-        # Never block build/service notifications on incident aggregation.
-        pass
-
-    # Trim ring-buffer
-    if len(_notifications) > _NOTIFY_MAX:
-        del _notifications[:len(_notifications) - _NOTIFY_MAX]
+    _notify_state.apply(snapshot, append_event=_event_feed_append)
 
 
 def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
     """Full collection — runs in a thread-pool executor (blocking)."""
     from clients.jenkins_client import JenkinsClient
-    from clients.gitlab_client import GitLabClient
     from parsers.pytest_parser import PytestXMLParser
     from parsers.allure_parser import AllureJsonParser
     from docker_monitor.monitor import DockerMonitor
@@ -2225,126 +1634,6 @@ def _rid(request: Request | None) -> str:
     return getattr(request.state, "request_id", "-")
 
 
-def _config_instance_label(inst: dict[str, Any], *, kind: str) -> str:
-    """Stable label for a jenkins_instances / gitlab_instances entry (merge + UI grouping)."""
-    n = str(inst.get("name") or "").strip()
-    if n:
-        return n[:240]
-    u = str(inst.get("url") or "").strip()
-    if u:
-        try:
-            net = urlparse(u).netloc
-            return (net or u.rstrip("/"))[:240]
-        except Exception:
-            return u[:240]
-    return "Jenkins" if kind == "jenkins" else "GitLab"
-
-
-def _enabled_ci_bases(cfg: dict[str, Any], kind: str) -> list[str]:
-    insts = cfg.get(f"{kind}_instances", []) or []
-    out: list[str] = []
-    for inst in insts:
-        if not inst.get("enabled", True):
-            continue
-        u = str(inst.get("url", "") or "").strip()
-        if u:
-            out.append(u.rstrip("/"))
-    return out
-
-
-def _build_url_matches_ci_bases(b: Any, bases: list[str]) -> bool:
-    """Whether build.url belongs to one of the configured instance roots.
-
-    Jenkins sometimes returns a *path-only* URL (``/job/...``); resolve it against
-    each enabled base so those builds are not dropped by the dashboard filter.
-    """
-    if not bases:
-        return False
-    bu_raw = str(getattr(b, "url", None) or "").strip()
-    if not bu_raw:
-        return True
-    bu = bu_raw.rstrip("/")
-    bl = bu.lower()
-    for base in bases:
-        br = str(base).rstrip("/")
-        if not br:
-            continue
-        brl = br.lower()
-        if bu.startswith(br) or bl.startswith(brl):
-            return True
-        if bu_raw.startswith("/"):
-            try:
-                joined = urljoin(br + "/", bu_raw).rstrip("/").lower()
-                if joined.startswith(brl):
-                    return True
-            except Exception:
-                pass
-    return False
-
-
-def _is_snapshot_build_enabled(b: Any, cfg: dict[str, Any]) -> bool:
-    try:
-        src = (b.source or "").lower()
-    except Exception:
-        return True
-    if src == "jenkins":
-        bases = _enabled_ci_bases(cfg, "jenkins")
-        return _build_url_matches_ci_bases(b, bases)
-    if src == "gitlab":
-        bases = _enabled_ci_bases(cfg, "gitlab")
-        return _build_url_matches_ci_bases(b, bases)
-    return True
-
-
-def _inst_label_for_build_with_cfg(b: Any, cfg: dict[str, Any]) -> str | None:
-    """Instance column / filter label: prefer ``source_instance``, else URL → config match."""
-    try:
-        stored = getattr(b, "source_instance", None)
-    except Exception:
-        stored = None
-    if isinstance(stored, str) and stored.strip():
-        return stored.strip()
-    try:
-        src = (b.source or "").lower()
-    except Exception:
-        return None
-    try:
-        bu = (b.url or "").rstrip("/")
-    except Exception:
-        bu = ""
-    if src == "jenkins":
-        for inst in (cfg.get("jenkins_instances", []) or []):
-            if not inst.get("enabled", True):
-                continue
-            base = str(inst.get("url", "") or "").rstrip("/")
-            if base and bu.startswith(base):
-                return _config_instance_label(inst, kind="jenkins")
-            if base and bu.startswith("/"):
-                try:
-                    joined = urljoin(base + "/", str(getattr(b, "url", None) or "").strip())
-                    if joined.rstrip("/").startswith(base):
-                        return _config_instance_label(inst, kind="jenkins")
-                except Exception:
-                    pass
-        return None
-    if src == "gitlab":
-        for inst in (cfg.get("gitlab_instances", []) or []):
-            if not inst.get("enabled", True):
-                continue
-            base = str(inst.get("url", "") or "").rstrip("/")
-            if base and bu.startswith(base):
-                return _config_instance_label(inst, kind="gitlab")
-            if base and bu.startswith("/"):
-                try:
-                    joined = urljoin(base + "/", str(getattr(b, "url", None) or "").strip())
-                    if joined.rstrip("/").startswith(base):
-                        return _config_instance_label(inst, kind="gitlab")
-                except Exception:
-                    pass
-        return None
-    return None
-
-
 # ── REST endpoints ────────────────────────────────────────────────────────
 
 @app.get("/api/status", response_class=JSONResponse)
@@ -2681,80 +1970,17 @@ def _aggregate_top_failing_tests(
     name_sub: str = "",
     message_max: int = 300,
 ) -> list[dict[str, Any]]:
-    """Group failed/error runs by test_name; pick error text from the latest run that has one.
-
-    Key includes source_instance + parser source so "real" mode doesn't mix different parsers.
-    """
-    by_name: dict[str, list[Any]] = defaultdict(list)
-    for t in tests:
-        if t.status_normalized in ("failed", "error"):
-            inst = getattr(t, "source_instance", None) or ""
-            src = getattr(t, "source", None) or "unknown"
-            key = f"{inst}::{src}::{t.test_name}"
-            by_name[key].append(t)
-
-    def _ts(rec: Any) -> datetime:
-        ts = rec.timestamp
-        if ts is None:
-            return datetime.min.replace(tzinfo=timezone.utc)
-        if ts.tzinfo is None:
-            return ts.replace(tzinfo=timezone.utc)
-        return ts.astimezone(timezone.utc)
-
-    rows: list[dict[str, Any]] = []
-    no_detail = "(no failure text in report)"
-    for key, recs in by_name.items():
-        recs_sorted = sorted(recs, key=_ts, reverse=True)
-        latest = recs_sorted[0]
-        inst = ""
-        src = None
-        tname = key
-        if "::" in key:
-            parts = key.split("::", 2)
-            inst = parts[0] if len(parts) > 0 else ""
-            src = parts[1] if len(parts) > 1 else None
-            tname = parts[2] if len(parts) > 2 else key
-        suite_val = latest.suite
-        msg: str | None = None
-        for r in recs_sorted:
-            fm = r.failure_message
-            if fm and str(fm).strip().lower() != "null":
-                msg = str(fm).strip()
-                break
-        if not msg:
-            msg = no_detail
-        if message_max > 0 and len(msg) > message_max:
-            msg = msg[:message_max]
-        rows.append({
-            "source_instance": inst or None,
-            "source": src or getattr(latest, "source", None) or None,
-            "test_name": tname,
-            "count": len(recs),
-            "suite": suite_val,
-            "message": msg,
-        })
-
-    rows.sort(key=lambda x: (-x["count"], x["test_name"]))
-    rows = rows[:top_n]
-
-    if suite_sub:
-        sl = suite_sub.lower()
-        rows = [r for r in rows if sl in (r.get("suite") or "").lower()]
-    if name_sub:
-        nl = name_sub.lower()
-        rows = [r for r in rows if nl in r["test_name"].lower()]
-    return rows
+    return _tests_analytics.aggregate_top_failing_tests(
+        tests,
+        top_n=top_n,
+        suite_sub=suite_sub,
+        name_sub=name_sub,
+        message_max=message_max,
+    )
 
 
 def _filter_tests_by_source(items: list[Any], source: str) -> list[Any]:
-    s = (source or "").strip().lower()
-    if not s:
-        return items
-    if s == "synthetic":
-        return [t for t in items if (t.source or "").strip().lower() == "jenkins_build"]
-    if s == "real":
-        return [t for t in items if (t.source or "").strip().lower() != "jenkins_build"]
-    return [t for t in items if (t.source or "").strip().lower() == s]
+    return _tests_analytics.filter_tests_by_source(items, source)
 
 
 def _filter_tests_by_lookback_hours(
@@ -2763,50 +1989,11 @@ def _filter_tests_by_lookback_hours(
     hours: int = 0,
     days: int = 0,
 ) -> list[Any]:
-    """Keep tests whose timestamp falls within the lookback window (UTC). days overrides hours if both set."""
-    lookback_h = 0
-    if days and int(days) > 0:
-        lookback_h = int(days) * 24
-    elif hours and int(hours) > 0:
-        lookback_h = int(hours)
-    if lookback_h <= 0:
-        return list(tests)
-
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=lookback_h)
-
-    def _ts(rec: Any) -> datetime:
-        ts = getattr(rec, "timestamp", None)
-        if ts is None:
-            return datetime.min.replace(tzinfo=timezone.utc)
-        if ts.tzinfo is None:
-            return ts.replace(tzinfo=timezone.utc)
-        return ts.astimezone(timezone.utc)
-
-    return [t for t in tests if _ts(t) >= cutoff]
+    return _tests_analytics.filter_tests_by_lookback_hours(tests, hours=hours, days=days)
 
 
 def _tests_breakdown_real_vs_synth(items: list[Any]) -> dict[str, int]:
-    real_total = 0
-    real_failed = 0
-    syn_total = 0
-    syn_failed = 0
-    for t in items:
-        src = (t.source or "").strip().lower()
-        is_syn = (src == "jenkins_build")
-        if is_syn:
-            syn_total += 1
-            if t.status_normalized in ("failed", "error"):
-                syn_failed += 1
-        else:
-            real_total += 1
-            if t.status_normalized in ("failed", "error"):
-                real_failed += 1
-    return {
-        "real_total": real_total,
-        "real_failed": real_failed,
-        "synthetic_total": syn_total,
-        "synthetic_failed": syn_failed,
-    }
+    return _tests_analytics.tests_breakdown_real_vs_synth(items)
 
 async def api_tests(
     page: int = 1,
@@ -3098,8 +2285,8 @@ async def api_notifications(since_id: int = 0, limit: int = 50):
     """Return state-change notifications (OK→FAIL / FAIL→OK).
     since_id=0 returns all; pass the last seen id to get only new ones.
     """
-    items = [n for n in _notifications if n["id"] > since_id]
-    return {"items": items[-limit:], "total": len(items), "max_id": _notify_id_seq}
+    items = [n for n in _notify_state.notifications if n["id"] > since_id]
+    return {"items": items[-limit:], "total": len(items), "max_id": _notify_state.notify_id_seq}
 
 
 @app.get("/api/events/persisted", response_class=JSONResponse)
@@ -3138,46 +2325,11 @@ async def api_analytics_flaky(
 # ── CSV / XLSX Export ─────────────────────────────────────────────────────
 
 def _to_csv_bytes(headers: list[str], rows: list[list]) -> bytes:
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(headers)
-    w.writerows(rows)
-    return buf.getvalue().encode("utf-8-sig")   # BOM for Excel
+    return _exports.to_csv_bytes(headers, rows)
 
 
 def _to_xlsx_bytes(headers: list[str], rows: list[list], sheet_name: str = "Data") -> bytes:
-    try:
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment
-    except ImportError:
-        raise HTTPException(501, "openpyxl not installed — install it with: pip install openpyxl")
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = sheet_name
-
-    # Header row
-    for col_idx, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_idx, value=h)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="1E293B")
-        cell.alignment = Alignment(horizontal="center")
-
-    for row_idx, row in enumerate(rows, 2):
-        for col_idx, val in enumerate(row, 1):
-            # Excel does not support timezone-aware datetimes — strip tzinfo
-            if hasattr(val, "tzinfo") and val.tzinfo is not None:
-                val = val.replace(tzinfo=None)
-            ws.cell(row=row_idx, column=col_idx, value=val)
-
-    # Auto-width columns (capped at 60)
-    for col in ws.columns:
-        max_len = max((len(str(c.value or "")) for c in col), default=8)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 60)
-
-    buf = io.BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
+    return _exports.to_xlsx_bytes(headers, rows, sheet_name)
 
 
 async def export_builds(
@@ -3187,40 +2339,13 @@ async def export_builds(
     job: str = "",
     hours: int = 0,
 ):
-    """Export build records as CSV or XLSX. ?fmt=csv|xlsx"""
-    snap = _load_snapshot()
-    if not snap:
-        raise HTTPException(404, "No snapshot data")
-
-    items = snap.builds
-    if source:
-        items = [b for b in items if b.source.lower() == source.lower()]
-    if status:
-        want = normalize_build_status(status)
-        items = [b for b in items if b.status_normalized == want]
-    if job:
-        items = [b for b in items if job.lower() in b.job_name.lower()]
-    if hours > 0:
-        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
-        items = [b for b in items if b.started_at and
-                 b.started_at.replace(tzinfo=timezone.utc if b.started_at.tzinfo is None else b.started_at.tzinfo) >= cutoff]
-
-    headers = ["source", "job_name", "build_number", "status", "branch", "started_at", "duration_seconds", "critical", "url"]
-    rows = [[getattr(b, h, "") or "" for h in headers] for b in items]
-    date_str = datetime.now().strftime("%Y%m%d_%H%M")
-
-    if fmt.lower() == "xlsx":
-        data = _to_xlsx_bytes(headers, rows, "Builds")
-        return Response(
-            content=data,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=builds_{date_str}.xlsx"},
-        )
-    data = _to_csv_bytes(headers, rows)
-    return Response(
-        content=data,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=builds_{date_str}.csv"},
+    return await _exports.export_builds(
+        load_snapshot=_load_snapshot,
+        fmt=fmt,
+        source=source,
+        status=status,
+        job=job,
+        hours=hours,
     )
 
 
@@ -3232,42 +2357,14 @@ async def export_tests(
     hours: int = 0,
     source: str = "",
 ):
-    """Export test records as CSV or XLSX. ?fmt=csv|xlsx"""
-    snap = _load_snapshot()
-    if not snap:
-        raise HTTPException(404, "No snapshot data")
-
-    items = snap.tests
-    if status:
-        want = normalize_test_status(status)
-        items = [t for t in items if t.status_normalized == want]
-    if suite:
-        items = [t for t in items if suite.lower() in (t.suite or "").lower()]
-    if name:
-        items = [t for t in items if name.lower() in t.test_name.lower()]
-    if hours > 0:
-        cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
-        items = [t for t in items if t.timestamp and
-                 t.timestamp.replace(tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo) >= cutoff]
-    if source:
-        items = _filter_tests_by_source(items, source)
-
-    headers = ["source", "suite", "test_name", "status", "duration_seconds", "timestamp", "failure_message", "file_path"]
-    rows = [[getattr(t, h, "") or "" for h in headers] for t in items]
-    date_str = datetime.now().strftime("%Y%m%d_%H%M")
-
-    if fmt.lower() == "xlsx":
-        data = _to_xlsx_bytes(headers, rows, "Tests")
-        return Response(
-            content=data,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=tests_{date_str}.xlsx"},
-        )
-    data = _to_csv_bytes(headers, rows)
-    return Response(
-        content=data,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=tests_{date_str}.csv"},
+    return await _exports.export_tests(
+        load_snapshot=_load_snapshot,
+        fmt=fmt,
+        status=status,
+        suite=suite,
+        name=name,
+        hours=hours,
+        source=source,
     )
 
 
@@ -3280,67 +2377,25 @@ async def export_failures(
     hours: int = 0,
     days: int = 0,
 ):
-    """Export top-failures aggregation as CSV or XLSX. ?fmt=csv|xlsx"""
-    snap = _load_snapshot()
-    if not snap:
-        raise HTTPException(404, "No snapshot data")
-
-    tests_win = _filter_tests_by_lookback_hours(snap.tests, hours=int(hours or 0), days=int(days or 0))
-    agg = _aggregate_top_failing_tests(
-        _filter_tests_by_source(tests_win, source),
-        top_n=n,
-        suite_sub=suite,
-        name_sub=name,
-        message_max=500,
-    )
-    all_items = [(r["test_name"], r["count"], r.get("suite") or "", r.get("message") or "") for r in agg]
-
-    headers = ["test_name", "failure_count", "suite", "last_error"]
-    rows = [[i[0], i[1], i[2], i[3]] for i in all_items]
-    date_str = datetime.now().strftime("%Y%m%d_%H%M")
-
-    if fmt.lower() == "xlsx":
-        data = _to_xlsx_bytes(headers, rows, "Failures")
-        return Response(
-            content=data,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=failures_{date_str}.xlsx"},
-        )
-    data = _to_csv_bytes(headers, rows)
-    return Response(
-        content=data,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=failures_{date_str}.csv"},
+    return await _exports.export_failures(
+        load_snapshot=_load_snapshot,
+        fmt=fmt,
+        n=n,
+        suite=suite,
+        name=name,
+        source=source,
+        hours=hours,
+        days=days,
     )
 
 
 async def collect_status():
     """Return background collection state."""
-    # When auto-collect was enabled but we haven't collected yet, estimate ETA from enable time.
-    next_in = None
-    if _auto_collect_enabled and not _collect_state.get("is_collecting"):
-        interval = int(_collect_state.get("interval_seconds") or 300)
-        if _collect_state.get("last_collected_at"):
-            next_in = max(0, interval - int(
-                (datetime.now(tz=timezone.utc) -
-                 datetime.fromisoformat(_collect_state["last_collected_at"]))
-                .total_seconds()
-            ))
-        elif _auto_collect_enabled_at_iso:
-            try:
-                enabled_at = datetime.fromisoformat(str(_auto_collect_enabled_at_iso))
-                if enabled_at.tzinfo is None:
-                    enabled_at = enabled_at.replace(tzinfo=timezone.utc)
-                else:
-                    enabled_at = enabled_at.astimezone(timezone.utc)
-                next_in = max(0, interval - int((datetime.now(tz=timezone.utc) - enabled_at).total_seconds()))
-            except Exception:
-                next_in = None
-    return {
-        **_collect_state,
-        "auto_collect_enabled": bool(_auto_collect_enabled),
-        "next_collect_in_seconds": next_in,
-    }
+    return _collect_api.collect_status_payload(
+        collect_state=_collect_state,
+        auto_collect_enabled=_auto_collect_enabled,
+        auto_collect_enabled_at_iso=_auto_collect_enabled_at_iso,
+    )
 
 
 async def set_auto_collect(request: Request):
@@ -3354,7 +2409,7 @@ async def set_auto_collect(request: Request):
         body = await request.json()
     except Exception:
         body = {}
-    enabled = bool(isinstance(body, dict) and body.get("enabled") in (True, "true", "1", 1))
+    enabled = _collect_api.parse_enabled(body)
     _auto_collect_enabled = enabled
     global _auto_collect_enabled_at_iso
     _auto_collect_enabled_at_iso = datetime.now(tz=timezone.utc).isoformat() if enabled else None
@@ -3375,31 +2430,12 @@ async def collect_logs(limit: int = 400, offset: int = 0):
     Recent collect progress lines for UI live log view.
     Returns {items:[...], total:int}
     """
-    try:
-        lim = max(1, min(2000, int(limit)))
-    except Exception:
-        lim = 400
-    try:
-        off = max(0, int(offset))
-    except Exception:
-        off = 0
-    items = list(_collect_logs)
-    total = len(items)
-    if off:
-        items = items[off:]
-    items = items[-lim:]
-    return {"items": items, "total": total}
+    return _collect_rt.collect_logs(limit=limit, offset=offset)
 
 
 async def collect_slow(limit: int = 10):
     """Top slow (job/build) operations observed during current collect."""
-    try:
-        lim = max(1, min(100, int(limit)))
-    except Exception:
-        lim = 10
-    items = list(_collect_slow)
-    items.sort(key=lambda x: int(x.get("elapsed_ms") or 0), reverse=True)
-    return {"items": items[:lim]}
+    return _collect_rt.collect_slow(limit=limit)
 
 
 async def trigger_collect(request: Request):
@@ -3411,75 +2447,62 @@ async def trigger_collect(request: Request):
     force_full = False
     try:
         body = await request.json()
-        if isinstance(body, dict) and body.get("force_full") in (True, "true", "1", 1):
-            force_full = True
+        force_full = _collect_triggers.parse_force_full(body)
     except Exception:
         force_full = False
     cfg = _load_yaml_config()
     logger.info("[%s] manual collect started", rid)
     asyncio.create_task(_do_collect(cfg, force_full=force_full))
-    return {"ok": True, "message": "Collection started."}
+    return _collect_triggers.started_payload()
 
 
 async def api_get_settings():
     """Return config for the settings UI — secrets are masked; use POST with same shape to save."""
-    return _mask_settings_for_response(_load_yaml_config())
+    return _settings_api.get_settings(_load_yaml_config())
 
 
 async def api_get_settings_public():
     """Minimal non-secret fields (safe for embedding / diagnostics)."""
-    return _public_settings_payload(_load_yaml_config())
+    return _settings_api.get_settings_public(_public_settings_payload, _load_yaml_config())
 
 
 async def api_save_settings(request: Request):
     """Persist new settings to config.yaml and restart the collect loop."""
     global _collect_task
-    try:
-        new_cfg = await request.json()
-    except Exception:
-        raise HTTPException(400, "Invalid JSON payload")
 
-    saved = _load_yaml_config()
-    merged = _merge_settings_secrets(new_cfg, saved)
+    async def _cancel_collect_task() -> None:
+        global _collect_task
+        if _collect_task and not _collect_task.done():
+            _collect_task.cancel()
+            try:
+                await _collect_task
+            except asyncio.CancelledError:
+                pass
+            _collect_task = None
 
-    p = _config_yaml_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("w", encoding="utf-8") as fh:
-        yaml.dump(merged, fh, allow_unicode=True, default_flow_style=False, sort_keys=False)
-    logger.info("Settings saved to %s", p.resolve())
+    def _set_collect_state_after_save(merged: dict) -> None:
+        _collect_state["is_collecting"] = False
+        _collect_state["last_error"] = None
+        w_cfg = merged.get("web", {})
+        _collect_state["interval_seconds"] = int(w_cfg.get("collect_interval_seconds", 300))
 
-    # Cancel the running collect loop
-    if _collect_task and not _collect_task.done():
-        _collect_task.cancel()
-        try:
-            await _collect_task
-        except asyncio.CancelledError:
-            pass
-        _collect_task = None
+    def _restart_collect_after_save(merged: dict) -> None:
+        global _collect_task
+        w_cfg = merged.get("web", {})
+        if w_cfg.get("auto_collect", True):
+            _collect_task = asyncio.create_task(_collect_loop(merged))
+        else:
+            asyncio.create_task(_do_collect(merged, force_full=False))
 
-    _collect_state["is_collecting"] = False
-    _collect_state["last_error"] = None
-
-    # Restart collect loop with updated config
-    w_cfg = merged.get("web", {})
-    interval = int(w_cfg.get("collect_interval_seconds", 300))
-    _collect_state["interval_seconds"] = interval
-    if w_cfg.get("auto_collect", True):
-        _collect_task = asyncio.create_task(_collect_loop(merged))
-    else:
-        asyncio.create_task(_do_collect(merged, force_full=False))
-
-    msg = "Settings saved. Collection restarted with the new configuration."
-    cursor_proxy: dict = {}
-    try:
-        cursor_proxy = await asyncio.to_thread(sync_cursor_proxy_from_config, merged)
-        if cursor_proxy.get("message"):
-            msg += " " + cursor_proxy["message"]
-    except Exception as exc:
-        logger.warning("sync_cursor_proxy_from_config after save: %s", exc)
-        cursor_proxy = {"managed": False, "ok": False, "message": str(exc)}
-
-    return {"ok": True, "message": msg, "cursor_proxy": cursor_proxy}
+    return await _settings_api.save_settings_and_restart_collect(
+        request_json=request.json,
+        load_cfg=_load_yaml_config,
+        config_yaml_path=_config_yaml_path,
+        cancel_collect_task=_cancel_collect_task,
+        set_collect_state_after_save=_set_collect_state_after_save,
+        restart_collect_after_save=_restart_collect_after_save,
+        sync_cursor_proxy=lambda cfg: asyncio.to_thread(sync_cursor_proxy_from_config, cfg),
+    )
 
 
 def _ui_lang_from_config() -> str:
@@ -3512,22 +2535,6 @@ async def settings_page(request: Request):
 
 # ── Action endpoints (trigger builds / restart containers) ────────────────
 
-def _find_jenkins_instance(cfg: dict, url_hint: str) -> dict | None:
-    """Find a Jenkins instance from config that matches the given URL prefix."""
-    for inst in cfg.get("jenkins_instances", []):
-        if inst.get("url", "").rstrip("/") == url_hint.rstrip("/"):
-            return inst
-    insts = cfg.get("jenkins_instances", [])
-    return insts[0] if insts else None
-
-
-def _find_gitlab_instance(cfg: dict, url_hint: str) -> dict | None:
-    for inst in cfg.get("gitlab_instances", []):
-        if inst.get("url", "").rstrip("/") == url_hint.rstrip("/"):
-            return inst
-    insts = cfg.get("gitlab_instances", [])
-    return insts[0] if insts else None
-
 
 @app.post("/api/action/jenkins/build", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
 async def action_jenkins_build(request: Request):
@@ -3543,21 +2550,9 @@ async def action_jenkins_build(request: Request):
     _check_rate_limit(f"jenkins:{job_name}")
     logger.info("[%s] action jenkins build job=%s", rid, job_name)
 
-    cfg = _load_yaml_config()
-    inst = _find_jenkins_instance(cfg, instance_url)
-    if not inst:
-        raise HTTPException(404, "No Jenkins instance found in config")
-
-    from clients.jenkins_client import JenkinsClient
     try:
-        client = JenkinsClient(
-            url=inst["url"],
-            username=inst.get("username", ""),
-            token=inst.get("token", ""),
-            verify_ssl=bool(inst.get("verify_ssl", True)),
-        )
-        result = client.trigger_build(job_name)
-        return result
+        cfg = _load_yaml_config()
+        return _ops_actions.trigger_jenkins_build(cfg=cfg, job_name=job_name, instance_url=instance_url)
     except Exception as exc:
         logger.error("Jenkins trigger failed: %s", exc)
         raise HTTPException(500, f"Failed to trigger build: {exc}")
@@ -3578,20 +2573,11 @@ async def action_gitlab_pipeline(request: Request):
     _check_rate_limit(f"gitlab:{project_id}:{ref}")
     logger.info("[%s] action gitlab pipeline project=%s ref=%s", rid, project_id, ref)
 
-    cfg = _load_yaml_config()
-    inst = _find_gitlab_instance(cfg, instance_url)
-    if not inst:
-        raise HTTPException(404, "No GitLab instance found in config")
-
-    from clients.gitlab_client import GitLabClient
     try:
-        client = GitLabClient(
-            url=inst.get("url", "https://gitlab.com"),
-            token=inst.get("token", ""),
-            verify_ssl=bool(inst.get("verify_ssl", True)),
+        cfg = _load_yaml_config()
+        return _ops_actions.trigger_gitlab_pipeline(
+            cfg=cfg, project_id=project_id, ref=ref, instance_url=instance_url
         )
-        result = client.trigger_pipeline(project_id, ref=ref)
-        return result
     except Exception as exc:
         logger.error("GitLab trigger failed: %s", exc)
         raise HTTPException(500, f"Failed to trigger pipeline: {exc}")
@@ -3613,9 +2599,8 @@ async def action_docker_container(request: Request):
     _check_rate_limit(f"docker:{container_name}:{action}", window=5)
     logger.info("[%s] action docker %s %s", rid, action, container_name)
 
-    from docker_monitor.monitor import DockerMonitor
     try:
-        return DockerMonitor.container_action(container_name, action)
+        return _ops_actions.docker_container_action(container_name=container_name, action=action)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
@@ -3630,9 +2615,8 @@ async def action_docker_restart(request: Request):
     container_name = body.get("container_name", "")
     if not container_name:
         raise HTTPException(400, "container_name is required")
-    from docker_monitor.monitor import DockerMonitor
     try:
-        return DockerMonitor.container_action(container_name, "restart")
+        return _ops_actions.docker_container_action(container_name=container_name, action="restart")
     except Exception as exc:
         logger.error("Docker restart failed: %s", exc)
         raise HTTPException(500, f"Failed to restart container: {exc}") from exc
@@ -3651,29 +2635,9 @@ async def api_logs_jenkins(
     logger.info("[%s] GET jenkins log %s #%s", _rid(request), job_name, build_number)
 
     cfg = _load_yaml_config()
-    if instance_url:
-        inst = _find_jenkins_instance(cfg, instance_url)
-        insts = [inst] if inst else []
-    else:
-        insts = [i for i in cfg.get("jenkins_instances", []) if i.get("enabled", True)]
-
-    last_err: str | None = None
-    from clients.jenkins_client import JenkinsClient
-    for inst in insts:
-        try:
-            client = JenkinsClient(
-                url=inst["url"],
-                username=inst.get("username", ""),
-                token=inst.get("token", ""),
-                verify_ssl=bool(inst.get("verify_ssl", True)),
-            )
-            text = client.fetch_console_text(job_name, build_number)
-            return {"ok": True, "log": text, "instance": inst.get("url", "")}
-        except Exception as exc:
-            last_err = str(exc)
-            logger.debug("Jenkins log for %s #%s on %s: %s", job_name, build_number, inst.get("url"), exc)
-
-    raise HTTPException(502, detail=last_err or "Could not fetch Jenkins console log")
+    return _logs_api.fetch_jenkins_log(
+        cfg=cfg, job_name=job_name, build_number=build_number, instance_url=instance_url
+    )
 
 
 @app.get("/api/logs/gitlab", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
@@ -3687,27 +2651,9 @@ async def api_logs_gitlab(
     logger.info("[%s] GET gitlab log %s pipeline %s", _rid(request), project_id, pipeline_id)
 
     cfg = _load_yaml_config()
-    if instance_url:
-        inst = _find_gitlab_instance(cfg, instance_url)
-        insts = [inst] if inst else []
-    else:
-        insts = [i for i in cfg.get("gitlab_instances", []) if i.get("enabled", True)]
-
-    last_err: str | None = None
-    from clients.gitlab_client import GitLabClient
-    for inst in insts:
-        try:
-            client = GitLabClient(
-                url=inst.get("url", "https://gitlab.com"),
-                token=inst.get("token", ""),
-            )
-            text = client.fetch_pipeline_logs(project_id, pipeline_id)
-            return {"ok": True, "log": text, "instance": inst.get("url", "")}
-        except Exception as exc:
-            last_err = str(exc)
-            logger.debug("GitLab log pipeline %s on %s: %s", pipeline_id, inst.get("url"), exc)
-
-    raise HTTPException(502, detail=last_err or "Could not fetch GitLab pipeline logs")
+    return _logs_api.fetch_gitlab_log(
+        cfg=cfg, project_id=project_id, pipeline_id=pipeline_id, instance_url=instance_url
+    )
 
 
 @app.get("/api/logs/diff", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
@@ -3722,118 +2668,16 @@ async def api_logs_diff(
     tag: '+' added, '-' removed, ' ' unchanged, '?' context only shown
     """
     _check_rate_limit(f"diff:{source}:{job_name}:{build_number}", window=5)
-    import difflib
-
-    # Reference build from snapshot: prefer last successful, else last any other build.
-    # If snapshot doesn't contain *any* other build for this job, we may fall back to the CI API
-    # (at least for Jenkins) because snapshot typically stores only the latest build per job.
-    snap = _load_snapshot()
-    if snap is None:
-        raise HTTPException(404, "No snapshot data")
-
-    def _same_job_rows() -> list:
-        return [
-            b
-            for b in snap.builds
-            if b.source.lower() == source.lower()
-            and b.job_name == job_name
-            and b.build_number != build_number
-        ]
-
-    prev_build_number: int | None = None
-    reference_kind = ""
-    reference_status: str | None = None
-
-    same_job_success = [b for b in _same_job_rows() if b.status_normalized == "success"]
-    same_job_any = _same_job_rows()
-    if same_job_success:
-        same_job_success.sort(key=lambda b: b.started_at or datetime.min, reverse=True)
-        prev_build_number = int(same_job_success[0].build_number)
-        reference_kind = "last_success"
-        reference_status = same_job_success[0].status
-    elif same_job_any:
-        same_job_any.sort(key=lambda b: b.started_at or datetime.min, reverse=True)
-        prev_build_number = int(same_job_any[0].build_number)
-        reference_kind = "last_build"
-        reference_status = same_job_any[0].status
-
-    cur_text = prev_text = ""
     cfg = _load_yaml_config()
-    last_fetch_err: str | None = None
-
-    if source.lower() == "jenkins":
-        from clients.jenkins_client import JenkinsClient
-        insts = ([_find_jenkins_instance(cfg, instance_url)] if instance_url else
-                 [i for i in cfg.get("jenkins_instances", []) if i.get("enabled", True)])
-        for inst in (i for i in insts if i):
-            try:
-                client = JenkinsClient(url=inst.get("url",""), username=inst.get("username",""), token=inst.get("token",""))
-                cur_text  = client.fetch_console_text(job_name, build_number)
-
-                # If snapshot couldn't provide a reference build, ask Jenkins directly.
-                if prev_build_number is None:
-                    ref = client.fetch_reference_build_number(job_name, prefer_success=True)
-                    if ref is not None and int(ref) != int(build_number):
-                        prev_build_number = int(ref)
-                        reference_kind = "jenkins_last_success"
-                        reference_status = "success"
-                    else:
-                        ref2 = client.fetch_reference_build_number(job_name, prefer_success=False)
-                        if ref2 is not None and int(ref2) != int(build_number):
-                            prev_build_number = int(ref2)
-                            reference_kind = "jenkins_last_completed"
-                            reference_status = "unknown"
-
-                if prev_build_number is None:
-                    raise HTTPException(
-                        404,
-                        f"No other build for «{job_name}» in snapshot (and no reference build resolved from Jenkins) — run collect to refresh data.",
-                    )
-
-                prev_text = client.fetch_console_text(job_name, int(prev_build_number))
-                break
-            except Exception as exc:
-                last_fetch_err = str(exc)
-    elif source.lower() == "gitlab":
-        from clients.gitlab_client import GitLabClient
-        insts = ([_find_gitlab_instance(cfg, instance_url)] if instance_url else
-                 [i for i in cfg.get("gitlab_instances", []) if i.get("enabled", True)])
-        for inst in (i for i in insts if i):
-            try:
-                client = GitLabClient(url=inst.get("url",""), token=inst.get("token",""))
-                cur_text  = client.fetch_pipeline_logs(job_name, build_number)
-                if prev_build_number is None:
-                    raise HTTPException(
-                        404,
-                        f"No other build for «{job_name}» in snapshot — run collect to refresh data.",
-                    )
-                prev_text = client.fetch_pipeline_logs(job_name, int(prev_build_number))
-                break
-            except Exception as exc:
-                last_fetch_err = str(exc)
-    else:
-        raise HTTPException(400, f"Diff not supported for source: {source}")
-
-    if not cur_text:
-        raise HTTPException(502, "Could not fetch current build log" + (f": {last_fetch_err}" if last_fetch_err else ""))
-    if not prev_text:
-        raise HTTPException(502, "Could not fetch reference build log" + (f": {last_fetch_err}" if last_fetch_err else ""))
-
-    # Compute unified diff (context=5 lines)
-    cur_lines  = cur_text.splitlines()
-    prev_lines = prev_text.splitlines()
-    diff = list(difflib.unified_diff(prev_lines, cur_lines, lineterm="", n=4))
-
-    return {
-        "ok": True,
-        "current_build": build_number,
-        "reference_build": prev_build_number,
-        "reference_status": reference_status,
-        "reference_kind": reference_kind,
-        "diff": diff,
-        "cur_lines": len(cur_lines),
-        "prev_lines": len(prev_lines),
-    }
+    snap = _load_snapshot()
+    return _logs_api.diff_logs(
+        source=source,
+        job_name=job_name,
+        build_number=build_number,
+        instance_url=instance_url,
+        cfg=cfg,
+        snapshot=snap,
+    )
 
 
 @app.get("/api/pipeline/stages", response_class=JSONResponse)
@@ -3844,46 +2688,9 @@ async def api_pipeline_stages(project_id: str, pipeline_id: int, instance_url: s
     _check_rate_limit(f"stages:{project_id}:{pipeline_id}", window=2)
 
     cfg = _load_yaml_config()
-    if instance_url:
-        inst = _find_gitlab_instance(cfg, instance_url)
-        insts = [inst] if inst else []
-    else:
-        insts = [i for i in cfg.get("gitlab_instances", []) if i.get("enabled", True)]
-
-    from clients.gitlab_client import GitLabClient
-    last_err: str | None = None
-    for inst in insts:
-        try:
-            client = GitLabClient(
-                url=inst.get("url", "https://gitlab.com"),
-                token=inst.get("token", ""),
-            )
-            base = inst.get("url", "https://gitlab.com").rstrip("/")
-            pid_enc = project_id.replace("/", "%2F")
-            resp = client.session.get(
-                f"{base}/api/v4/projects/{pid_enc}/pipelines/{pipeline_id}/jobs",
-                params={"per_page": 100},
-                timeout=client.timeout,
-            )
-            resp.raise_for_status()
-            jobs = resp.json()
-            stages: dict[str, list[dict]] = {}
-            for j in jobs:
-                stage = j.get("stage", "unknown")
-                stages.setdefault(stage, []).append({
-                    "name":     j.get("name", ""),
-                    "status":   j.get("status", "unknown"),
-                    "duration": j.get("duration"),
-                    "web_url":  j.get("web_url"),
-                    "id":       j.get("id"),
-                })
-            ordered = []
-            for stage_name, jobs_list in stages.items():
-                ordered.append({"stage": stage_name, "jobs": jobs_list})
-            return {"ok": True, "stages": ordered}
-        except Exception as exc:
-            last_err = str(exc)
-    raise HTTPException(502, detail=last_err or "Could not fetch pipeline stages")
+    return _logs_api.pipeline_stages(
+        cfg=cfg, project_id=project_id, pipeline_id=pipeline_id, instance_url=instance_url
+    )
 
 
 @app.get("/api/logs/docker", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])
@@ -3893,10 +2700,8 @@ async def api_logs_docker(container: str, tail: int = 4000):
     if not container:
         raise HTTPException(400, "container is required")
     _check_rate_limit(f"log:docker:{container}", window=2)
-    from docker_monitor.monitor import DockerMonitor
     try:
-        text = DockerMonitor.container_logs_tail(container, tail=max(100, min(tail, 50_000)))
-        return {"ok": True, "log": text}
+        return _logs_api.docker_logs_tail(container=container, tail=tail)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
     except Exception as exc:
@@ -3913,14 +2718,7 @@ async def api_logs_docker_stream(container: str):
     if not container:
         raise HTTPException(400, "container is required")
     _check_rate_limit(f"log:docker:stream:{container}", window=3)
-    from docker_monitor.monitor import DockerMonitor
-
-    def gen():
-        yield from DockerMonitor.iter_container_logs_stream(
-            container, follow=True, tail=200, timestamps=True
-        )
-
-    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+    return _logs_api.docker_logs_stream_response(container=container)
 
 
 @app.post("/webhook/build-complete", dependencies=[Depends(require_shared_token)])
@@ -3946,119 +2744,33 @@ async def webhook_build_complete(request: Request):
 
     logger.info("Webhook received: %s", payload)
 
-    snap = _load_snapshot() or CISnapshot()
-    from models.models import BuildRecord
-    record = BuildRecord(
-        source=payload.get("source", "webhook"),
-        source_instance=(payload.get("source_instance") or None),
-        job_name=payload.get("job", "unknown"),
-        build_number=payload.get("build_number"),
-        status=payload.get("status", "unknown"),
-        started_at=datetime.now(tz=timezone.utc),
-        url=payload.get("url"),
-        critical=payload.get("critical", False),
+    return _webhooks.handle_build_complete(
+        payload,
+        load_snapshot=_load_snapshot,
+        save_snapshot=save_snapshot,
+        is_collecting=lambda: bool(_collect_state.get("is_collecting")),
+        load_cfg=_load_yaml_config,
+        trigger_collect=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
     )
-    snap.builds.insert(0, record)
-    save_snapshot(snap)
-
-    # Optionally kick off a full collect cycle (for near-realtime updates)
-    if payload.get("trigger_collect", False) and not _collect_state["is_collecting"]:
-        cfg = _load_yaml_config()
-        asyncio.create_task(_do_collect(cfg, force_full=False))
-        return {"ok": True, "message": "Build record added. Full collect triggered."}
-
-    return {"ok": True, "message": "Build record added."}
 
 
 # ── AI Chat (OpenAI) ──────────────────────────────────────────────────────
 
 
 def _ai_default_model(provider: str) -> str:
-    return {
-        "openai": "gpt-4o-mini",
-        "gemini": "gemini-2.0-flash",
-        "openrouter": "google/gemini-2.0-flash-exp:free",
-        "cursor": "auto",
-        "ollama": "llama3.1:8b",
-        "custom": "gpt-4o-mini",
-    }.get(provider, "gpt-4o-mini")
+    return _ai_helpers.ai_default_model(provider)
 
 
 def _looks_like_upstream_unreachable(err_text: str) -> bool:
-    low = err_text.lower()
-    return any(
-        s in low
-        for s in (
-            "connection refused",
-            "failed to connect",
-            "errno 111",
-            "errno 61",
-            "10061",  # Windows: connection refused
-            "winerror 10061",
-            "name or service not known",
-            "getaddrinfo failed",
-            "timed out",
-            "connect error",
-            "connection reset",
-        )
-    )
+    return _ai_helpers.looks_like_upstream_unreachable(err_text)
 
 
 def _openai_proxy_url(ai_cfg: dict) -> str | None:
-    """Build httpx proxy URL from config (HTTP, HTTPS, SOCKS5). Returns None if disabled."""
-    proxy = ai_cfg.get("proxy")
-    if not isinstance(proxy, dict) or not proxy.get("enabled"):
-        return None
-    raw = (proxy.get("url") or "").strip()
-    if raw:
-        # socks5:// resolves DNS locally; socks5h sends hostname to proxy (needed for api.openai.com on many VPNs)
-        low = raw.lower()
-        if low.startswith("socks5://") and not low.startswith("socks5h://"):
-            raw = "socks5h://" + raw[9:]
-        return raw
-    host = (proxy.get("host") or "").strip()
-    try:
-        port = int(proxy.get("port") or 0)
-    except (TypeError, ValueError):
-        port = 0
-    if not host or port <= 0:
-        return None
-    ptype = (proxy.get("type") or "http").strip().lower()
-    if ptype not in ("http", "https", "socks5", "socks5h"):
-        ptype = "http"
-    # UI "SOCKS5" → socks5h so TLS to api.openai.com uses remote DNS through the tunnel (fixes many geo/VPN cases)
-    if ptype == "socks5":
-        ptype = "socks5h"
-    user = (proxy.get("username") or "").strip()
-    password = (proxy.get("password") or "").strip()
-    auth = ""
-    if user or password:
-        auth = f"{quote(user, safe='')}:{quote(password, safe='')}@"
-    return f"{ptype}://{auth}{host}:{port}"
+    return _ai_helpers.openai_proxy_url(ai_cfg)
 
 
 async def _http_probe_public_ip(client: httpx.AsyncClient) -> tuple[str | None, str | None]:
-    """Return (ip, error_message). Used to verify proxy egress vs direct connection."""
-    last_err = "unknown"
-    try:
-        r = await client.get("https://api.ipify.org", params={"format": "json"}, timeout=20.0)
-        r.raise_for_status()
-        ip = r.json().get("ip")
-        if ip:
-            return str(ip), None
-        last_err = "ipify returned no ip"
-    except Exception as exc:
-        last_err = str(exc)
-    try:
-        r = await client.get("https://icanhazip.com", timeout=20.0)
-        r.raise_for_status()
-        line = (r.text or "").strip().splitlines()[0].strip()
-        if line:
-            return line, None
-        last_err = "icanhazip empty body"
-    except Exception as exc:
-        last_err = str(exc)
-    return None, last_err
+    return await _ai_helpers.http_probe_public_ip(client)
 
 
 async def api_chat(request: Request):
@@ -4273,14 +2985,6 @@ async def api_chat_proxy_check():
 
 
 
-from web.routes.builds import router as _builds_router
-from web.routes.chat import router as _chat_router
-from web.routes.collect import router as _collect_router
-from web.routes.incident import router as _incident_router
-from web.routes.ops import router as _ops_router
-from web.routes.services import router as _services_router
-from web.routes.settings import router as _settings_router
-from web.routes.tests import router as _tests_router
 
 for __r in (
     _ops_router,
