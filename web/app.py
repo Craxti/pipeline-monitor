@@ -134,6 +134,10 @@ from web.services import runtime_helpers as _runtime_helpers
 from web.services import event_feed_api as _event_feed_api
 from web.services import sse_hub as _sse_hub
 from web.services import collect_loop as _collect_loop_mod
+from web.services import mem_cache as _mem_cache
+from web.services import request_id as _request_id
+from web.services import dashboard_summary as _dashboard_summary
+from web.services import meta_api as _meta_api
 
 _EVENT_FEED_FILE = _event_feed_mod.EVENT_FEED_PATH
 _EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
@@ -284,18 +288,11 @@ _MEM_CACHE_TTL_SEC = 20.0
 
 
 def _mem_cache_get(key: str) -> Any | None:
-    ent = _MEM_CACHE.get(key)
-    if not ent:
-        return None
-    exp, val = ent
-    if time.monotonic() > exp:
-        del _MEM_CACHE[key]
-        return None
-    return val
+    return _mem_cache.mem_cache_get(_MEM_CACHE, key)
 
 
 def _mem_cache_set(key: str, val: Any, ttl: float = _MEM_CACHE_TTL_SEC) -> None:
-    _MEM_CACHE[key] = (time.monotonic() + ttl, val)
+    return _mem_cache.mem_cache_set(_MEM_CACHE, key, val, ttl_seconds=ttl)
 
 
 async def _sse_broadcast_async(payload: dict) -> None:
@@ -1032,17 +1029,11 @@ if _static_dir.is_dir():
 
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
-    rid = (request.headers.get("x-request-id") or "").strip() or str(uuid.uuid4())
-    request.state.request_id = rid
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = rid
-    return response
+    return await _request_id.add_request_id_middleware(request, call_next)
 
 
 def _rid(request: Request | None) -> str:
-    if request is None:
-        return "-"
-    return getattr(request.state, "request_id", "-")
+    return _request_id.rid(request)
 
 
 # ── REST endpoints ────────────────────────────────────────────────────────
@@ -1217,71 +1208,13 @@ async def api_builds_history(
 
 
 def _dashboard_summary_payload() -> dict[str, Any]:
-    cfg = _load_yaml_config()
-    w_cfg = cfg.get("web", {})
-    interval = int(w_cfg.get("collect_interval_seconds", 300))
-    stale_threshold = interval * 2
-
-    snap = _load_snapshot()
-    collected_at: str | None = None
-    age_seconds: float | None = None
-    stale = False
-    counts = {
-        "builds": 0,
-        "failed_builds": 0,
-        "failed_tests": 0,
-        "tests_total": 0,
-        "services_down": 0,
-    }
-    if snap:
-        counts["builds"] = len(snap.builds)
-        counts["failed_builds"] = sum(
-            1 for b in snap.builds if b.status_normalized in ("failure", "unstable")
-        )
-        counts["failed_tests"] = sum(
-            1 for t in snap.tests if t.status_normalized in ("failed", "error")
-        )
-        counts["tests_total"] = len(snap.tests)
-        counts["services_down"] = sum(1 for s in snap.services if s.status_normalized == "down")
-        ca = snap.collected_at
-        if ca.tzinfo is None:
-            ca = ca.replace(tzinfo=timezone.utc)
-        else:
-            ca = ca.astimezone(timezone.utc)
-        collected_at = ca.isoformat()
-        age_seconds = (datetime.now(tz=timezone.utc) - ca).total_seconds()
-        stale = age_seconds > stale_threshold
-
-    partial_errors: list[dict[str, Any]] = []
-    if _collect_state.get("last_error"):
-        partial_errors.append({"source": "collect", "message": _collect_state["last_error"]})
-    for h in _instance_health:
-        if not h.get("ok"):
-            partial_errors.append({
-                "source": h.get("kind"),
-                "name": h.get("name"),
-                "message": h.get("error"),
-            })
-
-    return {
-        "data_revision": _data_revision,
-        "snapshot": {
-            "collected_at": collected_at,
-            "age_seconds": round(age_seconds, 1) if age_seconds is not None else None,
-            "stale": stale,
-            "stale_threshold_seconds": stale_threshold,
-        },
-        "counts": counts,
-        "collect": {
-            "is_collecting": _collect_state["is_collecting"],
-            "last_collected_at": _collect_state["last_collected_at"],
-            "last_error": _collect_state["last_error"],
-            "interval_seconds": interval,
-        },
-        "partial_errors": partial_errors,
-        "instance_health": list(_instance_health),
-        "parse_coverage": (snap.collect_meta if snap else {}) or {},
-    }
+    return _dashboard_summary.dashboard_summary_payload(
+        load_yaml_config=_load_yaml_config,
+        load_snapshot=_load_snapshot,
+        collect_state=_collect_state,
+        instance_health=_instance_health,
+        data_revision=_data_revision,
+    )
 
 
 @app.get("/api/dashboard/summary", response_class=JSONResponse)
@@ -1301,45 +1234,14 @@ async def api_instances_health():
 @app.get("/api/meta", response_class=JSONResponse)
 async def api_meta():
     """Dashboard metadata: snapshot freshness, collect state, correlation, job analytics."""
-    cfg = _load_yaml_config()
-    w_cfg = cfg.get("web", {})
-    interval = int(w_cfg.get("collect_interval_seconds", 300))
-    stale_threshold = interval * 2
-
-    snap = await _load_snapshot_async()
-    collected_at: str | None = None
-    age_seconds: float | None = None
-    stale = False
-    job_analytics: dict = {}
-    if snap:
-        job_analytics = _job_build_analytics(snap)
-        ca = snap.collected_at
-        if ca.tzinfo is None:
-            ca = ca.replace(tzinfo=timezone.utc)
-        else:
-            ca = ca.astimezone(timezone.utc)
-        collected_at = ca.isoformat()
-        age_seconds = (datetime.now(tz=timezone.utc) - ca).total_seconds()
-        stale = age_seconds > stale_threshold
-
-    return {
-        "data_revision": _data_revision,
-        "snapshot": {
-            "collected_at": collected_at,
-            "age_seconds": round(age_seconds, 1) if age_seconds is not None else None,
-            "stale": stale,
-            "stale_threshold_seconds": stale_threshold,
-        },
-        "collect": {
-            "is_collecting": _collect_state["is_collecting"],
-            "last_collected_at": _collect_state["last_collected_at"],
-            "last_error": _collect_state["last_error"],
-            "interval_seconds": interval,
-        },
-        "correlation": _correlation_last_hour(),
-        "job_analytics": job_analytics,
-        "parse_coverage": (snap.collect_meta if snap else {}) or {},
-    }
+    return await _meta_api.meta_payload(
+        load_yaml_config=_load_yaml_config,
+        load_snapshot_async=_load_snapshot_async,
+        job_build_analytics=_job_build_analytics,
+        correlation_last_hour=_correlation_last_hour,
+        collect_state=_collect_state,
+        data_revision=_data_revision,
+    )
 
 
 @app.get("/api/stream/events")
