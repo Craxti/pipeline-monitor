@@ -641,7 +641,13 @@ html.light .trends-filters-bar{background:rgba(0,0,0,.03)}
 .uptime-seg.us-ok{background:var(--ok)}.uptime-seg.us-down{background:var(--fail)}.uptime-seg.us-deg{background:var(--warn)}.uptime-seg.us-none{background:var(--border)}
 .uptime-pct{font-size:.7rem;color:var(--muted);white-space:nowrap;margin-left:.35rem}
 /* Failure Correlation */
+.flaky-line-clickable{cursor:pointer;border-radius:.35rem;margin:0 -.25rem;padding-left:.25rem;padding-right:.25rem;transition:background .12s ease}
+.flaky-line-clickable:hover{background:rgba(139,92,246,.1)}
+.flaky-line-clickable:focus{outline:2px solid var(--info);outline-offset:1px}
 .incident-card{background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--fail);border-radius:.5rem;padding:.65rem 1rem;margin:.4rem .75rem;font-size:.83rem}
+.incident-card-clickable{cursor:pointer;transition:background .12s ease,border-color .12s ease,box-shadow .12s ease}
+.incident-card-clickable:hover{background:rgba(239,68,68,.07);box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.incident-card-clickable:focus{outline:2px solid var(--info);outline-offset:2px}
 .incident-title{font-weight:700;color:var(--fail);margin-bottom:.25rem}
 .incident-jobs{color:var(--muted);font-size:.78rem;line-height:1.6}
 .cl-line{display:block;white-space:pre-wrap;word-break:break-word}

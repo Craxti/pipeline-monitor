@@ -126,7 +126,8 @@ function renderFlakyAndCorrelation(builds, dbFlakyItems, flakyErr) {
       flakyList.innerHTML = flaky.map(f => {
         const pct = Math.round(f.flipRate * 100);
         const cls = f.lastStatus === 'failure' ? 'c-fail' : 'c-ok';
-        return `<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border)">
+        const hint = _svgTitleAttr(t('dash.action_view') + ' — ' + (f.job || ''));
+        return `<div class="flaky-line-clickable" role="button" tabindex="0" title="${hint}" style="display:flex;align-items:center;gap:.5rem;padding:.3rem 0;border-bottom:1px solid var(--border)" onclick='filterBuilds("","",${JSON.stringify(f.job)})' onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();filterBuilds('','',${JSON.stringify(f.job)});}">
           <span class="b b-purple" style="font-size:.7rem" title="${_svgTitleAttr(t('flaky.badge_title'))}">${esc(t('flaky.badge'))}</span>
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.83rem">
             <strong>${_escHtml(f.src)}</strong> / ${_escHtml(f.job)}
@@ -134,7 +135,6 @@ function renderFlakyAndCorrelation(builds, dbFlakyItems, flakyErr) {
           <span style="font-size:.75rem;color:var(--muted)">${esc(tf('flaky.flips_runs', { flips: f.flips, total: f.total }))}</span>
           <span style="font-size:.75rem;color:#a855f7">${esc(tf('flaky.flip_rate', { pct }))}</span>
           <span class="${cls}" style="font-size:.75rem">${_escHtml(f.lastStatus)}</span>
-          <button class="btn btn-ghost" style="font-size:.7rem;padding:.15rem .4rem" onclick='filterBuilds("","",${JSON.stringify(f.job)})'>${esc(t('dash.action_view'))}</button>
         </div>`;
       }).join('');
     }
@@ -149,12 +149,16 @@ function renderFlakyAndCorrelation(builds, dbFlakyItems, flakyErr) {
       const shown = incidents.slice(0, MAX_INC);
       const more = Math.max(0, incidents.length - shown.length);
       const hdr = `<div style="padding:.3rem 1rem .1rem;font-size:.8rem;font-weight:700;color:var(--fail);display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">&#9888; <span>${t('incident.correlated_title')}</span><button type="button" class="glossary-hint" title="${_svgTitleAttr(t('glossary.incidents'))}">?</button></div>`;
-      incList.innerHTML = hdr + shown.map(inc => `
-        <div class="incident-card">
+      incList.innerHTML = hdr + shown.map(inc => {
+        const incJson = JSON.stringify(inc).replace(/</g, '\\u003c').replace(/&/g, '\\u0026');
+        const hint = _svgTitleAttr(t('dash.action_view') + (inc.jobs && inc.jobs[0] ? ' — ' + inc.jobs[0] : ''));
+        return `
+        <div class="incident-card incident-card-clickable" role="button" tabindex="0" title="${hint}" onclick='applyIncidentFilter(${incJson})' onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();applyIncidentFilter(${incJson});}">
           <div class="incident-title">&#128683; ${inc.count} ${esc(t('incident.within_10'))} — ${_tlAgo(inc.start)}</div>
           <div class="incident-jobs">${esc(t('incident.jobs_lbl'))}: ${inc.jobs.map(j => `<strong>${_escHtml(j)}</strong>`).join(', ')}</div>
           <div class="incident-jobs" style="margin-top:.15rem">${esc(t('incident.sources_lbl'))}: ${inc.sources.map(s => _escHtml(s)).join(', ')}</div>
-        </div>`).join('') + (more ? `<div style="padding:.35rem 1rem;color:var(--muted);font-size:.78rem">+${more} more</div>` : '');
+        </div>`;
+      }).join('') + (more ? `<div style="padding:.35rem 1rem;color:var(--muted);font-size:.78rem">+${more} more</div>` : '');
     }
   }
 
