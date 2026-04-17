@@ -130,6 +130,8 @@ from web.services import logs_api as _logs_api
 from web.services import webhooks as _webhooks
 from web.services import ai_helpers as _ai_helpers
 from web.services import cursor_proxy as _cursor_proxy
+from web.services import runtime_helpers as _runtime_helpers
+from web.services import event_feed_api as _event_feed_api
 
 _EVENT_FEED_FILE = _event_feed_mod.EVENT_FEED_PATH
 _EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
@@ -369,13 +371,7 @@ _RATE_LIMIT_SECONDS = 15
 
 
 def _check_rate_limit(key: str, window: float = _RATE_LIMIT_SECONDS) -> None:
-    """Raise 429 if the same action key was invoked within *window* seconds."""
-    now = time.monotonic()
-    last = _rate_limit_store.get(key, 0.0)
-    if now - last < window:
-        wait = window - (now - last)
-        raise HTTPException(429, f"Rate limit: try again in {wait:.1f}s")
-    _rate_limit_store[key] = now
+    return _runtime_helpers.check_rate_limit(_rate_limit_store, key, window=window)
 
 
 # ── State-change notifications ────────────────────────────────────────────
@@ -383,15 +379,15 @@ _notify_state = _NotificationState(notify_max=200)
 
 
 def _event_feed_slim(entry: dict) -> dict:
-    return _event_feed_mod.slim_event(entry)
+    return _event_feed_api.slim(entry)
 
 
 def _event_feed_append(entries: list[dict]) -> None:
-    return _event_feed_mod.append_events(entries, path=_EVENT_FEED_FILE, max_entries=_EVENT_FEED_MAX)
+    return _event_feed_api.append(entries, path=_EVENT_FEED_FILE, max_entries=_EVENT_FEED_MAX)
 
 
 def _event_feed_load(limit: int = 300) -> list[dict]:
-    return _event_feed_mod.load_events(limit, path=_EVENT_FEED_FILE)
+    return _event_feed_api.load(limit=limit, path=_EVENT_FEED_FILE)
 
 
 def _detect_state_changes(snapshot: "CISnapshot") -> None:
