@@ -1548,7 +1548,9 @@ async function loadBuilds() {
 // FAILURES (top-N aggregated)
 // ─────────────────────────────────────────────────────────────────────────────
 function resetFailures(soft=false) {
-  const s = _state.failures; s.page=1; s.done=false;
+  // If a previous page load is in-flight, cancel it so new filters apply immediately.
+  abortFetchKey('failures');
+  const s = _state.failures; s.page=1; s.done=false; s.loading = false;
   const tb = document.getElementById('tbody-failures');
   if (!soft) tb.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_loading'))}</td></tr>`;
   loadFailures();
@@ -1677,7 +1679,9 @@ function resetTests() {
   resetTestsSoft(false);
 }
 function resetTestsSoft(soft=false) {
-  const s = _state.tests; s.page=1; s.done=false;
+  // If a previous page load is in-flight, cancel it so new filters apply immediately.
+  abortFetchKey('tests');
+  const s = _state.tests; s.page=1; s.done=false; s.loading = false;
   const tb = document.getElementById('tbody-tests');
   if (!soft) tb.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('dash.table_loading'))}</td></tr>`;
   loadTests();
