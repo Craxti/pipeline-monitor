@@ -18,9 +18,15 @@ async def api_tests_route(
     hours: int = 0,
     source: str = "",
 ):
-    import web.app as m
+    from models.models import normalize_test_status
+    from web.core import runtime as rt
+    from web.services import tests_analytics, tests_endpoints
 
-    return await m.api_tests(
+    return await tests_endpoints.api_tests(
+        load_snapshot_async=rt.load_snapshot_async,
+        normalize_test_status=normalize_test_status,
+        tests_breakdown_real_vs_synth=tests_analytics.tests_breakdown_real_vs_synth,
+        filter_tests_by_source=tests_analytics.filter_tests_by_source,
         page=page,
         per_page=per_page,
         status=status,
@@ -42,9 +48,14 @@ async def api_tests_top_failures_route(
     hours: int = 0,
     days: int = 0,
 ):
-    import web.app as m
+    from web.core import runtime as rt
+    from web.services import tests_analytics, tests_endpoints
 
-    return await m.api_top_failures(
+    return await tests_endpoints.api_top_failures(
+        load_snapshot=rt.load_snapshot,
+        filter_tests_by_lookback_hours=tests_analytics.filter_tests_by_lookback_hours,
+        filter_tests_by_source=tests_analytics.filter_tests_by_source,
+        aggregate_top_failing_tests=tests_analytics.aggregate_top_failing_tests,
         n=n,
         page=page,
         per_page=per_page,
@@ -65,9 +76,12 @@ async def export_tests_route(
     hours: int = 0,
     source: str = "",
 ):
-    import web.app as m
+    from web.core import runtime as rt
+    from web.services import export_endpoints, exports
 
-    return await m.export_tests(
+    return await export_endpoints.export_tests(
+        export_tests_fn=exports.export_tests,
+        load_snapshot=rt.load_snapshot,
         fmt=fmt,
         status=status,
         suite=suite,
@@ -87,9 +101,12 @@ async def export_failures_route(
     hours: int = 0,
     days: int = 0,
 ):
-    import web.app as m
+    from web.core import runtime as rt
+    from web.services import export_endpoints, exports
 
-    return await m.export_failures(
+    return await export_endpoints.export_failures(
+        export_failures_fn=exports.export_failures,
+        load_snapshot=rt.load_snapshot,
         fmt=fmt,
         n=n,
         suite=suite,

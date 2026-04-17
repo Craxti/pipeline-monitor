@@ -8,19 +8,19 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from web.schemas import HealthResponse, ReadyResponse
+from web.core.paths import REPO_ROOT
+from web.services.app_constants import APP_BUILD
 
 router = APIRouter(tags=["ops"])
 
 
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    import web.app as web_app
-
     return HealthResponse(
         ts=datetime.now(tz=timezone.utc).isoformat(),
         version="1.0.0",
-        app_build=web_app._APP_BUILD,
-        app_path=str(Path(web_app.__file__).resolve()),
+        app_build=APP_BUILD,
+        app_path=str((REPO_ROOT / "web" / "app.py").resolve()),
     )
 
 

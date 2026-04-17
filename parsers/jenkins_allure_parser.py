@@ -82,6 +82,10 @@ class JenkinsAllureParser:
                 return r.json()
             except requests.HTTPError as exc:
                 code = getattr(getattr(exc, "response", None), "status_code", None)
+                if code == 404:
+                    # Allure report may legitimately be missing for a build.
+                    logger.debug("AllureParser: GET %s -> 404 (no report)", path)
+                    return None
                 if code is not None and self._should_retry_status(code) and attempt < self.retries:
                     delay = self.backoff_seconds * (2 ** attempt)
                     logger.warning("AllureParser: HTTP %s (%s), retry in %.1fs", path, code, delay)

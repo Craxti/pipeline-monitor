@@ -278,10 +278,15 @@ class JenkinsConsoleParser:
                     attempt += 1
                     continue
                 return None
-            except Exception:
+            except Exception as exc:
                 if attempt < self.retries:
                     delay = self.backoff_seconds * (2 ** attempt)
-                    logger.warning("ConsoleParser: GET failed, retry in %.1fs: %s", delay, url)
+                    logger.warning(
+                        "ConsoleParser: GET failed (%s), retry in %.1fs: %s",
+                        type(exc).__name__,
+                        delay,
+                        url,
+                    )
                     try:
                         import time
                         time.sleep(delay)

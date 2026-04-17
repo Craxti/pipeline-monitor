@@ -10,6 +10,14 @@ router = APIRouter(tags=["services"])
 
 @router.get("/api/services", response_class=JSONResponse)
 async def api_services_route(page: int = 1, per_page: int = 50, status: str = ""):
-    import web.app as m
+    from models.models import normalize_service_status
+    from web.core import runtime as rt
+    from web.services import services_endpoints
 
-    return await m.api_services(page=page, per_page=per_page, status=status)
+    return await services_endpoints.api_services(
+        load_snapshot_async=rt.load_snapshot_async,
+        normalize_service_status=normalize_service_status,
+        page=page,
+        per_page=per_page,
+        status=status,
+    )
