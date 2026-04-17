@@ -132,6 +132,8 @@ from web.services import ai_helpers as _ai_helpers
 from web.services import cursor_proxy as _cursor_proxy
 from web.services import runtime_helpers as _runtime_helpers
 from web.services import event_feed_api as _event_feed_api
+from web.services import sse_hub as _sse_hub
+from web.services import collect_loop as _collect_loop_mod
 
 _EVENT_FEED_FILE = _event_feed_mod.EVENT_FEED_PATH
 _EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
@@ -297,18 +299,7 @@ def _mem_cache_set(key: str, val: Any, ttl: float = _MEM_CACHE_TTL_SEC) -> None:
 
 
 async def _sse_broadcast_async(payload: dict) -> None:
-    for q in list(_sse_queues):
-        try:
-            q.put_nowait(payload)
-        except asyncio.QueueFull:
-            try:
-                q.get_nowait()
-            except Exception:
-                pass
-            try:
-                q.put_nowait(payload)
-            except Exception:
-                pass
+    return await _sse_hub.broadcast_async(_sse_queues, payload)
 
 
 def _status_str(b: object) -> str:
@@ -956,56 +947,26 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
 
 
 async def _do_collect(cfg: dict, *, force_full: bool = False) -> None:
-    """Async wrapper: run collection in thread pool, update shared state."""
-    if _collect_state["is_collecting"]:
-        logger.info("Collection already in progress, skipping.")
-        return
-    _collect_state["is_collecting"] = True
-    _collect_state["started_at"] = datetime.now(tz=timezone.utc).isoformat()
-    _collect_state["phase"] = "starting"
-    _collect_state["progress_main"] = "Starting collect…"
-    _collect_state["progress_sub"] = None
-    _collect_state["progress_counts"] = {"builds": 0, "tests": 0, "services": 0}
-    _collect_state["last_error"] = None
-    try:
-        _collect_logs.clear()
-        _collect_slow.clear()
-    except Exception:
-        pass
-    _push_collect_log("starting", "Starting collect…", None, "info")
-    try:
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, lambda: _run_collect_sync(cfg, force_full=force_full))
-        _collect_state["last_collected_at"] = datetime.now(tz=timezone.utc).isoformat()
-    except Exception as exc:
-        logger.error("Collection error: %s", exc)
-        _collect_state["last_error"] = str(exc)
-    finally:
-        _collect_state["is_collecting"] = False
-        _collect_state["started_at"] = None
-        try:
-            await _sse_broadcast_async(
-                {
-                    "type": "collect_done",
-                    "last_collected_at": _collect_state.get("last_collected_at"),
-                    "error": _collect_state.get("last_error"),
-                    "revision": _data_revision,
-                }
-            )
-        except Exception:
-            pass
+    return await _collect_loop_mod.do_collect(
+        cfg,
+        force_full=force_full,
+        collect_state=_collect_state,
+        collect_logs=_collect_logs,
+        collect_slow=_collect_slow,
+        push_collect_log=_push_collect_log,
+        run_collect_sync=_run_collect_sync,
+        sse_broadcast_async=_sse_broadcast_async,
+        data_revision=_data_revision,
+    )
 
 
 async def _collect_loop(cfg: dict) -> None:
-    """Collect immediately on start, then repeat every interval."""
-    while True:
-        # Re-check settings each cycle (interval can change, and the loop can be disabled).
-        if not _auto_collect_enabled:
-            await asyncio.sleep(1.0)
-            continue
-        interval = int(_collect_state.get("interval_seconds") or 300)
-        await _do_collect(cfg, force_full=False)
-        await asyncio.sleep(max(5, interval))
+    return await _collect_loop_mod.collect_loop(
+        cfg,
+        auto_collect_enabled_getter=lambda: bool(_auto_collect_enabled),
+        interval_seconds_getter=lambda: int(_collect_state.get("interval_seconds") or 300),
+        do_collect_fn=lambda c: _do_collect(c, force_full=False),
+    )
 
 
 # ── FastAPI lifespan ──────────────────────────────────────────────────────
@@ -1385,24 +1346,14 @@ async def api_meta():
 async def sse_events(request: Request):
     """Server-Sent Events: collect_done + heartbeats. Clients fall back to polling if unavailable."""
 
-    async def event_gen():
-        q: asyncio.Queue = asyncio.Queue(maxsize=64)
-        _sse_queues.add(q)
-        try:
-            yield f"data: {json.dumps({'type': 'hello', 'revision': _data_revision})}\n\n"
-            while True:
-                if await request.is_disconnected():
-                    break
-                try:
-                    ev = await asyncio.wait_for(q.get(), timeout=25.0)
-                    yield f"data: {json.dumps(ev)}\n\n"
-                except asyncio.TimeoutError:
-                    yield ": ping\n\n"
-        finally:
-            _sse_queues.discard(q)
-
     return StreamingResponse(
-        event_gen(),
+        _sse_hub.events_generator(
+            request,
+            _sse_queues,
+            hello_event={"type": "hello", "revision": _data_revision},
+            queue_maxsize=64,
+            ping_timeout_seconds=25.0,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
