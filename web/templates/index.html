@@ -88,11 +88,11 @@
     </span>
   </div>
   <div class="topbar-right">
-    <div class="topbar-legend" aria-label="Status legend">
-      <span class="lg"><span class="topdot ok"></span>success</span>
-      <span class="lg"><span class="topdot warn"></span>unstable</span>
-      <span class="lg"><span class="topdot err"></span>failure</span>
-      <span class="lg"><span class="topdot"></span>unknown</span>
+    <div class="topbar-legend" data-i18n-aria-label="statusLegend.aria_label" aria-label="Status legend">
+      <span class="lg"><span class="topdot ok"></span><span data-i18n="statusLegend.success">Success / OK</span></span>
+      <span class="lg"><span class="topdot warn"></span><span data-i18n="statusLegend.unstable">Unstable / Degraded</span></span>
+      <span class="lg"><span class="topdot err"></span><span data-i18n="statusLegend.failure">Failure / Down</span></span>
+      <span class="lg"><span class="topdot"></span><span data-i18n="statusLegend.unknown">Unknown / Aborted</span></span>
     </div>
   </div>
 </div>
@@ -209,27 +209,27 @@
   </div>
   <div id="map-body">
     <div class="filters" style="padding:.55rem 1rem .15rem;gap:.5rem;flex-wrap:wrap">
-      <input class="f-input" id="map-q" placeholder="Filter map…" style="width:220px"/>
+      <input class="f-input" id="map-q" data-i18n-placeholder="dash.filter_map_ph" placeholder="Filter map…" style="width:220px"/>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
         <input type="checkbox" id="map-only-critical"/>
-        critical only
+        <span data-i18n="dash.critical_only">critical only</span>
       </label>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="map-st-failure" checked/> failed
+        <input type="checkbox" id="map-st-failure" checked/> <span data-i18n="dash.map_filter_failure">failed</span>
       </label>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="map-st-running" checked/> running
+        <input type="checkbox" id="map-st-running" checked/> <span data-i18n="dash.map_filter_running">running</span>
       </label>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="map-st-unstable" checked/> unstable
+        <input type="checkbox" id="map-st-unstable" checked/> <span data-i18n="dash.map_filter_unstable">unstable</span>
       </label>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="map-st-success" checked/> success
+        <input type="checkbox" id="map-st-success" checked/> <span data-i18n="dash.map_filter_success">success</span>
       </label>
       <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
-        <input type="checkbox" id="map-st-unknown" checked/> unknown
+        <input type="checkbox" id="map-st-unknown" checked/> <span data-i18n="dash.map_filter_unknown">unknown</span>
       </label>
-      <button type="button" class="btn btn-ghost btn-sm" data-dash-action="clearMapFilters">reset</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-dash-action="clearMapFilters" data-i18n="dash.reset">reset</button>
     </div>
     <div class="map-grid" id="map-grid"></div>
     <div class="map-legend">

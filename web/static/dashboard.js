@@ -206,7 +206,11 @@ function updateTopStatusBar(metaObj, summaryObj, nFail, nTFail, nDown) {
 
   const collecting = !!c.is_collecting;
   const lastErr = c.last_error ? String(c.last_error) : '';
-  if (collectTxt) collectTxt.textContent = collecting ? 'Collect: running' : (lastErr ? 'Collect: error' : 'Collect: ok');
+  if (collectTxt) {
+    collectTxt.textContent = collecting
+      ? t('top.collect_running')
+      : (lastErr ? t('top.collect_error') : t('top.collect_ok'));
+  }
   if (collectDot) collectDot.className = 'topdot ' + (collecting ? 'warn' : (lastErr ? 'err' : 'ok'));
 
   const ageSec = (s && s.age_seconds != null) ? Number(s.age_seconds) : null;
@@ -215,13 +219,13 @@ function updateTopStatusBar(metaObj, summaryObj, nFail, nTFail, nDown) {
     _topAgeBaseSec = null;
     _topAgeBaseTs = 0;
     _topAgeStale = false;
-    if (ageTxt) ageTxt.textContent = 'Age: —';
+    if (ageTxt) ageTxt.textContent = t('top.age_empty');
     if (ageDot) ageDot.className = 'topdot';
   } else {
     _topAgeBaseSec = Math.max(0, Math.round(ageSec));
     _topAgeBaseTs = Date.now();
     _topAgeStale = stale;
-    if (ageTxt) ageTxt.textContent = `Age: ${_topAgeBaseSec}s`;
+    if (ageTxt) ageTxt.textContent = tf('top.age_fmt', { s: _topAgeBaseSec });
     if (ageDot) ageDot.className = 'topdot ' + (stale ? 'warn' : 'ok');
     if (!_topAgeTimer) {
       _topAgeTimer = setInterval(() => {
@@ -229,21 +233,27 @@ function updateTopStatusBar(metaObj, summaryObj, nFail, nTFail, nDown) {
         const extra = Math.max(0, Math.floor((Date.now() - _topAgeBaseTs) / 1000));
         const val = _topAgeBaseSec + extra;
         const tEl = document.getElementById('top-age-txt');
-        if (tEl) tEl.textContent = `Age: ${val}s`;
+        if (tEl) tEl.textContent = tf('top.age_fmt', { s: val });
         const dEl = document.getElementById('top-age-dot');
         if (dEl) dEl.className = 'topdot ' + (_topAgeStale ? 'warn' : 'ok');
       }, 1000);
     }
   }
 
-  if (redTxt) redTxt.textContent = `Builds: ${nFail || 0} · Tests: ${nTFail || 0} · Svcs: ${nDown || 0}`;
+  if (redTxt) {
+    redTxt.textContent = tf('top.red_fmt', { b: nFail || 0, t: nTFail || 0, s: nDown || 0 });
+  }
 
   const ih = (summaryObj && Array.isArray(summaryObj.instance_health)) ? summaryObj.instance_health
     : (metaObj && Array.isArray(metaObj.instance_health)) ? metaObj.instance_health
     : [];
   const down = ih.filter((x) => x && x.ok === false).length;
   const total = ih.length;
-  if (srcTxt) srcTxt.textContent = total ? `Sources: ${total - down}/${total} ok` : 'Sources: —';
+  if (srcTxt) {
+    srcTxt.textContent = total
+      ? tf('top.sources_fmt', { ok: total - down, total })
+      : t('top.sources_empty');
+  }
   if (srcDot) srcDot.className = 'topdot ' + (total ? (down ? 'warn' : 'ok') : '');
 }
 
