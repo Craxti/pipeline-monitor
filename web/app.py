@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urljoin, urlparse
 
 import httpx
 import yaml
@@ -272,36 +272,9 @@ def _append_trends(snapshot: CISnapshot) -> None:
         cfg_for_inst = None
 
     def _inst_label_for_build_trends(b: object) -> str | None:
-        try:
-            stored = getattr(b, "source_instance", None)
-        except Exception:
-            stored = None
-        if isinstance(stored, str) and stored.strip():
-            return stored.strip()
         if not cfg_for_inst:
             return None
-        try:
-            src0 = str(getattr(b, "source", "") or "").strip().lower()
-        except Exception:
-            return None
-        bu = str(getattr(b, "url", "") or "").rstrip("/")
-        if not src0 or not bu:
-            return None
-        if src0 == "jenkins":
-            for inst in (cfg_for_inst.get("jenkins_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "Jenkins")
-        if src0 == "gitlab":
-            for inst in (cfg_for_inst.get("gitlab_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "GitLab")
-        return None
+        return _inst_label_for_build_with_cfg(b, cfg_for_inst)
 
     for b in snapshot.builds:
         src = str(getattr(b, "source", "") or "").strip().lower() or "unknown"
@@ -2242,6 +2215,110 @@ def _config_instance_label(inst: dict[str, Any], *, kind: str) -> str:
     return "Jenkins" if kind == "jenkins" else "GitLab"
 
 
+def _enabled_ci_bases(cfg: dict[str, Any], kind: str) -> list[str]:
+    insts = cfg.get(f"{kind}_instances", []) or []
+    out: list[str] = []
+    for inst in insts:
+        if not inst.get("enabled", True):
+            continue
+        u = str(inst.get("url", "") or "").strip()
+        if u:
+            out.append(u.rstrip("/"))
+    return out
+
+
+def _build_url_matches_ci_bases(b: Any, bases: list[str]) -> bool:
+    """Whether build.url belongs to one of the configured instance roots.
+
+    Jenkins sometimes returns a *path-only* URL (``/job/...``); resolve it against
+    each enabled base so those builds are not dropped by the dashboard filter.
+    """
+    if not bases:
+        return False
+    bu_raw = str(getattr(b, "url", None) or "").strip()
+    if not bu_raw:
+        return True
+    bu = bu_raw.rstrip("/")
+    bl = bu.lower()
+    for base in bases:
+        br = str(base).rstrip("/")
+        if not br:
+            continue
+        brl = br.lower()
+        if bu.startswith(br) or bl.startswith(brl):
+            return True
+        if bu_raw.startswith("/"):
+            try:
+                joined = urljoin(br + "/", bu_raw).rstrip("/").lower()
+                if joined.startswith(brl):
+                    return True
+            except Exception:
+                pass
+    return False
+
+
+def _is_snapshot_build_enabled(b: Any, cfg: dict[str, Any]) -> bool:
+    try:
+        src = (b.source or "").lower()
+    except Exception:
+        return True
+    if src == "jenkins":
+        bases = _enabled_ci_bases(cfg, "jenkins")
+        return _build_url_matches_ci_bases(b, bases)
+    if src == "gitlab":
+        bases = _enabled_ci_bases(cfg, "gitlab")
+        return _build_url_matches_ci_bases(b, bases)
+    return True
+
+
+def _inst_label_for_build_with_cfg(b: Any, cfg: dict[str, Any]) -> str | None:
+    """Instance column / filter label: prefer ``source_instance``, else URL → config match."""
+    try:
+        stored = getattr(b, "source_instance", None)
+    except Exception:
+        stored = None
+    if isinstance(stored, str) and stored.strip():
+        return stored.strip()
+    try:
+        src = (b.source or "").lower()
+    except Exception:
+        return None
+    try:
+        bu = (b.url or "").rstrip("/")
+    except Exception:
+        bu = ""
+    if src == "jenkins":
+        for inst in (cfg.get("jenkins_instances", []) or []):
+            if not inst.get("enabled", True):
+                continue
+            base = str(inst.get("url", "") or "").rstrip("/")
+            if base and bu.startswith(base):
+                return _config_instance_label(inst, kind="jenkins")
+            if base and bu.startswith("/"):
+                try:
+                    joined = urljoin(base + "/", str(getattr(b, "url", None) or "").strip())
+                    if joined.rstrip("/").startswith(base):
+                        return _config_instance_label(inst, kind="jenkins")
+                except Exception:
+                    pass
+        return None
+    if src == "gitlab":
+        for inst in (cfg.get("gitlab_instances", []) or []):
+            if not inst.get("enabled", True):
+                continue
+            base = str(inst.get("url", "") or "").rstrip("/")
+            if base and bu.startswith(base):
+                return _config_instance_label(inst, kind="gitlab")
+            if base and bu.startswith("/"):
+                try:
+                    joined = urljoin(base + "/", str(getattr(b, "url", None) or "").strip())
+                    if joined.rstrip("/").startswith(base):
+                        return _config_instance_label(inst, kind="gitlab")
+                except Exception:
+                    pass
+        return None
+    return None
+
 
 # ── REST endpoints ────────────────────────────────────────────────────────
 
@@ -2256,72 +2333,11 @@ async def api_status():
         )
     cfg = _load_yaml_config()
 
-    def _enabled_urls(kind: str) -> list[str]:
-        insts = cfg.get(f"{kind}_instances", []) or []
-        out: list[str] = []
-        for inst in insts:
-            if not inst.get("enabled", True):
-                continue
-            u = str(inst.get("url", "") or "").strip()
-            if u:
-                out.append(u.rstrip("/"))
-        return out
-
-    enabled_jenkins = _enabled_urls("jenkins")
-    enabled_gitlab = _enabled_urls("gitlab")
-
-    def _inst_label_for_build(b: Any) -> str | None:
-        try:
-            stored = getattr(b, "source_instance", None)
-        except Exception:
-            stored = None
-        if isinstance(stored, str) and stored.strip():
-            return stored.strip()
-        try:
-            src = (b.source or "").lower()
-        except Exception:
-            return None
-        bu = (b.url or "").rstrip("/")
-        if src == "jenkins":
-            for inst in (cfg.get("jenkins_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "Jenkins")
-        if src == "gitlab":
-            for inst in (cfg.get("gitlab_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "GitLab")
-        return None
-
-    def _is_enabled_build(b: Any) -> bool:
-        try:
-            src = (b.source or "").lower()
-        except Exception:
-            return True
-        if src == "jenkins":
-            if not enabled_jenkins:
-                return False
-            bu = (b.url or "").rstrip("/")
-            if not bu:
-                return True
-            return any(bu.startswith(base) for base in enabled_jenkins)
-        if src == "gitlab":
-            if not enabled_gitlab:
-                return False
-            bu = (b.url or "").rstrip("/")
-            if not bu:
-                return True
-            return any(bu.startswith(base) for base in enabled_gitlab)
-        return True
-
     data = json.loads(snap.model_dump_json())
-    builds = [b for b in (snap.builds or []) if _is_enabled_build(b)]
-    data["builds"] = [dict(json.loads(b.model_dump_json()), instance=_inst_label_for_build(b)) for b in builds]
+    builds = [b for b in (snap.builds or []) if _is_snapshot_build_enabled(b, cfg)]
+    data["builds"] = [
+        dict(json.loads(b.model_dump_json()), instance=_inst_label_for_build_with_cfg(b, cfg)) for b in builds
+    ]
     return data
 
 
@@ -2348,70 +2364,7 @@ async def api_builds(
 
     cfg = _load_yaml_config()
 
-    def _enabled_urls(kind: str) -> list[str]:
-        insts = cfg.get(f"{kind}_instances", []) or []
-        out: list[str] = []
-        for inst in insts:
-            if not inst.get("enabled", True):
-                continue
-            u = str(inst.get("url", "") or "").strip()
-            if u:
-                out.append(u.rstrip("/"))
-        return out
-
-    enabled_jenkins = _enabled_urls("jenkins")
-    enabled_gitlab = _enabled_urls("gitlab")
-
-    def _is_enabled_build(b: Any) -> bool:
-        try:
-            src = (b.source or "").lower()
-        except Exception:
-            return True
-        if src == "jenkins":
-            if not enabled_jenkins:
-                return False
-            bu = (b.url or "").rstrip("/")
-            if not bu:
-                return True
-            return any(bu.startswith(base) for base in enabled_jenkins)
-        if src == "gitlab":
-            if not enabled_gitlab:
-                return False
-            bu = (b.url or "").rstrip("/")
-            if not bu:
-                return True
-            return any(bu.startswith(base) for base in enabled_gitlab)
-        return True
-
-    def _inst_label_for_build(b: Any) -> str | None:
-        try:
-            stored = getattr(b, "source_instance", None)
-        except Exception:
-            stored = None
-        if isinstance(stored, str) and stored.strip():
-            return stored.strip()
-        try:
-            src = (b.source or "").lower()
-        except Exception:
-            return None
-        bu = (b.url or "").rstrip("/")
-        if src == "jenkins":
-            for inst in (cfg.get("jenkins_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "Jenkins")
-        if src == "gitlab":
-            for inst in (cfg.get("gitlab_instances", []) or []):
-                if not inst.get("enabled", True):
-                    continue
-                base = str(inst.get("url", "") or "").rstrip("/")
-                if base and bu.startswith(base):
-                    return str(inst.get("name") or "GitLab")
-        return None
-
-    items = [b for b in snap.builds if _is_enabled_build(b)]
+    items = [b for b in snap.builds if _is_snapshot_build_enabled(b, cfg)]
     if source:
         items = [b for b in items if b.source.lower() == source.lower()]
     if instance:
@@ -2420,7 +2373,7 @@ async def api_builds(
             items = [
                 b
                 for b in items
-                if (_inst_label_for_build(b) or "").strip().lower() == want_inst
+                if (_inst_label_for_build_with_cfg(b, cfg) or "").strip().lower() == want_inst
             ]
     if status:
         want = normalize_build_status(status)
@@ -2437,7 +2390,7 @@ async def api_builds(
     # Totals per source||instance for the full filtered list (UI group headers).
     group_counts: dict[str, dict[str, int]] = {}
     for b in items:
-        gk = f"{(b.source or '').strip().lower()}||{(_inst_label_for_build(b) or '').strip().lower()}"
+        gk = f"{(b.source or '').strip().lower()}||{(_inst_label_for_build_with_cfg(b, cfg) or '').strip().lower()}"
         if gk not in group_counts:
             group_counts[gk] = {"fail": 0, "warn": 0, "ok": 0, "total": 0}
         rec = group_counts[gk]
@@ -2460,7 +2413,7 @@ async def api_builds(
     for b in page_items:
         row = json.loads(b.model_dump_json())
         row["analytics"] = job_ctx.get(b.job_name, {})
-        row["instance"] = _inst_label_for_build(b)
+        row["instance"] = _inst_label_for_build_with_cfg(b, cfg)
         out_items.append(row)
 
     return {
@@ -2474,16 +2427,26 @@ async def api_builds(
 
 
 async def api_instances():
-    """Return enabled instance names (for filter dropdowns)."""
+    """Return enabled instance labels for filter dropdowns.
+
+    Labels match ``_config_instance_label`` / ``source_instance`` on builds
+    (explicit ``name`` in YAML, otherwise URL host), so instance filtering
+    stays consistent even when ``name`` is omitted in config.
+    """
     cfg = _load_yaml_config()
     out: list[dict[str, str]] = []
     for inst in (cfg.get("jenkins_instances", []) or []):
-        if inst.get("enabled", True) and str(inst.get("name") or "").strip():
-            out.append({"source": "jenkins", "name": str(inst.get("name"))})
+        if not inst.get("enabled", True):
+            continue
+        if not str(inst.get("url", "") or "").strip():
+            continue
+        out.append({"source": "jenkins", "name": _config_instance_label(inst, kind="jenkins")})
     for inst in (cfg.get("gitlab_instances", []) or []):
-        if inst.get("enabled", True) and str(inst.get("name") or "").strip():
-            out.append({"source": "gitlab", "name": str(inst.get("name"))})
-    # stable order
+        if not inst.get("enabled", True):
+            continue
+        if not str(inst.get("url", "") or "").strip():
+            continue
+        out.append({"source": "gitlab", "name": _config_instance_label(inst, kind="gitlab")})
     out.sort(key=lambda x: (x.get("source", ""), x.get("name", "")))
     return out
 
@@ -3079,7 +3042,7 @@ async def api_sources():
         for inst in (cfg.get("gitlab_instances", []) or [])
     )
 
-    sources = {b.source for b in snap.builds}
+    sources = {b.source for b in snap.builds if _is_snapshot_build_enabled(b, cfg)}
     if "jenkins" in sources and not enabled_jenkins:
         sources.discard("jenkins")
     if "gitlab" in sources and not enabled_gitlab:

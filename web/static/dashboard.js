@@ -3236,7 +3236,6 @@ async function populateSources() {
   });
   // Keep current selection if still present.
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
-  _maybeRestoreFiltersFromLS();
   updateFilterSummary();
 }
 
@@ -3257,6 +3256,24 @@ async function populateInstances() {
     sel.appendChild(opt);
   });
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+/** Instance options must exist before restoring LS/URL filters (avoids stale instance hiding builds). */
+async function populateSourcesAndInstances() {
+  await populateInstances();
+  await populateSources();
+  _maybeRestoreFiltersFromLS();
+  _pruneInvalidBuildInstanceFilter();
+  updateFilterSummary();
+}
+
+function _pruneInvalidBuildInstanceFilter() {
+  const sel = document.getElementById('f-instance');
+  if (!sel || !sel.value) return;
+  if ([...sel.options].some((o) => o.value === sel.value)) return;
+  sel.value = '';
+  try { localStorage.removeItem('cimon-f-instance'); } catch { /* ignore */ }
+  _writeURLFilters();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4437,7 +4454,7 @@ async function refreshAll() {
       // Do not blank tables on refresh; keep current rows until new data arrives.
 
       // Update dropdowns (can change after Collect / settings updates).
-      await Promise.all([populateSources(), populateInstances()]);
+      await populateSourcesAndInstances();
       await Promise.all([
         loadSummary(),
         loadBuilds(),
@@ -4578,7 +4595,7 @@ document.addEventListener('DOMContentLoaded', () => {
   pollCollect();
   loadUptimeData().then(() => loadServices()); // load uptime before services render
   loadSummary();
-  Promise.all([populateSources(), populateInstances()]).then(() => {
+  populateSourcesAndInstances().then(() => {
     loadBuilds();
     loadFailures();
     loadTests();
