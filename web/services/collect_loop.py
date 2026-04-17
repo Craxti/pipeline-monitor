@@ -7,6 +7,8 @@ import logging
 from datetime import datetime, timezone
 from collections.abc import Awaitable, Callable
 
+from web.services.collect_sync.exceptions import CollectCancelled
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +29,7 @@ async def do_collect(
         logger.info("Collection already in progress, skipping.")
         return
     collect_state["is_collecting"] = True
+    collect_state["cancel_requested"] = False
     collect_state["started_at"] = datetime.now(tz=timezone.utc).isoformat()
     collect_state["phase"] = "starting"
     collect_state["progress_main"] = "Starting collect…"
@@ -46,10 +49,21 @@ async def do_collect(
             lambda: run_collect_sync(cfg, force_full=force_full),
         )
         collect_state["last_collected_at"] = datetime.now(tz=timezone.utc).isoformat()
+    except CollectCancelled:
+        logger.info("Collection cancelled by user.")
+        collect_state["last_error"] = None
+        collect_state["phase"] = "cancelled"
+        collect_state["progress_main"] = "Collect cancelled"
+        collect_state["progress_sub"] = "Stopped by user"
+        try:
+            push_collect_log("cancelled", "Collect stopped by user", None, "warn")
+        except Exception:
+            pass
     except Exception as exc:
         logger.error("Collection error: %s", exc)
         collect_state["last_error"] = str(exc)
     finally:
+        collect_state["cancel_requested"] = False
         collect_state["is_collecting"] = False
         collect_state["started_at"] = None
         try:

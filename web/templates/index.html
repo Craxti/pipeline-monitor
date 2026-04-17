@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260417i" />
+<link rel="stylesheet" href="/static/app.css?v=20260417m" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
@@ -27,7 +27,7 @@
 <script src="/static/dashboard.flaky.js?v=20260417i" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
 <script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
-<script src="/static/dashboard.collect-bar.js?v=20260417i" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260417k" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
 <script src="/static/dashboard.trends.js?v=20260417i" defer></script>
 <script src="/static/dashboard.actions.js?v=20260417i" defer></script>
@@ -59,7 +59,12 @@
       <div id="collect-err" role="alert" aria-live="assertive"></div>
     </div>
   </div>
-  <button class="btn" id="btn-collect" data-dash-action="triggerCollect">&#8635; <span data-i18n="dash.collect">Collect</span></button>
+  <div class="collect-actions-stack">
+    <button class="btn" id="btn-collect" data-dash-action="triggerCollect">&#8635; <span data-i18n="dash.collect">Collect</span></button>
+    <button type="button" class="btn btn-collect-stop collect-stop-hidden" id="btn-collect-stop" data-dash-action="stopCollect" disabled data-i18n-title="dash.collect_stop_title" title="">
+      &#9632; <span data-i18n="dash.collect_stop">Stop</span>
+    </button>
+  </div>
   <label class="live-toggle" style="margin-left:.35rem" data-i18n-title="dash.collect_full_title" title="">
     <input type="checkbox" id="collect-full">
     <span class="pill" style="font-size:.72rem" data-i18n="dash.collect_full_pill">FULL</span>

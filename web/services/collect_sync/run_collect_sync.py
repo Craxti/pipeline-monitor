@@ -13,6 +13,7 @@ from web.services.collect_sync import local_parsers as _local_parsers
 from web.services.collect_sync import merge as _merge
 from web.services.collect_sync import progress as _progress
 from web.services.collect_sync import synth_tests as _synth_tests
+from web.services.collect_sync.exceptions import CollectCancelled
 
 
 def run_collect_sync(
@@ -63,6 +64,10 @@ def run_collect_sync(
             push_collect_log=push_collect_log,
         )
 
+    def _between_phases() -> None:
+        if collect_state.get("cancel_requested"):
+            raise CollectCancelled("Stopped by user")
+
     def merge_build_records(new_records: list) -> None:
         return _merge.merge_build_records(snapshot, new_records)
 
@@ -85,6 +90,7 @@ def run_collect_sync(
         TestRecord=TestRecord,
         append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
     )
+    _between_phases()
 
     _gitlab_collect.collect_gitlab_builds(
         cfg=cfg,
@@ -95,8 +101,10 @@ def run_collect_sync(
         config_instance_label=config_instance_label,
         logger=logger,
     )
+    _between_phases()
 
     _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger)
+    _between_phases()
 
     _docker_collect.collect_docker_services(
         cfg=cfg,

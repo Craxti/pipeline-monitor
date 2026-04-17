@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from web.services.collect_sync.exceptions import CollectCancelled
+
 
 def progress_update(
     *,
@@ -13,6 +15,8 @@ def progress_update(
     push_collect_log,
 ) -> None:
     """Update `collect_state` fields based on snapshot state and phase."""
+    if collect_state.get("cancel_requested"):
+        raise CollectCancelled("Stopped by user")
     collect_state["phase"] = phase
     collect_state["progress_main"] = main
     collect_state["progress_sub"] = sub

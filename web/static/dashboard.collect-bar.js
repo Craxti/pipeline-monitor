@@ -21,6 +21,7 @@ function updateCollectBar(state) {
   const dot = document.getElementById('cdot');
   const errEl = document.getElementById('collect-err');
   const btn = document.getElementById('btn-collect');
+  const stopBtn = document.getElementById('btn-collect-stop');
   if (!dot || !btn) return;
 
   _dashIsCollecting = !!(state && state.is_collecting);
@@ -41,6 +42,10 @@ function updateCollectBar(state) {
     if (!_collectStartedAt) _collectStartedAt = Date.now();
     dot.classList.add('collecting');
     btn.disabled = true;
+    if (stopBtn) {
+      stopBtn.classList.remove('collect-stop-hidden');
+      stopBtn.disabled = false;
+    }
     if (errEl) {
       errEl.textContent = '';
       errEl.style.display = 'none';
@@ -65,6 +70,10 @@ function updateCollectBar(state) {
 
   _collectStartedAt = null;
   btn.disabled = false;
+  if (stopBtn) {
+    stopBtn.classList.add('collect-stop-hidden');
+    stopBtn.disabled = true;
+  }
 
   if (hasErr) {
     dot.classList.add('err');
@@ -179,6 +188,25 @@ async function loadCollectSlowTop() {
         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(job)} <span style="color:var(--muted)">${_escHtml(b)}</span></span>
       </div>`;
     }).join('');
+}
+
+async function stopCollect() {
+  const stopBtn = document.getElementById('btn-collect-stop');
+  if (stopBtn) stopBtn.disabled = true;
+  const res = await fetch(apiUrl('api/collect/stop'), { method: 'POST' }).catch(() => null);
+  if (stopBtn) stopBtn.disabled = false;
+  if (!res || !res.ok) {
+    const d = res ? await res.json().catch(() => ({})) : {};
+    showToast((d && d.message) || (d && d.detail) || (res && res.statusText) || 'Stop failed', 'warn');
+    return;
+  }
+  const j = await res.json().catch(() => ({}));
+  if (j.ok === false) {
+    showToast(j.message || 'Nothing to stop', 'warn');
+    return;
+  }
+  showToast(t('dash.collect_stop_sent'), 'ok');
+  pollCollect();
 }
 
 async function triggerCollect() {

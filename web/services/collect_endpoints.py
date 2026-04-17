@@ -56,6 +56,14 @@ async def set_auto_collect(
     return {"ok": True, "enabled": bool(auto_collect_enabled_ref.get("value"))}
 
 
+def stop_collect_request(*, collect_state: dict) -> dict:
+    """Request cooperative cancellation of the in-flight collect (worker checks flag)."""
+    if not collect_state.get("is_collecting"):
+        return {"ok": False, "message": "Not collecting."}
+    collect_state["cancel_requested"] = True
+    return {"ok": True, "message": "Stop requested."}
+
+
 async def trigger_collect(
     *,
     request_json: Callable[[], Awaitable[Any]],

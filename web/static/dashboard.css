@@ -54,6 +54,32 @@ html[lang="ru"] .live-help{display:none}
 body.dashboard-live header{box-shadow:0 0 0 1px rgba(34,197,94,.25)}
 
 .collect-bar{display:flex;align-items:flex-start;gap:.55rem;margin-left:auto;font-size:.8rem;color:var(--muted);flex-shrink:0;min-width:0}
+
+/* Collect + Stop stacked — saves horizontal space in the header */
+.collect-actions-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:.2rem;
+  flex-shrink:0;
+}
+.collect-actions-stack > .btn{
+  justify-content:center;
+  padding:.36rem .6rem;
+  font-size:.74rem;
+}
+#btn-collect-stop.btn-collect-stop{
+  background:var(--fail)!important;
+  border:1px solid #b91c1c!important;
+  color:#fff!important;
+}
+#btn-collect-stop.btn-collect-stop:hover:not(:disabled){
+  background:#f87171!important;
+  border-color:#dc2626!important;
+  filter:none;
+  opacity:1;
+}
+#btn-collect-stop.collect-stop-hidden{display:none!important}
 .collect-text{display:flex;flex-direction:column;gap:.15rem;align-items:flex-start;min-width:0;max-width:min(420px,42vw)}
 .collect-line-main{font-size:.78rem;color:var(--text);line-height:1.4;font-weight:500}
 .collect-line-sub{font-size:.7rem;color:var(--muted);line-height:1.35}

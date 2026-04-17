@@ -39,6 +39,7 @@ async def api_save_settings(
 
     def _set_collect_state_after_save(merged: dict) -> None:
         collect_state["is_collecting"] = False
+        collect_state["cancel_requested"] = False
         collect_state["last_error"] = None
         w_cfg = merged.get("web", {})
         collect_state["interval_seconds"] = int(w_cfg.get("collect_interval_seconds", 300))

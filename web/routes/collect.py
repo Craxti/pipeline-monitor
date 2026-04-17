@@ -99,6 +99,19 @@ async def collect_slow_route(limit: int = 10):
 
 
 @router.post(
+    "/api/collect/stop",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def collect_stop_route():
+    """Request cancellation of a running collect (cooperative; may finish current step)."""
+    from web.core import runtime as rt
+    from web.services import collect_endpoints
+
+    return collect_endpoints.stop_collect_request(collect_state=rt.collect_state)
+
+
+@router.post(
     "/api/collect",
     response_class=JSONResponse,
     dependencies=[Depends(require_shared_token)],
