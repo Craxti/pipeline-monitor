@@ -97,6 +97,7 @@ def maybe_save_partial(
 
 def detect_state_changes(snapshot: CISnapshot) -> None:
     """Detect changes and append notifications + persisted events."""
+
     # `notify_state` object lives in runtime; keep it the same
     def _append_event(entries: list[dict]) -> None:
         from web.services import event_feed_api
@@ -143,6 +144,7 @@ def run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
 
         def _set(*_a, **_k) -> None:
             return None
+
     else:
         _get = get_collector_state_int
         _set = set_collector_state_int
@@ -189,8 +191,6 @@ async def collect_loop(cfg: dict) -> None:
     return await collect_loop_mod.collect_loop(
         cfg,
         auto_collect_enabled_getter=lambda: bool(rt.auto_collect_rt.enabled),
-        interval_seconds_getter=lambda: int(
-            rt.collect_state.get("interval_seconds") or 300
-        ),
+        interval_seconds_getter=lambda: int(rt.collect_state.get("interval_seconds") or 300),
         do_collect_fn=lambda c: do_collect(c, force_full=False),
     )

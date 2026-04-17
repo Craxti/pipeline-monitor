@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class JenkinsAllureParser:
     """Fetch and parse Allure results from Jenkins jobs/builds."""
+
     def __init__(
         self,
         url: str,
@@ -62,6 +63,7 @@ class JenkinsAllureParser:
         while True:
             try:
                 import time
+
                 t0 = time.monotonic()
                 r = requests.get(
                     url,
@@ -70,12 +72,8 @@ class JenkinsAllureParser:
                     verify=self.verify_ssl,
                 )
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
-                if (
-                    r.status_code >= 400
-                    and self._should_retry_status(r.status_code)
-                    and attempt < self.retries
-                ):
-                    delay = self.backoff_seconds * (2 ** attempt)
+                if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
                         "AllureParser: GET %s -> %d (%dms), retry in %.1fs",
                         path,
@@ -98,10 +96,11 @@ class JenkinsAllureParser:
                     logger.debug("AllureParser: GET %s -> 404 (no report)", path)
                     return None
                 if code is not None and self._should_retry_status(code) and attempt < self.retries:
-                    delay = self.backoff_seconds * (2 ** attempt)
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning("AllureParser: HTTP %s (%s), retry in %.1fs", path, code, delay)
                     try:
                         import time
+
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -111,7 +110,7 @@ class JenkinsAllureParser:
                 return None
             except Exception as exc:
                 if attempt < self.retries:
-                    delay = self.backoff_seconds * (2 ** attempt)
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
                         "AllureParser: GET %s failed, retry in %.1fs: %s",
                         path,
@@ -120,6 +119,7 @@ class JenkinsAllureParser:
                     )
                     try:
                         import time
+
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -134,9 +134,7 @@ class JenkinsAllureParser:
         if int(self.max_builds) <= 0:
             data = self._get_json(f"{jp}/api/json?tree=builds[number]")
         else:
-            data = self._get_json(
-                f"{jp}/api/json?tree=builds[number]{{0,{int(self.max_builds)}}}"
-            )
+            data = self._get_json(f"{jp}/api/json?tree=builds[number]{{0,{int(self.max_builds)}}}")
         if not isinstance(data, dict):
             return []
         builds = data.get("builds") or []
@@ -171,14 +169,10 @@ class JenkinsAllureParser:
         uid: str,
     ) -> dict[str, Any] | None:
         jp = JenkinsClient.job_path(job_name)
-        data = self._get_json(
-            f"{jp}/{int(build_number)}/allure/data/test-cases/{uid}.json"
-        )
+        data = self._get_json(f"{jp}/{int(build_number)}/allure/data/test-cases/{uid}.json")
         return data if isinstance(data, dict) else None
 
-    def _parse_allure(
-        self, job_name: str, build_number: int
-    ) -> list[TestRecord]:
+    def _parse_allure(self, job_name: str, build_number: int) -> list[TestRecord]:
         jp = JenkinsClient.job_path(job_name)
         suites = self._get_json(f"{jp}/{int(build_number)}/allure/data/suites.json")
         if not isinstance(suites, dict):
@@ -279,6 +273,7 @@ class JenkinsAllureParser:
                 except Exception:
                     pass
             import time
+
             t0 = time.monotonic()
             recs = self._parse_allure(job_name, build_num)
             elapsed_ms = int((time.monotonic() - t0) * 1000)
@@ -316,11 +311,7 @@ class JenkinsAllureParser:
                         except Exception:
                             pass
                     job_name = recs[0].suite or "job"
-                    failed = sum(
-                        1
-                        for r in recs
-                        if r.status_normalized in ("failed", "error")
-                    )
+                    failed = sum(1 for r in recs if r.status_normalized in ("failed", "error"))
                     logger.info(
                         "AllureParser: '%s' → %d test records (%d failed)",
                         job_name,

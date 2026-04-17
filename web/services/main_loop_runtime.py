@@ -9,4 +9,5 @@ from dataclasses import dataclass
 @dataclass
 class MainLoopRuntime:
     """Holds reference to the main event loop (set at startup)."""
+
     loop: asyncio.AbstractEventLoop | None = None

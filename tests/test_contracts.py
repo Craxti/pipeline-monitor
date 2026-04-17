@@ -1,6 +1,7 @@
 """
 Contract tests: settings masking/merge, SQLite history query, status normalization helpers.
 """
+
 from __future__ import annotations
 
 import os

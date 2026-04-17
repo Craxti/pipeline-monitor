@@ -14,6 +14,7 @@ from typing import Any, Deque, Dict
 @dataclass
 class CollectState:
     """Mutable collect state + rolling logs for UI endpoints."""
+
     state: Dict[str, Any] = field(
         default_factory=lambda: {
             "is_collecting": False,
@@ -48,15 +49,15 @@ class CollectState:
             job: str | None = None
             m = (main or "").strip()
             if m.startswith("Jenkins: "):
-                instance = m[len("Jenkins: "):].strip()
+                instance = m[len("Jenkins: ") :].strip()
             elif m.startswith("GitLab: "):
-                instance = m[len("GitLab: "):].strip()
+                instance = m[len("GitLab: ") :].strip()
             s = (sub or "").strip()
             if s.startswith("Console: "):
-                rest = s[len("Console: "):]
+                rest = s[len("Console: ") :]
                 job = (rest.split(" #", 1)[0] if " #" in rest else rest).strip()
             elif s.startswith("Allure: "):
-                rest = s[len("Allure: "):]
+                rest = s[len("Allure: ") :]
                 job = (rest.split(" #", 1)[0] if " #" in rest else rest).strip()
             elif s.startswith("Builds: "):
                 parts = s.split(" ", 2)

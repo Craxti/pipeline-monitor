@@ -198,11 +198,7 @@ def _walk_windows_agent_cmd_bundle(root: Path, max_depth: int) -> str | None:
             if depth > max_depth:
                 dirnames[:] = []
                 continue
-            dirnames[:] = [
-                d
-                for d in dirnames
-                if d not in _CURSOR_AGENT_WALK_SKIP_DIRS and not d.startswith(".")
-            ]
+            dirnames[:] = [d for d in dirnames if d not in _CURSOR_AGENT_WALK_SKIP_DIRS and not d.startswith(".")]
             if "agent.cmd" not in filenames:
                 continue
             p = Path(dirpath) / "agent.cmd"

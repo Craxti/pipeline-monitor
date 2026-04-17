@@ -2,6 +2,7 @@
 Unit tests for Jenkins and GitLab clients.
 Uses unittest.mock to avoid real HTTP calls.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ from models.models import BuildStatus
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_jenkins(jobs: list[dict] | None = None, **kw) -> JenkinsClient:
     return JenkinsClient(url="http://jenkins", username="u", token="t", jobs=jobs or [], **kw)
@@ -59,9 +61,7 @@ class TestJenkinsClient:
         client = _make_jenkins(jobs=[])
         data = {"builds": [RAW_BUILD_SUCCESS, RAW_BUILD_FAILURE]}
         with self._patch_get(client, data):
-            records = client.fetch_builds_for_job(
-                "folder/myjob", since=None, max_builds=5, critical=True
-            )
+            records = client.fetch_builds_for_job("folder/myjob", since=None, max_builds=5, critical=True)
         assert len(records) == 2
         assert all(r.job_name == "folder/myjob" for r in records)
         assert records[0].critical is True

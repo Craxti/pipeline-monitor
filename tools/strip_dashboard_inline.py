@@ -2,6 +2,7 @@
 
 Adds `/static/dashboard.js` after i18n include.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,11 +21,7 @@ def main() -> None:
         line = lines[i]
         st = line.strip()
         # Drop inline scripts only (keep Chart.js CDN, keep any <script src="...">)
-        if st == "<script>" or (
-            st.startswith("<script")
-            and "src=" not in st
-            and not st.endswith("/>")
-        ):
+        if st == "<script>" or (st.startswith("<script") and "src=" not in st and not st.endswith("/>")):
             i += 1
             while i < n and lines[i].strip() != "</script>":
                 i += 1
@@ -33,9 +30,7 @@ def main() -> None:
             continue
         if "{% include 'partials/i18n_core.html' %}" in line and not inserted:
             out.append(line)
-            out.append(
-                '<script src="/static/dashboard.js?v=20260416" defer></script>\n'
-            )
+            out.append('<script src="/static/dashboard.js?v=20260416" defer></script>\n')
             inserted = True
             i += 1
             continue

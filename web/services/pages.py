@@ -63,9 +63,7 @@ async def index_page(
     if snap:
         ctx["builds_ok"] = sum(1 for b in snap.builds if b.status_normalized == "success")
         ctx["builds_fail"] = sum(1 for b in snap.builds if b.status_normalized == "failure")
-        ctx["tests_fail"] = sum(
-            1 for t in snap.tests if t.status_normalized in ("failed", "error")
-        )
+        ctx["tests_fail"] = sum(1 for t in snap.tests if t.status_normalized in ("failed", "error"))
         ctx["svc_down"] = sum(1 for s in snap.services if s.status_normalized == "down")
 
     resp = templates.TemplateResponse("index.html", ctx)

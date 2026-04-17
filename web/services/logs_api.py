@@ -94,9 +94,7 @@ def diff_logs(
         return [
             b
             for b in snapshot.builds
-            if (b.source or "").lower() == source.lower()
-            and b.job_name == job_name
-            and b.build_number != build_number
+            if (b.source or "").lower() == source.lower() and b.job_name == job_name and b.build_number != build_number
         ]
 
     prev_build_number: int | None = None
@@ -181,10 +179,7 @@ def diff_logs(
                 if prev_build_number is None:
                     raise HTTPException(
                         404,
-                        (
-                            f"No other build for «{job_name}» in snapshot — "
-                            "run collect to refresh data."
-                        ),
+                        (f"No other build for «{job_name}» in snapshot — " "run collect to refresh data."),
                     )
                 prev_text = client.fetch_pipeline_logs(job_name, int(prev_build_number))
                 break
@@ -196,14 +191,12 @@ def diff_logs(
     if not cur_text:
         raise HTTPException(
             502,
-            "Could not fetch current build log"
-            + (f": {last_fetch_err}" if last_fetch_err else ""),
+            "Could not fetch current build log" + (f": {last_fetch_err}" if last_fetch_err else ""),
         )
     if not prev_text:
         raise HTTPException(
             502,
-            "Could not fetch reference build log"
-            + (f": {last_fetch_err}" if last_fetch_err else ""),
+            "Could not fetch reference build log" + (f": {last_fetch_err}" if last_fetch_err else ""),
         )
 
     cur_lines = cur_text.splitlines()
@@ -266,10 +259,7 @@ def pipeline_stages(
                         "id": j.get("id"),
                     }
                 )
-            ordered = [
-                {"stage": stage_name, "jobs": jobs_list}
-                for stage_name, jobs_list in stages.items()
-            ]
+            ordered = [{"stage": stage_name, "jobs": jobs_list} for stage_name, jobs_list in stages.items()]
             return {"ok": True, "stages": ordered}
         except Exception as exc:
             last_err = str(exc)

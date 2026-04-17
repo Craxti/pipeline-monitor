@@ -8,10 +8,7 @@ from typing import Any
 
 def parse_enabled(body: Any) -> bool:
     """Parse `enabled` flag from JSON body."""
-    return bool(
-        isinstance(body, dict)
-        and body.get("enabled") in (True, "true", "1", 1)
-    )
+    return bool(isinstance(body, dict) and body.get("enabled") in (True, "true", "1", 1))
 
 
 def collect_status_payload(
@@ -31,8 +28,7 @@ def collect_status_payload(
                     interval
                     - int(
                         (
-                            datetime.now(tz=timezone.utc)
-                            - datetime.fromisoformat(collect_state["last_collected_at"])
+                            datetime.now(tz=timezone.utc) - datetime.fromisoformat(collect_state["last_collected_at"])
                         ).total_seconds()
                     ),
                 )
@@ -45,12 +41,7 @@ def collect_status_payload(
                         enabled_at = enabled_at.astimezone(timezone.utc)
                     next_in = max(
                         0,
-                        interval
-                        - int(
-                            (
-                                datetime.now(tz=timezone.utc) - enabled_at
-                            ).total_seconds()
-                        ),
+                        interval - int((datetime.now(tz=timezone.utc) - enabled_at).total_seconds()),
                     )
                 except Exception:
                     next_in = None

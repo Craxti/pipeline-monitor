@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 @dataclass
 class SSERuntime:
     """Holds active subscriber queues."""
+
     queues: set[asyncio.Queue] = field(default_factory=set)
 
 

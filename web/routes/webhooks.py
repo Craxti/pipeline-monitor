@@ -53,8 +53,6 @@ async def webhook_build_complete(request: Request):
         save_snapshot=save_snapshot,
         is_collecting=lambda: bool(rt.collect_state.get("is_collecting")),
         load_cfg=load_yaml_config,
-        do_collect_task_factory=lambda cfg: asyncio.create_task(
-            _do_collect(cfg, force_full=False)
-        ),
+        do_collect_task_factory=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
         handle_build_complete=webhooks.handle_build_complete,
     )

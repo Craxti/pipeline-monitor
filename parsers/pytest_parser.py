@@ -34,9 +34,7 @@ class PytestXMLParser(BaseParser):
 
         root = tree.getroot()
         # Handle both <testsuites><testsuite> and bare <testsuite>
-        suites = (
-            root.findall("testsuite") if root.tag == "testsuites" else [root]
-        )
+        suites = root.findall("testsuite") if root.tag == "testsuites" else [root]
 
         for suite in suites:
             suite_name = suite.get("name", "")
@@ -44,9 +42,7 @@ class PytestXMLParser(BaseParser):
             suite_ts: datetime | None = None
             if ts_str:
                 try:
-                    suite_ts = datetime.fromisoformat(ts_str).replace(
-                        tzinfo=timezone.utc
-                    )
+                    suite_ts = datetime.fromisoformat(ts_str).replace(tzinfo=timezone.utc)
                 except ValueError:
                     pass
 

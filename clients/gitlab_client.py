@@ -57,9 +57,7 @@ class GitLabClient(BaseCIClient):
         except ValueError:
             return None
 
-    def _parse_pipeline(
-        self, raw: dict, project_id: str, critical: bool
-    ) -> BuildRecord:
+    def _parse_pipeline(self, raw: dict, project_id: str, critical: bool) -> BuildRecord:
         started = self._parse_dt(raw.get("created_at"))
         updated = self._parse_dt(raw.get("updated_at"))
         duration: float | None = None
@@ -92,7 +90,9 @@ class GitLabClient(BaseCIClient):
         if isinstance(data, dict) and "id" in data:
             logger.debug(
                 "GitLab: resolved '%s' -> project ID %s (%s)",
-                proj_id, data["id"], data.get("path_with_namespace", ""),
+                proj_id,
+                data["id"],
+                data.get("path_with_namespace", ""),
             )
             return str(data["id"])
         # Last-resort: search by project name
@@ -101,9 +101,7 @@ class GitLabClient(BaseCIClient):
         if isinstance(results, list):
             for item in results:
                 if item.get("path_with_namespace", "").lower() == proj_id.lower():
-                    logger.debug(
-                        "GitLab: found '%s' via search -> ID %s", proj_id, item["id"]
-                    )
+                    logger.debug("GitLab: found '%s' via search -> ID %s", proj_id, item["id"])
                     return str(item["id"])
         logger.warning("GitLab: could not resolve project '%s' — skipping.", proj_id)
         return None
@@ -138,8 +136,7 @@ class GitLabClient(BaseCIClient):
         if self.show_all:
             discovered = self.fetch_project_list()
             explicit_ids = {str(p.get("id", "")).lower() for p in self.projects}
-            extra = [{"id": path, "critical": False}
-                     for path in discovered if path.lower() not in explicit_ids]
+            extra = [{"id": path, "critical": False} for path in discovered if path.lower() not in explicit_ids]
             project_list = list(self.projects) + extra
         else:
             project_list = self.projects
@@ -155,15 +152,13 @@ class GitLabClient(BaseCIClient):
                 # Try the URL-encoded path directly as fallback
                 resolved_id = quote_plus(proj_id)
 
-            path = (
-                f"/api/v4/projects/{resolved_id}/pipelines"
-                f"?per_page={max_builds}&order_by=id&sort=desc"
-            )
+            path = f"/api/v4/projects/{resolved_id}/pipelines" f"?per_page={max_builds}&order_by=id&sort=desc"
             data = self._get(path)
             if not isinstance(data, list):
                 logger.warning(
                     "GitLab: no pipeline list for project '%s' (id=%s)",
-                    proj_id, resolved_id,
+                    proj_id,
+                    resolved_id,
                 )
                 continue
             if not data:
@@ -179,9 +174,7 @@ class GitLabClient(BaseCIClient):
                 project_records.append(record)
 
             records.extend(project_records)
-            logger.debug(
-                "GitLab: project '%s' -> %d pipelines", proj_id, len(project_records)
-            )
+            logger.debug("GitLab: project '%s' -> %d pipelines", proj_id, len(project_records))
 
         logger.info("GitLab: fetched %d pipeline records total", len(records))
         return records
@@ -193,10 +186,7 @@ class GitLabClient(BaseCIClient):
         resolved = self._resolve_project(project_id)
         if resolved is None:
             resolved = quote_plus(project_id)
-        jobs = self._get(
-            f"/api/v4/projects/{resolved}/pipelines/{int(pipeline_id)}/jobs"
-            f"?per_page=100"
-        )
+        jobs = self._get(f"/api/v4/projects/{resolved}/pipelines/{int(pipeline_id)}/jobs" f"?per_page=100")
         if not isinstance(jobs, list) or not jobs:
             return "(no jobs in this pipeline)\n"
         chunks: list[str] = []
@@ -212,7 +202,5 @@ class GitLabClient(BaseCIClient):
             except Exception as exc:
                 logger.warning("GitLab trace job %s: %s", jid, exc)
                 trace = f"[trace unavailable: {exc}]\n"
-            chunks.append(
-                f"{'=' * 60}\n# {stage} / {name} (job id={jid})\n{'=' * 60}\n{trace}\n"
-            )
+            chunks.append(f"{'=' * 60}\n# {stage} / {name} (job id={jid})\n{'=' * 60}\n{trace}\n")
         return "".join(chunks)

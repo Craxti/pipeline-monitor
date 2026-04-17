@@ -20,14 +20,29 @@ class CsvReporter:
 
     # ── build columns ────────────────────────────────────────────────────────
     BUILD_FIELDS = [
-        "type", "source", "job_name", "build_number", "status",
-        "started_at", "duration_seconds", "branch", "commit_sha",
-        "url", "critical",
+        "type",
+        "source",
+        "job_name",
+        "build_number",
+        "status",
+        "started_at",
+        "duration_seconds",
+        "branch",
+        "commit_sha",
+        "url",
+        "critical",
     ]
     # ── test columns ─────────────────────────────────────────────────────────
     TEST_FIELDS = [
-        "type", "source", "suite", "test_name", "status",
-        "duration_seconds", "failure_message", "timestamp", "file_path",
+        "type",
+        "source",
+        "suite",
+        "test_name",
+        "status",
+        "duration_seconds",
+        "failure_message",
+        "timestamp",
+        "file_path",
     ]
     # ── service columns ──────────────────────────────────────────────────────
     SVC_FIELDS = ["type", "name", "kind", "status", "detail", "checked_at"]
@@ -37,18 +52,14 @@ class CsvReporter:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        all_fields = sorted(
-            set(self.BUILD_FIELDS + self.TEST_FIELDS + self.SVC_FIELDS)
-        )
+        all_fields = sorted(set(self.BUILD_FIELDS + self.TEST_FIELDS + self.SVC_FIELDS))
 
         rows: list[dict] = []
 
         for b in snapshot.builds:
             row = {"type": "build"}
             row.update(b.model_dump())
-            row["started_at"] = (
-                b.started_at.isoformat() if b.started_at else ""
-            )
+            row["started_at"] = b.started_at.isoformat() if b.started_at else ""
             rows.append(row)
 
         for t in snapshot.tests:

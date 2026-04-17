@@ -8,5 +8,6 @@ from dataclasses import dataclass
 @dataclass
 class AutoCollectRuntime:
     """Holds LIVE-mode auto-collect state."""
+
     enabled: bool = False
     enabled_at_iso: str | None = None

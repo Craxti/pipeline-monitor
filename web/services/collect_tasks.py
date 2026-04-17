@@ -38,6 +38,7 @@ def do_collect_task_factory(
     collect_fn: Callable[[dict, bool], "asyncio.Future[None]"],
 ) -> Callable[[dict, bool], asyncio.Task]:
     """Create a task factory for the collect coroutine."""
+
     def _factory(cfg: dict, force_full: bool) -> asyncio.Task:
         return asyncio.create_task(collect_fn(cfg, force_full))
 

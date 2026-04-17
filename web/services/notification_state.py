@@ -19,6 +19,7 @@ EventAppender = Callable[[List[dict]], None]
 @dataclass
 class NotificationState:
     """Holds prior state and notification ring buffer for change detection."""
+
     notify_max: int = 200
     notifications: List[dict] = field(default_factory=list)  # ring buffer, newest last
     prev_build_statuses: dict[str, str] = field(default_factory=dict)

@@ -20,6 +20,7 @@ def make_lifespan(
     stop_collect_task: Callable[[asyncio.Task | None], Awaitable[None]],
 ) -> Callable[[object], Awaitable[None]]:
     """Create a FastAPI lifespan handler wired with injected functions."""
+
     @asynccontextmanager
     async def _lifespan(app):
         cfg = load_cfg()

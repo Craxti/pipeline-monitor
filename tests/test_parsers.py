@@ -1,6 +1,7 @@
 """
 Unit tests for report parsers.
 """
+
 from __future__ import annotations
 
 import textwrap
@@ -20,7 +21,8 @@ from parsers.pytest_parser import PytestXMLParser
 
 # ── Jenkins console parser ────────────────────────────────────────────────────
 
-CONSOLE_SAMPLE = textwrap.dedent("""\
+CONSOLE_SAMPLE = textwrap.dedent(
+    """\
     Started by timer
     [Pipeline] Start of Pipeline
     [Pipeline] echo
@@ -32,7 +34,8 @@ CONSOLE_SAMPLE = textwrap.dedent("""\
     [Pipeline] echo
     №3  Проверка API: ✅ Успешно
     [Pipeline] End of Pipeline
-""")
+"""
+)
 
 CONSOLE_NO_BLOCK = """\
     Started by timer
@@ -40,20 +43,24 @@ CONSOLE_NO_BLOCK = """\
     Nothing here
 """
 
-CONSOLE_ONLY_FAILURES = textwrap.dedent("""\
+CONSOLE_ONLY_FAILURES = textwrap.dedent(
+    """\
     ====== Результаты выполнения ======
     №1  Тест А: ❌ Ошибка: timeout after 30s
     №2  Тест Б: ❌ Ошибка: null
-""")
+"""
+)
 
-CONSOLE_PIPELINE_FAIL_WITH_PYTEST = textwrap.dedent("""\
+CONSOLE_PIPELINE_FAIL_WITH_PYTEST = textwrap.dedent(
+    """\
     ====== Результаты выполнения ======
     [Pipeline] echo
     №27  Ручная модель кластеризации: Ошибка: test_27_clusterize_manual_agent_oim #23 completed with status UNSTABLE (propagate: false to ignore)
 
     FAILED tests/clusterize_ui/test_27_clusterize_manual_agent_oim.py::test_27_clusterize_manual_agent_oim - AssertionError: boom
     E   web.driver.base.ElementNotFound: Элемент: (//*[contains(text(), 'x')])[1] не найден в течение 60 сек
-""")
+"""
+)
 
 
 class _FakeParser(JenkinsConsoleParser):
@@ -77,9 +84,7 @@ class _FakeParser(JenkinsConsoleParser):
     def _fetch_console(self, job_name: str, build_number: int) -> str:
         return self._console_text
 
-    def _fetch_build_timing(
-        self, job_name: str, build_number: int
-    ) -> tuple[datetime | None, float | None]:
+    def _fetch_build_timing(self, job_name: str, build_number: int) -> tuple[datetime | None, float | None]:
         # 285 s = 4m 45s — same as Jenkins duration field (ms) / 1000
         return datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc), 285.0
 
@@ -154,7 +159,8 @@ class TestJenkinsConsoleParser:
 
 # ── PytestXMLParser ───────────────────────────────────────────────────────────
 
-JUNIT_XML = textwrap.dedent("""\
+JUNIT_XML = textwrap.dedent(
+    """\
     <?xml version="1.0" encoding="utf-8"?>
     <testsuites>
       <testsuite name="suite_a" timestamp="2024-01-15T10:00:00">
@@ -170,14 +176,17 @@ JUNIT_XML = textwrap.dedent("""\
         </testcase>
       </testsuite>
     </testsuites>
-""")
+"""
+)
 
-BARE_SUITE_XML = textwrap.dedent("""\
+BARE_SUITE_XML = textwrap.dedent(
+    """\
     <?xml version="1.0"?>
     <testsuite name="bare">
       <testcase name="only_one" time="0.1"/>
     </testsuite>
-""")
+"""
+)
 
 MALFORMED_XML = "not xml at all <<<"
 
@@ -226,6 +235,7 @@ class TestPytestXMLParser:
 
 
 # ── Allure failure text helpers ───────────────────────────────────────────────
+
 
 class TestAllureFailureText:
     def test_status_details_nested_dict(self) -> None:

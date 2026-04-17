@@ -35,17 +35,13 @@ def run_collect_sync(
     logger,
 ) -> None:
     """Full collection — runs in a thread-pool executor (blocking)."""
-    since = datetime.now(tz=timezone.utc) - timedelta(
-        days=cfg.get("general", {}).get("default_lookback_days", 7)
-    )
+    since = datetime.now(tz=timezone.utc) - timedelta(days=cfg.get("general", {}).get("default_lookback_days", 7))
     now = datetime.now(tz=timezone.utc)
     if force_full:
         snapshot = CISnapshot(collected_at=now, collect_meta={}, tests=[])
     else:
         prev = load_snapshot() or CISnapshot()
-        snapshot = prev.model_copy(
-            update={"tests": [], "collect_meta": {}, "collected_at": now}
-        )
+        snapshot = prev.model_copy(update={"tests": [], "collect_meta": {}, "collected_at": now})
 
     snap_lock = threading.Lock()
     health: list[dict[str, Any]] = []

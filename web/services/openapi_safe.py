@@ -40,17 +40,13 @@ def make_safe_openapi(app, *, logger) -> Callable[[], dict[str, Any]]:
                     vals = tuple(get_literal_values(core_schema.CoreSchemaType)) + tuple(
                         get_literal_values(core_schema.CoreSchemaFieldType)
                     )
-                    _pydantic_json_schema.CoreSchemaOrFieldType = (  # type: ignore[attr-defined]
-                        Literal[vals]
-                    )
+                    _pydantic_json_schema.CoreSchemaOrFieldType = Literal[vals]  # type: ignore[attr-defined]
                     schema = get_openapi(
                         title=str(getattr(app, "title", "API")),
                         version=str(getattr(app, "version", "0")),
                         routes=getattr(app, "routes", []),
                     )
-                    logger.info(
-                        "OpenAPI generation recovered via Pydantic schema-type workaround."
-                    )
+                    logger.info("OpenAPI generation recovered via Pydantic schema-type workaround.")
                 except Exception as exc2:
                     logger.warning("OpenAPI generation failed (after workaround): %s", exc2)
                     schema = {

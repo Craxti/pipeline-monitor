@@ -88,15 +88,11 @@ async def api_settings_save_route(request: Request):
             collect_loop_mod.collect_loop(
                 cfg,
                 auto_collect_enabled_getter=lambda: bool(rt.auto_collect_rt.enabled),
-                interval_seconds_getter=lambda: int(
-                    rt.collect_state.get("interval_seconds") or 300
-                ),
+                interval_seconds_getter=lambda: int(rt.collect_state.get("interval_seconds") or 300),
                 do_collect_fn=lambda c: _do_collect(c, force_full=False),
             )
         ),
-        create_do_collect_task=lambda cfg: asyncio.create_task(
-            _do_collect(cfg, force_full=False)
-        ),
+        create_do_collect_task=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
         sync_cursor_proxy=lambda cfg: asyncio.to_thread(
             cursor_proxy.sync_cursor_proxy_from_config,
             cfg,

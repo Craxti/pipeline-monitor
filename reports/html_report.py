@@ -166,15 +166,9 @@ class HtmlReporter:
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 
-        builds_ok = sum(
-            1 for b in snapshot.builds if b.status_normalized == "success"
-        )
-        builds_fail = sum(
-            1 for b in snapshot.builds if b.status_normalized == "failure"
-        )
-        tests_fail = sum(
-            1 for t in snapshot.tests if t.status_normalized in ("failed", "error")
-        )
+        builds_ok = sum(1 for b in snapshot.builds if b.status_normalized == "success")
+        builds_fail = sum(1 for b in snapshot.builds if b.status_normalized == "failure")
+        tests_fail = sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error"))
         tests_skip = sum(1 for t in snapshot.tests if t.status_normalized == "skipped")
 
         # Top failures
@@ -201,6 +195,7 @@ class HtmlReporter:
         # Anomalies: critical jobs with ≥2 consecutive failures
         anomalies: list[str] = []
         from collections import defaultdict
+
         job_statuses: dict[str, list[str]] = defaultdict(list)
         for b in sorted(
             snapshot.builds,
@@ -217,19 +212,13 @@ class HtmlReporter:
                 else:
                     consecutive = 0
             if consecutive >= 2:
-                anomalies.append(
-                    f"Critical job '{job}' has {consecutive} consecutive failures!"
-                )
+                anomalies.append(f"Critical job '{job}' has {consecutive} consecutive failures!")
 
         # Prepare template context
         build_rows = []
         for b in snapshot.builds:
-            dur = (
-                f"{b.duration_seconds:.0f}s" if b.duration_seconds else None
-            )
-            started = (
-                b.started_at.strftime("%Y-%m-%d %H:%M") if b.started_at else None
-            )
+            dur = f"{b.duration_seconds:.0f}s" if b.duration_seconds else None
+            started = b.started_at.strftime("%Y-%m-%d %H:%M") if b.started_at else None
             build_rows.append(
                 {
                     "source": b.source,

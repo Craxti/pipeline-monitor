@@ -44,12 +44,8 @@ class ConsoleReporter:
 
     def print_short(self, snapshot: CISnapshot) -> None:
         """One-liner summary."""
-        builds_ok = sum(
-            1 for b in snapshot.builds if b.status == BuildStatus.SUCCESS
-        )
-        builds_fail = sum(
-            1 for b in snapshot.builds if b.status == BuildStatus.FAILURE
-        )
+        builds_ok = sum(1 for b in snapshot.builds if b.status == BuildStatus.SUCCESS)
+        builds_fail = sum(1 for b in snapshot.builds if b.status == BuildStatus.FAILURE)
         tests_fail = sum(1 for t in snapshot.tests if t.status == "failed")
         svc_down = sum(1 for s in snapshot.services if s.status == "down")
 
@@ -58,24 +54,25 @@ class ConsoleReporter:
             f"Test failures [red]{tests_fail}[/red]  |  "
             f"Services down [red]{svc_down}[/red]"
         )
-        console.print(
-            Panel(summary, title="[bold]CI/CD Monitor - Short Summary[/bold]",
-                  border_style="blue")
-        )
+        console.print(Panel(summary, title="[bold]CI/CD Monitor - Short Summary[/bold]", border_style="blue"))
 
     def print_detailed(self, snapshot: CISnapshot, top_n: int = 10) -> None:
         """Full detailed view."""
         # ── Header ────────────────────────────────────────────────────────
         console.rule("[bold blue]CI/CD Monitor Report[/bold blue]", characters="-")
-        console.print(
-            f"  Collected at: [dim]{snapshot.collected_at.strftime('%Y-%m-%d %H:%M UTC')}[/dim]\n"
-        )
+        console.print(f"  Collected at: [dim]{snapshot.collected_at.strftime('%Y-%m-%d %H:%M UTC')}[/dim]\n")
 
         # ── Builds ────────────────────────────────────────────────────────
         if snapshot.builds:
             t = Table(
-                "Source", "Job / Project", "#", "Status", "Branch",
-                "Started", "Duration", "Critical",
+                "Source",
+                "Job / Project",
+                "#",
+                "Status",
+                "Branch",
+                "Started",
+                "Duration",
+                "Critical",
                 title="[bold]Builds / Pipelines[/bold]",
                 box=box.SIMPLE_HEAVY,
                 show_lines=False,
@@ -107,7 +104,9 @@ class ConsoleReporter:
 
             if fail_counter:
                 ft = Table(
-                    "Test Name", "Failures", "Last Message",
+                    "Test Name",
+                    "Failures",
+                    "Last Message",
                     title=f"[bold]Top {top_n} Failing Tests[/bold]",
                     box=box.SIMPLE_HEAVY,
                 )
@@ -135,18 +134,20 @@ class ConsoleReporter:
         # ── Services ──────────────────────────────────────────────────────
         if snapshot.services:
             st = Table(
-                "Name", "Kind", "Status", "Detail",
+                "Name",
+                "Kind",
+                "Status",
+                "Detail",
                 title="[bold]Services / Containers[/bold]",
                 box=box.SIMPLE_HEAVY,
             )
             for s in snapshot.services:
-                st.add_row(
-                    s.name, s.kind, _style(s.status), s.detail or "—"
-                )
+                st.add_row(s.name, s.kind, _style(s.status), s.detail or "—")
             console.print(st)
 
         # ── Anomalies ────────────────────────────────────────────────────
         from collections import defaultdict
+
         job_statuses: dict[str, list[str]] = defaultdict(list)
         for b in sorted(
             snapshot.builds,

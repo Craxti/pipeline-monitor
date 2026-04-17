@@ -81,8 +81,7 @@ async def api_chat(
     px_cfg = ai_cfg.get("proxy") if isinstance(ai_cfg.get("proxy"), dict) else {}
     if px_cfg.get("enabled") and not proxy_url:
         logger.warning(
-            "OpenAI proxy enabled in config but URL is incomplete — check host/port "
-            "or full url (config=%s)",
+            "OpenAI proxy enabled in config but URL is incomplete — check host/port " "or full url (config=%s)",
             config_yaml_path(),
         )
 

@@ -19,6 +19,7 @@ from models.models import CISnapshot, BuildStatus
 
 logger = logging.getLogger(__name__)
 
+
 def _telegram_send_message_url(bot_token: str, api_base_url: str | None) -> str:
     base = (api_base_url or "").strip().rstrip("/")
     if not base:
@@ -109,19 +110,14 @@ class TelegramNotifier:
 
         # ── failed builds ─────────────────────────────────────────────────
         failed_builds = [
-            b for b in snapshot.builds
-            if b.status == BuildStatus.FAILURE
-            and (not self.critical_only or b.critical)
+            b for b in snapshot.builds if b.status == BuildStatus.FAILURE and (not self.critical_only or b.critical)
         ]
         if failed_builds:
             lines = ["🔴 *CI/CD Alert — Failed Builds*\n"]
             for b in failed_builds:
                 crit = " ⚠ CRITICAL" if b.critical else ""
                 link = f"[open]({b.url})" if b.url else ""
-                lines.append(
-                    f"• `{b.source}` / `{b.job_name}` #{b.build_number or '?'}"
-                    f"{crit} {link}"
-                )
+                lines.append(f"• `{b.source}` / `{b.job_name}` #{b.build_number or '?'}" f"{crit} {link}")
             msgs.append("\n".join(lines))
 
         # ── failed services ────────────────────────────────────────────────

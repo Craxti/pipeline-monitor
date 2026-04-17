@@ -43,10 +43,7 @@ async def api_tests(
             t
             for t in items
             if t.timestamp
-            and t.timestamp.replace(
-                tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo
-            )
-            >= cutoff
+            and t.timestamp.replace(tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo) >= cutoff
         ]
 
     breakdown_base = snap.tests
@@ -60,10 +57,7 @@ async def api_tests(
             t
             for t in breakdown_base
             if t.timestamp
-            and t.timestamp.replace(
-                tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo
-            )
-            >= cutoff
+            and t.timestamp.replace(tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo) >= cutoff
         ]
     breakdown = tests_breakdown_real_vs_synth(breakdown_base)
 
@@ -104,9 +98,7 @@ async def api_top_failures(
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
 
-    tests_items = filter_tests_by_lookback_hours(
-        snap.tests, hours=int(hours or 0), days=int(days or 0)
-    )
+    tests_items = filter_tests_by_lookback_hours(snap.tests, hours=int(hours or 0), days=int(days or 0))
 
     src = (source or "").strip().lower()
     if not src:
@@ -140,7 +132,7 @@ async def api_top_failures(
                 inst = getattr(t, "source_instance", None) or ""
                 key = f"{inst}::{(t.source or 'unknown')}::{t.test_name}"
                 counter[key] += 1
-                sources[key] = (t.source or "unknown")
+                sources[key] = t.source or "unknown"
                 ts = _rec_ts(t)
                 if t.suite and str(t.suite).strip():
                     prev = suite_ts.get(key)

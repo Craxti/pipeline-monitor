@@ -147,7 +147,9 @@ class TestWebCoreConfig:
         p = cfg_mod.config_yaml_path()
         assert p == repo_root / "config.yaml"
 
-    def test_config_yaml_path_falls_back_to_cwd_when_repo_missing(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_config_yaml_path_falls_back_to_cwd_when_repo_missing(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         from web.core import config as cfg_mod
         from web.core import paths as paths_mod
 
@@ -164,4 +166,3 @@ class TestWebCoreConfig:
 
         p = cfg_mod.config_yaml_path()
         assert p == (cwd / "config.yaml").resolve()
-

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class HealthResponse(BaseModel):
     """Response model for `/health` endpoint."""
+
     status: Literal["ok"] = "ok"
     ts: str = Field(..., description="UTC ISO-8601 timestamp")
     version: str
@@ -18,6 +19,7 @@ class HealthResponse(BaseModel):
 
 class ReadyResponse(BaseModel):
     """Response model for `/ready` endpoint."""
+
     status: Literal["ready"] = "ready"
     snapshot_age_seconds: Optional[float] = Field(
         default=None,
@@ -45,6 +47,7 @@ class MonitorGeneralConfig(BaseModel):
 
 class IncidentFailedBuildRow(BaseModel):
     """Row for a failed build in incident bundle export."""
+
     model_config = ConfigDict(extra="ignore")
 
     source: str
@@ -59,12 +62,14 @@ class IncidentFailedBuildRow(BaseModel):
 
 class IncidentTopFailedTestRow(BaseModel):
     """Row for a top failing test in incident bundle export."""
+
     test_name: str
     count: int
 
 
 class IncidentServiceDownRow(BaseModel):
     """Row for a down/degraded service in incident bundle export."""
+
     model_config = ConfigDict(extra="ignore")
 
     name: str
@@ -75,6 +80,7 @@ class IncidentServiceDownRow(BaseModel):
 
 class IncidentSummaryBlock(BaseModel):
     """Summary counts block for incident bundle."""
+
     failed_builds: int
     failed_tests_in_snapshot: int
     services_down: int

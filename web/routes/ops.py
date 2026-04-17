@@ -36,9 +36,7 @@ async def ready() -> ReadyResponse:
             snap_age = (
                 datetime.now(tz=timezone.utc)
                 - snap.collected_at.replace(
-                    tzinfo=timezone.utc
-                    if snap.collected_at.tzinfo is None
-                    else snap.collected_at.tzinfo,
+                    tzinfo=timezone.utc if snap.collected_at.tzinfo is None else snap.collected_at.tzinfo,
                 )
             ).total_seconds()
         return ReadyResponse(snapshot_age_seconds=snap_age)

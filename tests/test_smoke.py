@@ -3,6 +3,7 @@ E2E smoke tests — start the FastAPI app with TestClient and hit real endpoints
 No real Jenkins/GitLab/Docker connections are made; the app may return 404 if
 there is no data/snapshot.json, which is still a valid response (server is up).
 """
+
 from __future__ import annotations
 
 import sys
@@ -16,6 +17,7 @@ if str(ROOT) not in sys.path:
 
 # Change working directory so the app can find config.yaml and data/
 import os
+
 os.chdir(ROOT)
 
 from fastapi.testclient import TestClient

@@ -95,6 +95,7 @@ async def api_instances_health():
 @router.get("/api/meta", response_class=JSONResponse)
 async def api_meta():
     """Return meta payload for UI."""
+
     def _load_events(limit: int = 300):
         from web.services import event_feed_api
 
@@ -133,6 +134,7 @@ async def sse_events(request: Request):
 @router.get("/api/trends", response_class=JSONResponse)
 async def api_trends(days: int = 14):
     """Return trends payload."""
+
     def _mem_get(key: str):
         from web.services import mem_cache
 
@@ -163,6 +165,7 @@ async def api_trends(days: int = 14):
 @router.get("/api/uptime", response_class=JSONResponse)
 async def api_uptime(days: int = 30):
     """Return uptime payload."""
+
     def _mem_get(key: str):
         from web.services import mem_cache
 
@@ -224,6 +227,7 @@ async def api_notifications(since_id: int = 0, limit: int = 50):
 @router.get("/api/events/persisted", response_class=JSONResponse)
 async def api_events_persisted(limit: int = 250):
     """Return persisted event feed entries."""
+
     def _event_feed_load(lim: int = 300):
         from web.services import event_feed_api
 

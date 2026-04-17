@@ -29,9 +29,7 @@ async def meta_payload(
 
     return {
         "data_revision": data_revision,
-        "snapshot": _freshness.snapshot_freshness(
-            snap=snap, stale_threshold_seconds=stale_threshold
-        ),
+        "snapshot": _freshness.snapshot_freshness(snap=snap, stale_threshold_seconds=stale_threshold),
         "collect": {
             "is_collecting": collect_state["is_collecting"],
             "last_collected_at": collect_state["last_collected_at"],

@@ -39,11 +39,7 @@ async def api_builds(
     if instance:
         want_inst = instance.strip().lower()
         if want_inst:
-            items = [
-                b
-                for b in items
-                if (inst_label_for_build_with_cfg(b, cfg) or "").strip().lower() == want_inst
-            ]
+            items = [b for b in items if (inst_label_for_build_with_cfg(b, cfg) or "").strip().lower() == want_inst]
     if status:
         want = normalize_build_status(status)
         items = [b for b in items if b.status_normalized == want]
@@ -55,18 +51,13 @@ async def api_builds(
             b
             for b in items
             if b.started_at
-            and b.started_at.replace(
-                tzinfo=timezone.utc if b.started_at.tzinfo is None else b.started_at.tzinfo
-            )
+            and b.started_at.replace(tzinfo=timezone.utc if b.started_at.tzinfo is None else b.started_at.tzinfo)
             >= cutoff
         ]
 
     group_counts: dict[str, dict[str, int]] = {}
     for b in items:
-        gk = (
-            f"{(b.source or '').strip().lower()}||"
-            f"{(inst_label_for_build_with_cfg(b, cfg) or '').strip().lower()}"
-        )
+        gk = f"{(b.source or '').strip().lower()}||" f"{(inst_label_for_build_with_cfg(b, cfg) or '').strip().lower()}"
         if gk not in group_counts:
             group_counts[gk] = {"fail": 0, "warn": 0, "ok": 0, "total": 0}
         rec = group_counts[gk]

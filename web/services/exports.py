@@ -92,9 +92,7 @@ async def export_builds(
             b
             for b in items
             if b.started_at
-            and b.started_at.replace(
-                tzinfo=timezone.utc if b.started_at.tzinfo is None else b.started_at.tzinfo
-            )
+            and b.started_at.replace(tzinfo=timezone.utc if b.started_at.tzinfo is None else b.started_at.tzinfo)
             >= cutoff
         ]
 
@@ -117,9 +115,7 @@ async def export_builds(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f"attachment; filename=builds_{date_str}.xlsx"
-            },
+            headers={"Content-Disposition": f"attachment; filename=builds_{date_str}.xlsx"},
         )
     data = to_csv_bytes(headers, rows)
     return Response(
@@ -156,10 +152,7 @@ async def export_tests(
             t
             for t in items
             if t.timestamp
-            and t.timestamp.replace(
-                tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo
-            )
-            >= cutoff
+            and t.timestamp.replace(tzinfo=timezone.utc if t.timestamp.tzinfo is None else t.timestamp.tzinfo) >= cutoff
         ]
     if source:
         items = tests_analytics.filter_tests_by_source(items, source)
@@ -182,9 +175,7 @@ async def export_tests(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f"attachment; filename=tests_{date_str}.xlsx"
-            },
+            headers={"Content-Disposition": f"attachment; filename=tests_{date_str}.xlsx"},
         )
     data = to_csv_bytes(headers, rows)
     return Response(
@@ -220,10 +211,7 @@ async def export_failures(
         name_sub=name,
         message_max=500,
     )
-    all_items = [
-        (r["test_name"], r["count"], r.get("suite") or "", r.get("message") or "")
-        for r in agg
-    ]
+    all_items = [(r["test_name"], r["count"], r.get("suite") or "", r.get("message") or "") for r in agg]
 
     headers = ["test_name", "failure_count", "suite", "last_error"]
     rows = [[i[0], i[1], i[2], i[3]] for i in all_items]
@@ -234,9 +222,7 @@ async def export_failures(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": f"attachment; filename=failures_{date_str}.xlsx"
-            },
+            headers={"Content-Disposition": f"attachment; filename=failures_{date_str}.xlsx"},
         )
     data = to_csv_bytes(headers, rows)
     return Response(

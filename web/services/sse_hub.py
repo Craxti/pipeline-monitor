@@ -34,6 +34,7 @@ def events_generator(
     ping_timeout_seconds: float = 25.0,
 ) -> AsyncGenerator[str, None]:
     """Create an SSE event generator tied to the request lifetime."""
+
     async def _gen() -> AsyncGenerator[str, None]:
         q: asyncio.Queue = asyncio.Queue(maxsize=queue_maxsize)
         queues.add(q)

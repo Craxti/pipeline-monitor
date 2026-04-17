@@ -21,6 +21,7 @@ async def api_save_settings(
     sync_cursor_proxy: Callable[[dict], Awaitable[Any]],
 ) -> Any:
     """Save settings and restart collection tasks if needed."""
+
     async def _cancel_collect_task() -> None:
         t = collect_loop_task_ref.get("task")
         if t and not t.done():

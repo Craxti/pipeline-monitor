@@ -97,7 +97,7 @@ def inst_label_for_build_with_cfg(b: Any, cfg: dict[str, Any]) -> str | None:
     except Exception:
         bu = ""
     if src == "jenkins":
-        for inst in (cfg.get("jenkins_instances", []) or []):
+        for inst in cfg.get("jenkins_instances", []) or []:
             if not inst.get("enabled", True):
                 continue
             base = str(inst.get("url", "") or "").rstrip("/")
@@ -112,7 +112,7 @@ def inst_label_for_build_with_cfg(b: Any, cfg: dict[str, Any]) -> str | None:
                     pass
         return None
     if src == "gitlab":
-        for inst in (cfg.get("gitlab_instances", []) or []):
+        for inst in cfg.get("gitlab_instances", []) or []:
             if not inst.get("enabled", True):
                 continue
             base = str(inst.get("url", "") or "").rstrip("/")

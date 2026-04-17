@@ -8,6 +8,7 @@ from dataclasses import dataclass
 @dataclass
 class CollectRuntimeState:
     """Proxy methods to a CollectState-like object."""
+
     collect_rt: object
     state: dict
     logs: list

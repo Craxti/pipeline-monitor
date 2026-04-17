@@ -1,6 +1,7 @@
 """
 Shared pytest fixtures for the CI/CD Monitor test suite.
 """
+
 from __future__ import annotations
 
 import sys

@@ -57,11 +57,11 @@ JENKINS_VERIFY_SSL: bool | None = None  # True/False to override; None = use con
 # If you want allowlist to apply only to one Jenkins instance, set
 # JENKINS_ALLOWLIST_INSTANCE_NAME to that instance's `name` from config.yaml.
 JENKINS_ALLOWLIST_INSTANCE_NAME: str = ""  # e.g. "ProofTech Jenkins"
-JENKINS_JOBS_ALLOWLIST: list[str] = [
-]
+JENKINS_JOBS_ALLOWLIST: list[str] = []
 
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
+
 
 def _setup_logging(level: str = "INFO") -> None:
     logging.basicConfig(
@@ -72,6 +72,7 @@ def _setup_logging(level: str = "INFO") -> None:
 
 
 # ── Config helpers ────────────────────────────────────────────────────────────
+
 
 def _load_config(path: str) -> dict:
     p = Path(path)
@@ -126,6 +127,7 @@ def _parse_since(from_arg: str) -> datetime | None:
 
 # ── Snapshot persistence ──────────────────────────────────────────────────────
 
+
 def _snapshot_path(cfg: dict) -> Path:
     data_dir = Path(cfg.get("general", {}).get("data_dir", "data"))
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -150,9 +152,9 @@ def _save_snapshot(snapshot: CISnapshot, cfg: dict) -> None:
 
 # ── CLI root ──────────────────────────────────────────────────────────────────
 
+
 @click.group()
-@click.option("--config", "-c", default="config.yaml", show_default=True,
-              help="Path to YAML config file.")
+@click.option("--config", "-c", default="config.yaml", show_default=True, help="Path to YAML config file.")
 @click.option("--log-level", default=None, help="Override log level (DEBUG/INFO/WARNING).")
 @click.pass_context
 def cli(ctx: click.Context, config: str, log_level: Optional[str]) -> None:
@@ -166,12 +168,23 @@ def cli(ctx: click.Context, config: str, log_level: Optional[str]) -> None:
 
 # ── collect command ───────────────────────────────────────────────────────────
 
+
 @cli.command()
-@click.option("--from", "from_arg", default="week", show_default=True,
-              help="How far back: yesterday | today | week | month | Nd | YYYY-MM-DD | all")
-@click.option("--format", "fmt", default="console",
-              type=click.Choice(["console", "csv", "html", "all"], case_sensitive=False),
-              show_default=True, help="Output format(s).")
+@click.option(
+    "--from",
+    "from_arg",
+    default="week",
+    show_default=True,
+    help="How far back: yesterday | today | week | month | Nd | YYYY-MM-DD | all",
+)
+@click.option(
+    "--format",
+    "fmt",
+    default="console",
+    type=click.Choice(["console", "csv", "html", "all"], case_sensitive=False),
+    show_default=True,
+    help="Output format(s).",
+)
 @click.option("--short", is_flag=True, help="Short console summary (overrides --format for console).")
 @click.option("--notify", is_flag=True, help="Send notifications after collection.")
 @click.pass_context
@@ -187,15 +200,10 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             continue
         username = JENKINS_USER or inst.get("username", "")
         token = JENKINS_TOKEN or inst.get("token", "")
-        verify_ssl = (
-            bool(inst.get("verify_ssl", True))
-            if JENKINS_VERIFY_SSL is None
-            else bool(JENKINS_VERIFY_SSL)
-        )
+        verify_ssl = bool(inst.get("verify_ssl", True)) if JENKINS_VERIFY_SSL is None else bool(JENKINS_VERIFY_SSL)
         jobs = inst.get("jobs", [])
         allowlist_applies = bool(JENKINS_JOBS_ALLOWLIST) and (
-            not JENKINS_ALLOWLIST_INSTANCE_NAME
-            or (inst.get("name", "") == JENKINS_ALLOWLIST_INSTANCE_NAME)
+            not JENKINS_ALLOWLIST_INSTANCE_NAME or (inst.get("name", "") == JENKINS_ALLOWLIST_INSTANCE_NAME)
         )
         # If user asked to "show all jobs" for this instance, do not force an allowlist.
         # Otherwise the UI toggle becomes confusing (show_all does nothing).
@@ -224,9 +232,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             verify_ssl=verify_ssl,
             source_instance=inst_label,
         )
-        snapshot.builds.extend(
-            client.fetch_builds(since=since, max_builds=inst.get("max_builds", 10))
-        )
+        snapshot.builds.extend(client.fetch_builds(since=since, max_builds=inst.get("max_builds", 10)))
         if inst.get("parse_console", False):
 
             console_parser = JenkinsConsoleParser(
@@ -237,16 +243,19 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                     jobs
                     if jobs
                     else (
-                        [{"name": n, "critical": False, "parse_console": True} for n in JenkinsClient(
-                            url=inst["url"],
-                            username=username,
-                            token=token,
-                            jobs=[],
-                            timeout=15,
-                            show_all=False,
-                            verify_ssl=verify_ssl,
-                            source_instance=inst_label,
-                        ).fetch_job_list()[: max(1, int(inst.get("console_jobs_limit", 25) or 25))]]
+                        [
+                            {"name": n, "critical": False, "parse_console": True}
+                            for n in JenkinsClient(
+                                url=inst["url"],
+                                username=username,
+                                token=token,
+                                jobs=[],
+                                timeout=15,
+                                show_all=False,
+                                verify_ssl=verify_ssl,
+                                source_instance=inst_label,
+                            ).fetch_job_list()[: max(1, int(inst.get("console_jobs_limit", 25) or 25))]
+                        ]
                         if inst.get("show_all_jobs", False)
                         else []
                     )
@@ -265,16 +274,19 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                     jobs
                     if jobs
                     else (
-                        [{"name": n, "critical": False, "parse_allure": True} for n in JenkinsClient(
-                            url=inst["url"],
-                            username=username,
-                            token=token,
-                            jobs=[],
-                            timeout=15,
-                            show_all=False,
-                            verify_ssl=verify_ssl,
-                            source_instance=inst_label,
-                        ).fetch_job_list()[: max(1, int(inst.get("allure_jobs_limit", 25) or 25))]]
+                        [
+                            {"name": n, "critical": False, "parse_allure": True}
+                            for n in JenkinsClient(
+                                url=inst["url"],
+                                username=username,
+                                token=token,
+                                jobs=[],
+                                timeout=15,
+                                show_all=False,
+                                verify_ssl=verify_ssl,
+                                source_instance=inst_label,
+                            ).fetch_job_list()[: max(1, int(inst.get("allure_jobs_limit", 25) or 25))]
+                        ]
                         if inst.get("show_all_jobs", False)
                         else []
                     )
@@ -296,9 +308,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             show_all=inst.get("show_all_projects", False),
             source_instance=gl_label,
         )
-        snapshot.builds.extend(
-            client.fetch_builds(since=since, max_builds=inst.get("max_pipelines", 10))
-        )
+        snapshot.builds.extend(client.fetch_builds(since=since, max_builds=inst.get("max_pipelines", 10)))
 
     # ── Test parsers ──────────────────────────────────────────────────────
     p_cfg = cfg.get("parsers", {})
@@ -324,8 +334,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
 
     _save_snapshot(snapshot, cfg)
     click.echo(
-        f"[collect] builds={len(snapshot.builds)}, "
-        f"tests={len(snapshot.tests)}, services={len(snapshot.services)}"
+        f"[collect] builds={len(snapshot.builds)}, " f"tests={len(snapshot.tests)}, services={len(snapshot.services)}"
     )
 
     # ── Reports ───────────────────────────────────────────────────────────
@@ -338,9 +347,11 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
 
 # ── report command ────────────────────────────────────────────────────────────
 
+
 @cli.command()
-@click.option("--format", "fmt", default="console",
-              type=click.Choice(["console", "csv", "html", "all"], case_sensitive=False))
+@click.option(
+    "--format", "fmt", default="console", type=click.Choice(["console", "csv", "html", "all"], case_sensitive=False)
+)
 @click.option("--short", is_flag=True)
 @click.pass_context
 def report(ctx: click.Context, fmt: str, short: bool) -> None:
@@ -354,6 +365,7 @@ def report(ctx: click.Context, fmt: str, short: bool) -> None:
 
 
 # ── web command ───────────────────────────────────────────────────────────────
+
 
 @cli.command()
 @click.pass_context
@@ -405,6 +417,7 @@ def web(ctx: click.Context) -> None:
 
 # ── docker-check command ──────────────────────────────────────────────────────
 
+
 @cli.command("docker-check")
 @click.pass_context
 def docker_check(ctx: click.Context) -> None:
@@ -428,6 +441,7 @@ def docker_check(ctx: click.Context) -> None:
 
 # ── notify command ────────────────────────────────────────────────────────────
 
+
 @cli.command()
 @click.pass_context
 def notify(ctx: click.Context) -> None:
@@ -438,6 +452,7 @@ def notify(ctx: click.Context) -> None:
 
 
 # ── internal helpers ──────────────────────────────────────────────────────────
+
 
 def _emit_reports(
     snapshot: CISnapshot,

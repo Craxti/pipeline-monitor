@@ -121,4 +121,3 @@ class TestServiceUptime:
         assert "svc-a" in out
         assert isinstance(out["svc-a"], list)
         assert all("date" in row and "status" in row for row in out["svc-a"])
-

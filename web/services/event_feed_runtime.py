@@ -8,6 +8,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class EventFeedRuntime:
     """Event feed path + max entries settings."""
+
     path: str
     max_entries: int
 

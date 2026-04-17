@@ -9,6 +9,7 @@ from typing import Any
 @dataclass
 class MemCacheRuntime:
     """Holds TTL cache store and defaults."""
+
     store: dict[str, tuple[float, Any]] = field(default_factory=dict)
     ttl_seconds: float = 20.0
 
@@ -32,6 +33,7 @@ def set_value(
         val,
         ttl_seconds=float(ttl_seconds or rt.ttl_seconds),
     )
+
 
 # Backward-compatible alias (avoid breaking older imports)
 set = set_value  # type: ignore[assignment]  # pylint: disable=redefined-builtin

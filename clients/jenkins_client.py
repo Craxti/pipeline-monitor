@@ -54,9 +54,7 @@ class JenkinsClient(BaseCIClient):
 
     def _parse_build(self, raw: dict, job_name: str, critical: bool) -> BuildRecord:
         ts_ms = raw.get("timestamp")
-        started = (
-            datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc) if ts_ms else None
-        )
+        started = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc) if ts_ms else None
         duration_ms = raw.get("duration")
         result = raw.get("result")
         duration_seconds = None
@@ -89,6 +87,7 @@ class JenkinsClient(BaseCIClient):
 
         This is dramatically faster than per-job requests when show_all_jobs is enabled.
         """
+
         def _tree(level: int) -> str:
             base = (
                 "name,color,url,_class,"
@@ -131,9 +130,7 @@ class JenkinsClient(BaseCIClient):
         if isinstance(limit_jobs, int) and limit_jobs > 0:
             jobs = jobs[:limit_jobs]
 
-        critical_by_name = {
-            (j.get("name") or ""): bool(j.get("critical", False)) for j in (self.jobs or [])
-        }
+        critical_by_name = {(j.get("name") or ""): bool(j.get("critical", False)) for j in (self.jobs or [])}
 
         out: list[BuildRecord] = []
         for j in jobs:
@@ -190,8 +187,9 @@ class JenkinsClient(BaseCIClient):
             if isinstance(self.show_all_limit_jobs, int) and self.show_all_limit_jobs > 0:
                 discovered = discovered[: self.show_all_limit_jobs]
             explicit_names = {j.get("name") for j in self.jobs}
-            extra = [{"name": n, "critical": False, "parse_console": False}
-                     for n in discovered if n not in explicit_names]
+            extra = [
+                {"name": n, "critical": False, "parse_console": False} for n in discovered if n not in explicit_names
+            ]
             job_list = list(self.jobs) + extra
         else:
             job_list = self.jobs
@@ -241,10 +239,7 @@ class JenkinsClient(BaseCIClient):
         if int(max_builds) <= 0:
             path = f"{jp}/api/json?tree=builds[number,result,timestamp,duration,url]"
         else:
-            path = (
-                f"{jp}/api/json?tree=builds[number,result,timestamp,duration,url]"
-                f"{{0,{int(max_builds)}}}"
-            )
+            path = f"{jp}/api/json?tree=builds[number,result,timestamp,duration,url]" f"{{0,{int(max_builds)}}}"
         data = self._get(path)
         if not data:
             return []
@@ -334,6 +329,7 @@ class JenkinsClient(BaseCIClient):
         Jenkins commonly has folders / multibranch containers, so we fetch a bounded
         recursive tree and return only leaf jobs as "folder/sub/job" names.
         """
+
         def _tree(level: int) -> str:
             base = "name,_class,jobs[name,_class]"
             if level <= 0:

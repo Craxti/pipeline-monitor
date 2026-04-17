@@ -42,9 +42,7 @@ def merge_settings_secrets(incoming: Any, saved: Any) -> Any:
         for k, v in incoming.items():
             sv = saved.get(k)
             if is_secret_settings_key(k) and isinstance(v, str):
-                if v == SETTINGS_SECRET_MASK or (
-                    not v.strip() and isinstance(sv, str) and sv.strip()
-                ):
+                if v == SETTINGS_SECRET_MASK or (not v.strip() and isinstance(sv, str) and sv.strip()):
                     out[k] = sv if isinstance(sv, str) else v
                 else:
                     out[k] = v

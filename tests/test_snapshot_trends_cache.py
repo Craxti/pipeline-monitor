@@ -191,4 +191,3 @@ class TestCorrelation:
         out = correlation_last_hour(load_snapshot=lambda: snap, load_events=load_events, events_limit=500)
         assert out["pipelines_started_last_hour"] == 1
         assert out["service_events_last_hour"] == 2
-

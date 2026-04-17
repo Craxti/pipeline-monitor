@@ -73,9 +73,7 @@ async def collect_auto_route(request: Request):
         load_cfg=load_yaml_config,
         collect_state=rt.collect_state,
         parse_enabled=collect_api.parse_enabled,
-        do_collect_task_factory=lambda cfg: asyncio.create_task(
-            _do_collect(cfg, force_full=False)
-        ),
+        do_collect_task_factory=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
         auto_collect_enabled_ref=enabled_ref,
         auto_collect_enabled_at_iso_ref=enabled_at_ref,
     )
@@ -145,8 +143,6 @@ async def collect_trigger_route(request: Request):
         collect_state=rt.collect_state,
         load_cfg=load_yaml_config,
         parse_force_full=collect_triggers.parse_force_full,
-        do_collect_task_factory=lambda cfg, force_full: asyncio.create_task(
-            _do_collect(cfg, force_full=force_full)
-        ),
+        do_collect_task_factory=lambda cfg, force_full: asyncio.create_task(_do_collect(cfg, force_full=force_full)),
         started_payload=collect_triggers.started_payload,
     )

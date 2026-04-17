@@ -262,6 +262,7 @@ class JenkinsConsoleParser:
         while True:
             try:
                 import time
+
                 t0 = time.monotonic()
                 r = requests.get(
                     url,
@@ -270,12 +271,8 @@ class JenkinsConsoleParser:
                     verify=self.verify_ssl,
                 )
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
-                if (
-                    r.status_code >= 400
-                    and self._should_retry_status(r.status_code)
-                    and attempt < self.retries
-                ):
-                    delay = self.backoff_seconds * (2 ** attempt)
+                if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
                         "ConsoleParser: %s -> %d (%dms), retry in %.1fs",
                         url,
@@ -294,10 +291,11 @@ class JenkinsConsoleParser:
             except requests.HTTPError as exc:
                 code = getattr(getattr(exc, "response", None), "status_code", None)
                 if code is not None and self._should_retry_status(code) and attempt < self.retries:
-                    delay = self.backoff_seconds * (2 ** attempt)
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning("ConsoleParser: HTTP %s (%s), retry in %.1fs", url, code, delay)
                     try:
                         import time
+
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -306,7 +304,7 @@ class JenkinsConsoleParser:
                 return None
             except Exception as exc:
                 if attempt < self.retries:
-                    delay = self.backoff_seconds * (2 ** attempt)
+                    delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
                         "ConsoleParser: GET failed (%s), retry in %.1fs: %s",
                         type(exc).__name__,
@@ -315,6 +313,7 @@ class JenkinsConsoleParser:
                     )
                     try:
                         import time
+
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -328,10 +327,7 @@ class JenkinsConsoleParser:
         if int(self.max_builds) <= 0:
             url = f"{self.base_url}{jp}/api/json?tree=builds[number]"
         else:
-            url = (
-                f"{self.base_url}{jp}/api/json?"
-                f"tree=builds[number]{{0,{int(self.max_builds)}}}"
-            )
+            url = f"{self.base_url}{jp}/api/json?" f"tree=builds[number]{{0,{int(self.max_builds)}}}"
         try:
             r = self._get_with_retry(url)
             if not r:
@@ -341,18 +337,12 @@ class JenkinsConsoleParser:
                     except Exception:
                         pass
                 return []
-            return [
-                b["number"]
-                for b in (r.json().get("builds", []) or [])
-                if "number" in b
-            ]
+            return [b["number"] for b in (r.json().get("builds", []) or []) if "number" in b]
         except Exception as exc:
             logger.warning("ConsoleParser: cannot list builds for '%s': %s", job_name, exc)
             if self.progress_cb:
                 try:
-                    self.progress_cb(
-                        f"Console: {job_name} build list error: {str(exc)[:160]}"
-                    )
+                    self.progress_cb(f"Console: {job_name} build list error: {str(exc)[:160]}")
                 except Exception:
                     pass
             return []
@@ -371,21 +361,15 @@ class JenkinsConsoleParser:
                 return ""
             return r.text
         except Exception as exc:
-            logger.warning(
-                "ConsoleParser: cannot fetch console %s #%d: %s", job_name, build_number, exc
-            )
+            logger.warning("ConsoleParser: cannot fetch console %s #%d: %s", job_name, build_number, exc)
             if self.progress_cb:
                 try:
-                    self.progress_cb(
-                        f"Console: {job_name} #{build_number} error: {str(exc)[:160]}"
-                    )
+                    self.progress_cb(f"Console: {job_name} #{build_number} error: {str(exc)[:160]}")
                 except Exception:
                     pass
             return ""
 
-    def _fetch_build_timing(
-        self, job_name: str, build_number: int
-    ) -> tuple[datetime | None, float | None]:
+    def _fetch_build_timing(self, job_name: str, build_number: int) -> tuple[datetime | None, float | None]:
         """
         Jenkins build `timestamp` (ms) and `duration` (ms) for the run start time.
 
@@ -393,10 +377,7 @@ class JenkinsConsoleParser:
         into ``_parse_console`` so the Tests table does not show whole-pipeline time on every row.
         """
         jp = JenkinsClient.job_path(job_name)
-        url = (
-            f"{self.base_url}{jp}/{int(build_number)}/api/json?"
-            "tree=timestamp,duration,estimatedDuration"
-        )
+        url = f"{self.base_url}{jp}/{int(build_number)}/api/json?" "tree=timestamp,duration,estimatedDuration"
         try:
             r = self._get_with_retry(url)
             if not r:
@@ -464,11 +445,7 @@ class JenkinsConsoleParser:
                         msg = None
                         if " - " in rest:
                             test_id, msg = rest.split(" - ", 1)
-                        failure_message = (
-                            (msg or "").strip()[:_FAILURE_MSG_MAX]
-                            if msg
-                            else None
-                        )
+                        failure_message = (msg or "").strip()[:_FAILURE_MSG_MAX] if msg else None
                         records.append(
                             TestRecord(
                                 source="jenkins_console",
@@ -482,9 +459,7 @@ class JenkinsConsoleParser:
                         )
                         continue
                     # Stop when we hit the final summary/footer separators
-                    if line.startswith("===") or line.startswith("FAILED") or line.startswith(
-                        "ERROR"
-                    ):
+                    if line.startswith("===") or line.startswith("FAILED") or line.startswith("ERROR"):
                         continue
                     if not line and records:
                         # after some summary lines, blank usually indicates end
@@ -557,6 +532,7 @@ class JenkinsConsoleParser:
                 except Exception:
                     pass
             import time
+
             t0 = time.monotonic()
             console = self._fetch_console(job_name, build_num)
             if not console:
@@ -565,13 +541,13 @@ class JenkinsConsoleParser:
             # echo scenario row — it reads like "total for all tests" and is not per-scenario.
             bts, _dur_ignored = self._fetch_build_timing(job_name, build_num)
             rec_ts = bts if bts is not None else datetime.now(tz=timezone.utc)
-            recs = self._parse_console(
-                console, job_name, build_num, record_ts=rec_ts, duration_seconds=None
-            )
+            recs = self._parse_console(console, job_name, build_num, record_ts=rec_ts, duration_seconds=None)
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             if self.timing_cb:
                 try:
-                    self.timing_cb({"kind": "console", "job": job_name, "build": int(build_num), "elapsed_ms": elapsed_ms})
+                    self.timing_cb(
+                        {"kind": "console", "job": job_name, "build": int(build_num), "elapsed_ms": elapsed_ms}
+                    )
                 except Exception:
                     pass
             # Also surface very slow operations in progress log.

@@ -65,7 +65,8 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
 
 
 def _apply_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript("""
+    conn.executescript(
+        """
         CREATE TABLE IF NOT EXISTS meta (
             key   TEXT PRIMARY KEY,
             value TEXT
@@ -133,7 +134,8 @@ def _apply_schema(conn: sqlite3.Connection) -> None:
             value      TEXT,
             updated_at TEXT
         );
-    """)
+    """
+    )
     # Record schema version
     conn.execute(
         "INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)",
@@ -148,12 +150,9 @@ def append_snapshot(snapshot: Any) -> None:
     try:
         with _conn() as conn:
             cur = conn.execute(
-                "INSERT INTO snapshots (collected_at, builds_count, tests_count, svcs_count) "
-                "VALUES (?,?,?,?)",
+                "INSERT INTO snapshots (collected_at, builds_count, tests_count, svcs_count) " "VALUES (?,?,?,?)",
                 (
-                    snapshot.collected_at.isoformat()
-                    if snapshot.collected_at
-                    else datetime.utcnow().isoformat(),
+                    snapshot.collected_at.isoformat() if snapshot.collected_at else datetime.utcnow().isoformat(),
                     len(snapshot.builds),
                     len(snapshot.tests),
                     len(snapshot.services),
@@ -171,9 +170,11 @@ def append_snapshot(snapshot: Any) -> None:
                         b.source,
                         b.job_name,
                         b.build_number,
-                        b.status
-                        if isinstance(b.status, str)
-                        else (b.status.value if hasattr(b.status, "value") else str(b.status)),
+                        (
+                            b.status
+                            if isinstance(b.status, str)
+                            else (b.status.value if hasattr(b.status, "value") else str(b.status))
+                        ),
                         b.started_at.isoformat() if b.started_at else None,
                         b.duration_seconds,
                         b.branch,
@@ -189,7 +190,11 @@ def append_snapshot(snapshot: Any) -> None:
                     "duration_seconds,failure_message,timestamp,file_path) "
                     "VALUES (?,?,?,?,?,?,?,?,?)",
                     (
-                        snap_id, t.source, t.suite, t.test_name, t.status,
+                        snap_id,
+                        t.source,
+                        t.suite,
+                        t.test_name,
+                        t.status,
                         t.duration_seconds,
                         t.failure_message[:2000] if t.failure_message else None,
                         t.timestamp.isoformat() if t.timestamp else None,
@@ -199,10 +204,12 @@ def append_snapshot(snapshot: Any) -> None:
 
             for sv in snapshot.services:
                 conn.execute(
-                    "INSERT INTO services (snapshot_id,name,kind,status,detail,checked_at) "
-                    "VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO services (snapshot_id,name,kind,status,detail,checked_at) " "VALUES (?,?,?,?,?,?)",
                     (
-                        snap_id, sv.name, sv.kind, sv.status,
+                        snap_id,
+                        sv.name,
+                        sv.kind,
+                        sv.status,
                         sv.detail,
                         sv.checked_at.isoformat() if sv.checked_at else None,
                     ),
@@ -267,10 +274,7 @@ def build_duration_history(job_name: str, limit: int = 20) -> list[dict]:
                 (job_name, limit),
             ).fetchall()
         # Return oldest first
-        return [
-            {"d": r["duration_seconds"], "s": r["status"], "n": r["build_number"]}
-            for r in reversed(rows)
-        ]
+        return [{"d": r["duration_seconds"], "s": r["status"], "n": r["build_number"]} for r in reversed(rows)]
     except Exception as exc:
         logger.debug("SQLite build_duration_history failed: %s", exc)
         return []
@@ -302,9 +306,7 @@ def query_builds_history(
             params.append(normalize_build_status(status))
         where = " AND ".join(conditions)
         with _conn() as conn:
-            total = conn.execute(
-                f"SELECT COUNT(*) FROM builds WHERE {where}", params
-            ).fetchone()[0]
+            total = conn.execute(f"SELECT COUNT(*) FROM builds WHERE {where}", params).fetchone()[0]
             rows = conn.execute(
                 f"SELECT * FROM builds WHERE {where} ORDER BY started_at DESC LIMIT ? OFFSET ?",
                 params + [per_page, (page - 1) * per_page],
@@ -378,9 +380,7 @@ def service_uptime(days: int = 30) -> dict[str, list[dict]]:
 
         result: dict[str, list] = {}
         for r in rows:
-            result.setdefault(r["name"], []).append(
-                {"date": r["day"], "status": r["status"]}
-            )
+            result.setdefault(r["name"], []).append({"date": r["day"], "status": r["status"]})
         return result
     except Exception as exc:
         logger.debug("SQLite service_uptime failed: %s", exc)
@@ -393,10 +393,10 @@ def db_stats() -> dict:
         return {"enabled": False}
     try:
         with _conn() as conn:
-            snap_count   = conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
-            build_count  = conn.execute("SELECT COUNT(*) FROM builds").fetchone()[0]
-            svc_count    = conn.execute("SELECT COUNT(*) FROM services").fetchone()[0]
-            oldest       = conn.execute("SELECT MIN(started_at) FROM builds").fetchone()[0]
+            snap_count = conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+            build_count = conn.execute("SELECT COUNT(*) FROM builds").fetchone()[0]
+            svc_count = conn.execute("SELECT COUNT(*) FROM services").fetchone()[0]
+            oldest = conn.execute("SELECT MIN(started_at) FROM builds").fetchone()[0]
         size_mb = round(_DB_PATH.stat().st_size / 1024 / 1024, 2)
         return {
             "enabled": True,

@@ -70,6 +70,7 @@ def normalize_service_status(raw: str) -> str:
 
 class BuildStatus(str, Enum):
     """Canonical build statuses used across collectors and UI."""
+
     SUCCESS = "success"
     FAILURE = "failure"
     RUNNING = "running"

@@ -264,4 +264,3 @@ class TestBuildsEndpoints:
         )
         assert out["total"] == 1
         assert out["items"][0]["build_number"] == 2
-

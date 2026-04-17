@@ -9,6 +9,7 @@ from collections.abc import Callable
 @dataclass
 class RevisionState:
     """Monotonic revision counter."""
+
     revision: int = 0
 
     def bump(self) -> int:

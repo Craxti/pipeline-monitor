@@ -113,20 +113,11 @@ def detect_state_changes(
 
     # Incident (aggregate) notification: emit once when an incident first appears.
     try:
-        failed_builds = sum(
-            1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st
-        )
-        failed_tests = sum(
-            1
-            for t in snapshot.tests
-            if getattr(t, "status_normalized", None) in ("failed", "error")
-        )
-        down_svcs = sum(
-            1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down"
-        )
+        failed_builds = sum(1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st)
+        failed_tests = sum(1 for t in snapshot.tests if getattr(t, "status_normalized", None) in ("failed", "error"))
+        down_svcs = sum(1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down")
         has_critical = any(
-            bool(getattr(b, "critical", False))
-            and getattr(b, "status_normalized", None) in fail_st
+            bool(getattr(b, "critical", False)) and getattr(b, "status_normalized", None) in fail_st
             for b in snapshot.builds
         )
         active = (failed_builds > 0) or (failed_tests > 0) or (down_svcs > 0)
@@ -141,9 +132,7 @@ def detect_state_changes(
                 "level": lvl,
                 "title": "Incident detected",
                 "detail": (
-                    f"Failed builds: {failed_builds}, "
-                    f"failed tests: {failed_tests}, "
-                    f"services down: {down_svcs}"
+                    f"Failed builds: {failed_builds}, " f"failed tests: {failed_tests}, " f"services down: {down_svcs}"
                 ),
                 "url": "/?tab=incidents",
                 "critical": bool(has_critical) or (down_svcs > 0),

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 @dataclass
 class RateLimitRuntime:
     """Holds per-key timestamp store for rate limiting."""
+
     store: dict[str, float] = field(default_factory=dict)
     default_window_seconds: float = 15.0
 

@@ -2,6 +2,7 @@
 
 Also adds overlay dismiss attributes.
 """
+
 from __future__ import annotations
 
 import json
@@ -32,19 +33,19 @@ PAIRS: list[tuple[str, str]] = [
     (
         " onclick=\"goToInTab('builds','panel-builds');"
         "document.getElementById('f-bstatus').value='failure';"
-        "resetBuilds();\"",
+        'resetBuilds();"',
         ' data-dash-action="runbookFocusBuildFailures"',
     ),
     (
         " onclick=\"goToInTab('tests','panel-tests');"
         "document.getElementById('f-tstatus').value='failed';"
-        "resetTests();\"",
+        'resetTests();"',
         ' data-dash-action="runbookFocusTestFailures"',
     ),
     (
         " onclick=\"goToInTab('services','panel-svcs');"
         "document.getElementById('sv-problems-only').checked=true;"
-        "toggleSvcProblemsOnly(true);\"",
+        'toggleSvcProblemsOnly(true);"',
         ' data-dash-action="runbookFocusServicesProblems"',
     ),
 ]
@@ -63,52 +64,37 @@ def main() -> None:
 
     text = re.sub(
         r" onclick=\"loadTrends\((\d+),this\)\"",
-        lambda m: (
-            f' data-dash-action="loadTrends"{_args_attr([int(m.group(1))])}'
-        ),
+        lambda m: (f' data-dash-action="loadTrends"{_args_attr([int(m.group(1))])}'),
         text,
     )
     text = re.sub(
         r" onclick=\"setTrendsSize\('([^']+)',this\)\"",
-        lambda m: (
-            f' data-dash-action="setTrendsSize"{_args_attr([m.group(1)])}'
-        ),
+        lambda m: (f' data-dash-action="setTrendsSize"{_args_attr([m.group(1)])}'),
         text,
     )
     text = re.sub(
         r" onclick=\"(\w+)\('([^']*)'\)\"",
-        lambda m: (
-            f' data-dash-action="{m.group(1)}"{_args_attr([m.group(2)])}'
-        ),
+        lambda m: (f' data-dash-action="{m.group(1)}"{_args_attr([m.group(2)])}'),
         text,
     )
     text = re.sub(
         r' onclick="(\w+)\((-?\d+)\)"',
-        lambda m: (
-            f' data-dash-action="{m.group(1)}"{_args_attr([int(m.group(2))])}'
-        ),
+        lambda m: (f' data-dash-action="{m.group(1)}"{_args_attr([int(m.group(2))])}'),
         text,
     )
     text = re.sub(
         r" onclick=\"filterBuilds\('([^']*)','([^']*)'\)\"",
-        lambda m: (
-            f' data-dash-action="filterBuilds"{_args_attr([m.group(1), m.group(2)])}'
-        ),
+        lambda m: (f' data-dash-action="filterBuilds"{_args_attr([m.group(1), m.group(2)])}'),
         text,
     )
     text = re.sub(
         r" onclick=\"goToInTab\('([^']+)','([^']+)'\)\"",
-        lambda m: (
-            f' data-dash-action="goToInTab"{_args_attr([m.group(1), m.group(2)])}'
-        ),
+        lambda m: (f' data-dash-action="goToInTab"{_args_attr([m.group(1), m.group(2)])}'),
         text,
     )
     text = re.sub(
         r" onclick=\"toggleChartFullscreen\('([^']+)',(\d+)\)\"",
-        lambda m: (
-            " data-dash-action=\"toggleChartFullscreen\""
-            f"{_args_attr([m.group(1), int(m.group(2))])}"
-        ),
+        lambda m: (' data-dash-action="toggleChartFullscreen"' f"{_args_attr([m.group(1), int(m.group(2))])}"),
         text,
     )
     text = re.sub(r' onclick="(\w+)\(\)"', r' data-dash-action="\1"', text)

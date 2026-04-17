@@ -18,13 +18,7 @@ def append_synthetic_tests_from_builds(
             st = b.status_normalized
             if st not in ("success", "failure", "unstable", "aborted"):
                 continue
-            t_status = (
-                "passed"
-                if st == "success"
-                else "failed"
-                if st in ("failure", "unstable")
-                else "skipped"
-            )
+            t_status = "passed" if st == "success" else "failed" if st in ("failure", "unstable") else "skipped"
             snapshot.tests.append(
                 TestRecord(
                     source="jenkins_build",

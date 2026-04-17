@@ -10,10 +10,7 @@ def build_key(b: object) -> str:
     try:
         bn = getattr(b, "build_number", None)
         inst_l = getattr(b, "source_instance", None) or ""
-        return (
-            f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|{bn}|"
-            f"{getattr(b,'url','') or ''}"
-        )
+        return f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|{bn}|" f"{getattr(b,'url','') or ''}"
     except Exception:
         return str(id(b))
 
@@ -29,8 +26,7 @@ def merge_build_records(snapshot, new_records: list) -> None:
     merged = list(existing_by_key.values())
     try:
         merged.sort(
-            key=lambda x: getattr(x, "started_at", None)
-            or datetime.min.replace(tzinfo=timezone.utc),
+            key=lambda x: getattr(x, "started_at", None) or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
     except Exception:

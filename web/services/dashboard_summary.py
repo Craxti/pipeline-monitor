@@ -43,17 +43,12 @@ def dashboard_summary_payload(
         )
         counts["tests_total"] = len(getattr(snap, "tests", []) or [])
         counts["services_down"] = sum(
-            1
-            for s in (getattr(snap, "services", []) or [])
-            if getattr(s, "status_normalized", None) == "down"
+            1 for s in (getattr(snap, "services", []) or []) if getattr(s, "status_normalized", None) == "down"
         )
-
 
     partial_errors: list[dict[str, Any]] = []
     if collect_state.get("last_error"):
-        partial_errors.append(
-            {"source": "collect", "message": collect_state["last_error"]}
-        )
+        partial_errors.append({"source": "collect", "message": collect_state["last_error"]})
     for h in instance_health:
         if not h.get("ok"):
             partial_errors.append(
@@ -79,9 +74,7 @@ def dashboard_summary_payload(
 
     return {
         "data_revision": data_revision,
-        "snapshot": _freshness.snapshot_freshness(
-            snap=snap, stale_threshold_seconds=stale_threshold
-        ),
+        "snapshot": _freshness.snapshot_freshness(snap=snap, stale_threshold_seconds=stale_threshold),
         "counts": counts,
         "collect": collect,
         "partial_errors": partial_errors,

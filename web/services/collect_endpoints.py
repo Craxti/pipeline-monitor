@@ -43,9 +43,7 @@ async def set_auto_collect(
         body = {}
     enabled = parse_enabled(body)
     auto_collect_enabled_ref["value"] = enabled
-    auto_collect_enabled_at_iso_ref["value"] = (
-        datetime.now(tz=timezone.utc).isoformat() if enabled else None
-    )
+    auto_collect_enabled_at_iso_ref["value"] = datetime.now(tz=timezone.utc).isoformat() if enabled else None
     logger.info("[%s] auto-collect set to %s", rid, "on" if enabled else "off")
 
     if enabled:

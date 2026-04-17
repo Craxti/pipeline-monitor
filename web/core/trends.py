@@ -32,9 +32,7 @@ def append_trends(
 
     try:
         history: list[dict[str, Any]] = (
-            json.loads(history_path.read_text(encoding="utf-8"))
-            if history_path.exists()
-            else []
+            json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else []
         )
     except Exception:
         history = []
@@ -129,15 +127,9 @@ def append_trends(
             "date": day_key,
             "ts": now.isoformat(),
             "builds_total": len(snapshot.builds),
-            "builds_failed": sum(
-                1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")
-            ),
+            "builds_failed": sum(1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")),
             "tests_total": len(snapshot.tests),
-            "tests_failed": sum(
-                1
-                for t in snapshot.tests
-                if t.status_normalized in ("failed", "error")
-            ),
+            "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
             "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
             "services_down_by_kind": services_down_by_kind,
             "service_health": service_health,
@@ -148,8 +140,7 @@ def append_trends(
             "job_totals": job_totals,
             "top_test_failures": sorted(test_failures.items(), key=lambda x: -x[1])[:20],
             "top_test_failures_by_source": {
-                src: sorted(m.items(), key=lambda x: -x[1])[:20]
-                for src, m in test_failures_by_source.items()
+                src: sorted(m.items(), key=lambda x: -x[1])[:20] for src, m in test_failures_by_source.items()
             },
         }
     )

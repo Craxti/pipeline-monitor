@@ -64,6 +64,7 @@ def do_collect_task_factory(
     do_collect_fn: Callable[[dict, bool], "asyncio.Future[None]"],
 ) -> Callable[[dict, bool], asyncio.Task]:
     """Create a task factory wrapping `do_collect_fn` with `asyncio.create_task`."""
+
     def _factory(cfg: dict, force_full: bool) -> asyncio.Task:
         return asyncio.create_task(do_collect_fn(cfg, force_full))
 
