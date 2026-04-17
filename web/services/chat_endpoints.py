@@ -47,6 +47,7 @@ async def api_chat(
         raise HTTPException(400, "messages list is required")
 
     context_text = body.get("context", "")
+    ui_location = str(body.get("ui_location") or "").strip()
     model = (ai_cfg.get("model") or "").strip() or ai_default_model(provider)
 
     system_prompt = (
@@ -63,9 +64,14 @@ async def api_chat(
         "- When a CI job needs re-running, mention the job name clearly so the dashboard "
         "can offer a re-run button.\n"
         "- If the user asks to collect/refresh data, say 'collect' or 'refresh data'.\n"
+        "- The client sends the exact browser page and tab in «Current UI location». "
+        "Treat that as where the user is now: on Settings, focus on config.yaml fields and "
+        "CI monitor settings; on a dashboard tab, focus on that tab (builds, tests, services, …).\n"
     )
+    if ui_location:
+        system_prompt += "\n\n=== Current UI location ===\n" + ui_location[:2000]
     if context_text:
-        system_prompt += "\nCurrent dashboard context:\n" + context_text[:12000]
+        system_prompt += "\n\nCurrent dashboard context (optional snapshot from the UI):\n" + context_text[:12000]
 
     messages = [{"role": "system", "content": system_prompt}]
     for m in user_messages[-20:]:

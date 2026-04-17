@@ -3,15 +3,53 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && document.getElementById('log-modal').classList.contains('open')) closeLogModal();
-  if (e.key === 'Escape' && document.getElementById('ai-chat-panel').classList.contains('open')) toggleChat();
+  const logModal = document.getElementById('log-modal');
+  if (e.key === 'Escape' && logModal && logModal.classList.contains('open') && typeof closeLogModal === 'function') {
+    closeLogModal();
+  }
+  const chatPanel = document.getElementById('ai-chat-panel');
+  if (e.key === 'Escape' && chatPanel && chatPanel.classList.contains('open')) toggleChat();
   // Ctrl+F inside log modal → focus custom search
-  if ((e.ctrlKey || e.metaKey) && e.key === 'f' && document.getElementById('log-modal').classList.contains('open')) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f' && logModal && logModal.classList.contains('open')) {
     e.preventDefault();
     const inp = document.getElementById('log-search-input');
     if (inp) { inp.focus(); inp.select(); }
   }
 });
+
+/** Human-readable names for `?tab=` on the main dashboard (sent to the model). */
+const _CHAT_TAB_LABELS = {
+  overview: 'Overview — metrics, status map, situation',
+  builds: 'Builds — pipelines, filters, starred jobs',
+  tests: 'Tests — top failures and test runs',
+  services: 'Services — Docker containers, HTTP checks',
+  trends: 'Trends — charts over time',
+  incidents: 'Incidents — correlated failures',
+  logs: 'Logs — collect output and parsers',
+};
+
+function _gatherUiLocationContext() {
+  const href = (typeof location !== 'undefined' && location.href) ? location.href : '';
+  const page = (document.body && document.body.dataset && document.body.dataset.page) || '';
+  const lines = [
+    'URL: ' + href,
+    'Screen: ' + (page === 'settings' ? 'Settings (YAML-backed configuration in the browser)' : 'Main dashboard'),
+  ];
+  if (page === 'settings') {
+    const nav = document.querySelector('.snav-item.active');
+    if (nav) lines.push('Active settings section: ' + nav.textContent.trim().replace(/\s+/g, ' '));
+  } else if (page === 'dashboard' || !page) {
+    let tab = '';
+    try {
+      tab = (new URL(href)).searchParams.get('tab') || '';
+    } catch { /* ignore */ }
+    if (!tab && typeof _dashTab !== 'undefined' && _dashTab) tab = String(_dashTab);
+    if (!tab) tab = 'overview';
+    const label = _CHAT_TAB_LABELS[tab] || ('Tab «' + tab + '»');
+    lines.push('Dashboard tab: ' + tab + ' — ' + label);
+  }
+  return lines.join('\n');
+}
 
 const CHAT_HISTORY_KEY = 'cimon-ai-chat-history';
 const CHAT_MAX_MESSAGES = 100;
@@ -243,7 +281,7 @@ async function sendChat() {
   box.appendChild(typing);
   box.scrollTop = box.scrollHeight;
 
-  const body = { messages: _chatHistory };
+  const body = { messages: _chatHistory, ui_location: _gatherUiLocationContext() };
   if (document.getElementById('chat-ctx-toggle').checked) {
     body.context = _gatherContext();
   }
@@ -332,6 +370,7 @@ async function sendChat() {
 // AI Quick Actions
 // ─────────────────────────────────────────────────────────────────────────────
 function _injectQuickActions(msgDiv, text) {
+  if (document.body && document.body.dataset && document.body.dataset.page !== 'dashboard') return;
   // Detect container names mentioned with "restart", "stop", "start" context
   // Also look for jobs mentioned with "re-run", "trigger", "run"
   const actions = [];
@@ -398,8 +437,12 @@ function _injectQuickActions(msgDiv, text) {
   msgDiv.appendChild(wrap);
 }
 
-document.getElementById('chat-input').addEventListener('input', function() {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
+(function _bindChatInputSizing() {
+  const el = document.getElementById('chat-input');
+  if (!el) return;
+  el.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+})();
 

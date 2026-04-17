@@ -8,6 +8,7 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
+<link rel="stylesheet" href="/static/dashboard.css?v=20260417i"/>
 <title>Settings — CI/CD Monitor</title>
 <style>
   :root{
@@ -503,6 +504,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+{% include 'partials/chat_widget.html' %}
+<script src="/static/dashboard.chat.js?v=20260417j" defer></script>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────────
