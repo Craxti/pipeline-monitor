@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable
 
 
@@ -20,12 +21,13 @@ def save_snapshot(
     logger_debug: Callable[[str, object], None],
 ) -> None:
     """Persist a full snapshot, bump revision, and run hooks."""
+    data_path = Path(data_file)
     with snapshot_write_lock:
-        data_file.parent.mkdir(parents=True, exist_ok=True)
-        data_file.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
         bump_revision()
         try:
-            mtime = data_file.stat().st_mtime
+            mtime = data_path.stat().st_mtime
         except OSError:
             mtime = None
         prime_snapshot_cache(snapshot, mtime)
@@ -69,12 +71,13 @@ def save_snapshot_partial(
     except Exception:
         pass
 
+    data_path = Path(data_file)
     with snapshot_write_lock:
-        data_file.parent.mkdir(parents=True, exist_ok=True)
-        data_file.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
+        data_path.parent.mkdir(parents=True, exist_ok=True)
+        data_path.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
         bump_revision()
         try:
-            mtime = data_file.stat().st_mtime
+            mtime = data_path.stat().st_mtime
         except OSError:
             mtime = None
         prime_snapshot_cache(snapshot, mtime)
