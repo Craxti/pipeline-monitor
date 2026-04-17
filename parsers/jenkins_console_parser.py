@@ -45,7 +45,7 @@ _PYTEST_FAIL_LINE_RE = re.compile(r"^(FAILED|ERROR)\s+(.+)$")
 _PYTEST_SECTION_HDR_RE = re.compile(r"^_{3,}\s*(.+?)\s*_{3,}\s*$")
 # Jenkins echo line often reports: test_27_foo #23 completed with status UNSTABLE
 _PIPELINE_TEST_ID_IN_NOISE_RE = re.compile(
-    r"\b((?:test_\d+[\w_]+)|(?:test_gu_FS_[\w]+))\s+#\d+\s+completed\b",
+    r"\b(test(?:[_-][A-Za-z0-9][\w-]*)?)\s+#\d+\s+completed\b",
     re.IGNORECASE,
 )
 
