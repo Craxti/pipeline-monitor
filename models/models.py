@@ -57,6 +57,7 @@ def normalize_test_status(raw: str) -> str:
 
 
 def normalize_service_status(raw: str) -> str:
+    """Normalize service health strings into up/down/degraded/unknown."""
     s = (raw or "").strip().lower()
     if s in ("up", "healthy", "ok", "running"):
         return "up"
@@ -68,6 +69,7 @@ def normalize_service_status(raw: str) -> str:
 
 
 class BuildStatus(str, Enum):
+    """Canonical build statuses used across collectors and UI."""
     SUCCESS = "success"
     FAILURE = "failure"
     RUNNING = "running"
@@ -82,7 +84,10 @@ class BuildRecord(BaseModel):
     source: str = Field(..., description="CI system: jenkins | gitlab | ...")
     # Config instance name (or URL host fallback) — disambiguates merges when several
     # Jenkins/GitLab entries share one server URL or build URLs are missing.
-    source_instance: Optional[str] = Field(default=None, description="Logical CI instance label from config")
+    source_instance: Optional[str] = Field(
+        default=None,
+        description="Logical CI instance label from config",
+    )
     job_name: str
     build_number: Optional[int] = None
     status: BuildStatus
@@ -98,6 +103,7 @@ class BuildRecord(BaseModel):
     @computed_field
     @property
     def status_normalized(self) -> str:
+        """Build status normalized to a stable lowercase string."""
         return normalize_build_status(self.status)
 
 
@@ -107,7 +113,10 @@ class TestRecord(BaseModel):
     source: str = Field(..., description="Parser type: pytest | allure | ...")
     # Config instance name (or URL host fallback) — disambiguates merges when several
     # Jenkins/GitLab entries are enabled and produce tests for the same suite/name.
-    source_instance: Optional[str] = Field(default=None, description="Logical CI instance label from config")
+    source_instance: Optional[str] = Field(
+        default=None,
+        description="Logical CI instance label from config",
+    )
     suite: Optional[str] = None
     test_name: str
     status: str  # passed | failed | skipped | error
@@ -119,6 +128,7 @@ class TestRecord(BaseModel):
     @computed_field
     @property
     def status_normalized(self) -> str:
+        """Test status normalized to a stable lowercase string."""
         return normalize_test_status(self.status)
 
 
@@ -134,7 +144,12 @@ class ServiceStatus(BaseModel):
     @computed_field
     @property
     def status_normalized(self) -> str:
+        """Service status normalized to a stable lowercase string."""
         return normalize_service_status(self.status)
+
+
+# Backward-compatible alias (older code/tests use ServiceRecord name)
+ServiceRecord = ServiceStatus
 
 
 class CISnapshot(BaseModel):
@@ -144,5 +159,6 @@ class CISnapshot(BaseModel):
     builds: list[BuildRecord] = []
     tests: list[TestRecord] = []
     services: list[ServiceStatus] = []
-    # Per-source parse coverage from last collect (e.g. jenkins jobs discovered vs Allure/console parsed).
+    # Per-source parse coverage from last collect
+    # (e.g. jenkins jobs discovered vs Allure/console parsed).
     collect_meta: dict[str, Any] = Field(default_factory=dict)

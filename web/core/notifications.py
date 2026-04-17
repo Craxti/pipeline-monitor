@@ -1,3 +1,5 @@
+"""Notifications: detect state changes between snapshots."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -21,7 +23,7 @@ def detect_state_changes(
     notify_max: int,
     append_event: Optional[EventAppender] = None,
 ) -> Tuple[dict[str, str], dict[str, str], bool, Tuple[int, int, int, bool], int]:
-    """Diff current snapshot vs previous; append entries to notifications (+ persisted event feed)."""
+    """Diff snapshot vs previous; append notification events."""
     now_iso = datetime.now(tz=timezone.utc).isoformat()
     fail_st = {"failure", "unstable"}
     ok_st = {"success"}
@@ -35,7 +37,11 @@ def detect_state_changes(
         if not job_name:
             continue
         prev = prev_build_statuses.get(job_name)
-        curr = b.status if isinstance(getattr(b, "status", None), str) else getattr(getattr(b, "status", None), "value", None)
+        curr = (
+            b.status
+            if isinstance(getattr(b, "status", None), str)
+            else getattr(getattr(b, "status", None), "value", None)
+        )
         curr = curr if isinstance(curr, str) else str(curr)
         if prev is not None and prev != curr:
             if curr in fail_st and prev in ok_st:
@@ -111,13 +117,16 @@ def detect_state_changes(
             1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st
         )
         failed_tests = sum(
-            1 for t in snapshot.tests if getattr(t, "status_normalized", None) in ("failed", "error")
+            1
+            for t in snapshot.tests
+            if getattr(t, "status_normalized", None) in ("failed", "error")
         )
         down_svcs = sum(
             1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down"
         )
         has_critical = any(
-            bool(getattr(b, "critical", False)) and getattr(b, "status_normalized", None) in fail_st
+            bool(getattr(b, "critical", False))
+            and getattr(b, "status_normalized", None) in fail_st
             for b in snapshot.builds
         )
         active = (failed_builds > 0) or (failed_tests > 0) or (down_svcs > 0)
@@ -131,7 +140,11 @@ def detect_state_changes(
                 "kind": "incident",
                 "level": lvl,
                 "title": "Incident detected",
-                "detail": f"Failed builds: {failed_builds}, failed tests: {failed_tests}, services down: {down_svcs}",
+                "detail": (
+                    f"Failed builds: {failed_builds}, "
+                    f"failed tests: {failed_tests}, "
+                    f"services down: {down_svcs}"
+                ),
                 "url": "/?tab=incidents",
                 "critical": bool(has_critical) or (down_svcs > 0),
             }
@@ -155,4 +168,3 @@ def detect_state_changes(
         prev_incident_sig,
         notify_id_seq,
     )
-

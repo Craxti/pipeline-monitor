@@ -1,3 +1,5 @@
+"""API endpoints for test records (filtered, paginated, analytics)."""
+
 from __future__ import annotations
 
 import json
@@ -22,6 +24,7 @@ async def api_tests(
     hours: int,
     source: str,
 ) -> dict:
+    """Return paginated tests list with breakdown and top failures."""
     snap = await load_snapshot_async()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
@@ -96,6 +99,7 @@ async def api_top_failures(
     hours: int,
     days: int,
 ) -> dict:
+    """Return aggregated top failing tests (paged)."""
     snap = load_snapshot()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
@@ -190,4 +194,3 @@ async def api_top_failures(
         "total": total,
         "has_more": end < total,
     }
-

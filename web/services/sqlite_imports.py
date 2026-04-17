@@ -1,11 +1,10 @@
-from __future__ import annotations
-
-"""
-Optional SQLite-backed history layer.
+"""Optional SQLite-backed history layer.
 
 The project can run without the SQLite module present. Centralize import fallback
 logic here so it doesn't get duplicated across `web.app` and route/service modules.
 """
+
+from __future__ import annotations
 
 from typing import Any, Callable
 
@@ -22,6 +21,8 @@ get_collector_state_int: Callable[..., Any] | None
 set_collector_state_int: Callable[..., Any] | None
 
 try:
+    # pylint: disable=unused-import
+    # Re-exported names are part of the public optional DB surface.
     from web.db import (  # type: ignore
         init_db,
         append_snapshot,
@@ -37,6 +38,7 @@ try:
     SQLITE_AVAILABLE = True
 except ImportError:
     try:
+        # pylint: disable=unused-import
         from db import (  # type: ignore
             init_db,
             append_snapshot,
@@ -61,4 +63,3 @@ except ImportError:
         query_builds_history = None
         get_collector_state_int = None
         set_collector_state_int = None
-

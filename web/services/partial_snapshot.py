@@ -1,3 +1,5 @@
+"""Partial snapshot save helper with throttling."""
+
 from __future__ import annotations
 
 import time
@@ -13,6 +15,7 @@ def maybe_save_partial(
     save_snapshot_partial: Callable[[Any], None],
     logger_debug: Callable[[str, object], None],
 ) -> None:
+    """Persist a partial snapshot if enough time passed or `force` is True."""
     now = time.monotonic()
     last = float(last_write_ts_ref.get("ts", 0.0) or 0.0)
     if not force and (now - last) < float(min_interval_s):
@@ -22,4 +25,3 @@ def maybe_save_partial(
         save_snapshot_partial(snapshot)
     except Exception as exc:
         logger_debug("Partial snapshot save skipped: %s", exc)
-

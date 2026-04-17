@@ -10,6 +10,23 @@ A practical Python tool for DevOps and QA engineers that collects CI/CD pipeline
 
 ---
 
+## Documentation
+
+- **Users (install/run/configure/use UI)**: `docs/USER_GUIDE.md`
+- **Developers (architecture/extension points)**: `docs/DEVELOPER_GUIDE.md`
+- **Workflow (Issues/PRs)**: `docs/WORKFLOW.md`
+
+## Project links
+
+- **Source repository**: `https://github.com/Craxti/pipeline-monitor`
+
+## License
+
+MIT License (2026). See `LICENSE`.
+
+---
+
+
 ## Layout (high level)
 
 ```text

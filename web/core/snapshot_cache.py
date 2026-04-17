@@ -40,7 +40,9 @@ def _current_revision() -> int:
 
 
 def invalidate_snapshot_cache() -> None:
-    global _snapshot_cache_snap, _snapshot_cache_rev, _snapshot_cache_mtime, _snapshot_cache_expires_mono
+    """Clear in-memory snapshot cache."""
+    global _snapshot_cache_snap, _snapshot_cache_rev
+    global _snapshot_cache_mtime, _snapshot_cache_expires_mono
     _snapshot_cache_snap = None
     _snapshot_cache_rev = -1
     _snapshot_cache_mtime = None
@@ -48,7 +50,9 @@ def invalidate_snapshot_cache() -> None:
 
 
 def prime_snapshot_cache(snapshot: CISnapshot, mtime: float | None = None) -> None:
-    global _snapshot_cache_snap, _snapshot_cache_rev, _snapshot_cache_mtime, _snapshot_cache_expires_mono
+    """Seed cache with a known snapshot + file mtime."""
+    global _snapshot_cache_snap, _snapshot_cache_rev
+    global _snapshot_cache_mtime, _snapshot_cache_expires_mono
     _snapshot_cache_snap = snapshot
     _snapshot_cache_rev = _current_revision()
     if mtime is None:
@@ -62,6 +66,7 @@ def prime_snapshot_cache(snapshot: CISnapshot, mtime: float | None = None) -> No
 
 
 def load_snapshot() -> CISnapshot | None:
+    """Load snapshot JSON, using short-lived in-memory cache when possible."""
     if not SNAPSHOT_PATH.exists():
         invalidate_snapshot_cache()
         return None
@@ -91,4 +96,5 @@ def load_snapshot() -> CISnapshot | None:
 
 
 async def load_snapshot_async() -> CISnapshot | None:
+    """Threaded wrapper around `load_snapshot`."""
     return await asyncio.to_thread(load_snapshot)

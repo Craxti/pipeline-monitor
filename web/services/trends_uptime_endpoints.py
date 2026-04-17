@@ -1,3 +1,5 @@
+"""Endpoints for trends and uptime (cached)."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -13,6 +15,7 @@ def api_trends(
     mem_cache_set: Callable[[str, Any], None],
     trends_compute: Callable[[int], Any],
 ) -> JSONResponse:
+    """Return cached trends payload (ETag + short private caching)."""
     cache_key = f"trends:{days}:{data_revision}"
     cached = mem_cache_get(cache_key)
     if cached is not None:
@@ -42,6 +45,7 @@ def api_uptime(
     mem_cache_set: Callable[[str, Any], None],
     uptime_compute: Callable[[int], Any],
 ) -> JSONResponse:
+    """Return cached uptime payload (ETag + short private caching)."""
     cache_key = f"uptime:{days}:{data_revision}"
     cached = mem_cache_get(cache_key)
     if cached is not None:
@@ -61,4 +65,3 @@ def api_uptime(
             "Cache-Control": "private, max-age=15",
         },
     )
-

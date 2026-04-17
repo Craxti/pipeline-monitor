@@ -1,3 +1,5 @@
+"""App-wide constants used by routes and services."""
+
 from __future__ import annotations
 
 
@@ -14,4 +16,3 @@ CURSOR_AGENT_UNAVAILABLE_MSG = (
     "либо указать каталог с agent.cmd + node.exe + index.js в Настройках → AI, "
     "либо переключить провайдера на Gemini или OpenRouter. Лог: data/cursor_proxy.log"
 )
-

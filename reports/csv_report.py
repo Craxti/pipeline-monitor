@@ -33,6 +33,7 @@ class CsvReporter:
     SVC_FIELDS = ["type", "name", "kind", "status", "detail", "checked_at"]
 
     def write(self, snapshot: CISnapshot, output_path: str | Path) -> Path:
+        """Write the snapshot to a single CSV file and return its path."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 

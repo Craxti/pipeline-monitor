@@ -12,7 +12,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 
-from web.core.config import config_yaml_path as _config_yaml_path, load_yaml_config as _load_yaml_config
+from web.core.config import (
+    config_yaml_path as _config_yaml_path,
+    load_yaml_config as _load_yaml_config,
+)
 from web.core import runtime as _rt
 from web.services import app_constants as _app_constants
 from web.services import app_lifespan_wiring as _app_lifespan_wiring
@@ -60,10 +63,12 @@ collect_loop = _collect_entrypoints.collect_loop
 
 
 def sync_cursor_proxy_from_config(cfg: dict) -> dict:
+    """Sync embedded Cursor proxy settings from config."""
     return _cursor_proxy_facade.sync_cursor_proxy_from_config(_cursor_proxy, cfg)
 
 
 def shutdown_embedded_cursor_proxy() -> None:
+    """Shutdown embedded Cursor proxy (best-effort)."""
     return _cursor_proxy_facade.shutdown_embedded_cursor_proxy(_cursor_proxy)
 
 
@@ -89,10 +94,12 @@ _static_mount.mount_static_if_present(app=app, base_dir=Path(__file__).resolve()
 
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
+    """Attach request id to response headers."""
     return await _request_id.add_request_id_middleware(request, call_next)
 
 
 def rid(request: Request | None) -> str:
+    """Return request-id for logs."""
     return _request_id.rid(request)
 
 
@@ -111,4 +118,3 @@ for __r in (
     _webhooks_router,
 ):
     _router_include.include_routers(app, [__r])
-

@@ -7,7 +7,11 @@ from typing import Any
 
 
 def parse_enabled(body: Any) -> bool:
-    return bool(isinstance(body, dict) and body.get("enabled") in (True, "true", "1", 1))
+    """Parse `enabled` flag from JSON body."""
+    return bool(
+        isinstance(body, dict)
+        and body.get("enabled") in (True, "true", "1", 1)
+    )
 
 
 def collect_status_payload(
@@ -16,6 +20,7 @@ def collect_status_payload(
     auto_collect_enabled: bool,
     auto_collect_enabled_at_iso: str | None,
 ) -> dict:
+    """Build collection status response for the UI."""
     next_in = None
     try:
         if auto_collect_enabled and not collect_state.get("is_collecting"):

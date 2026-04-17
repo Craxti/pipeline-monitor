@@ -1,3 +1,5 @@
+"""Wiring wrapper for trends append operation."""
+
 from __future__ import annotations
 
 
@@ -10,6 +12,7 @@ def append_trends(
     load_cfg,
     inst_label_for_build,
 ):
+    """Delegate to injected `append_trends_fn`."""
     return append_trends_fn(
         snapshot,
         history_path=history_path,
@@ -17,4 +20,3 @@ def append_trends(
         load_cfg=load_cfg,
         inst_label_for_build=inst_label_for_build,
     )
-

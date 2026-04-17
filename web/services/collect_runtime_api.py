@@ -1,3 +1,5 @@
+"""Runtime API adapters for collection logic."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,14 +9,17 @@ from web.core import runtime as rt
 
 
 def push_collect_log(phase: str, main: str, sub: str | None = None, level: str = "info") -> None:
+    """Append a log entry to the runtime collect log buffer."""
     return rt.collect_rt_state.push_log(phase, main, sub, level)
 
 
 async def sse_broadcast_async(sse_hub_mod, payload: dict) -> None:
+    """Broadcast an SSE payload to all subscribers."""
     return await sse_hub_mod.broadcast_async(rt.sse_rt.queues, payload)
 
 
 def set_instance_health(h: list[dict]) -> None:
+    """Update in-memory instance health cache."""
     return rt.set_instance_health(h)
 
 
@@ -34,6 +39,7 @@ def run_collect_sync(
     save_snapshot,
     maybe_save_partial,
 ):
+    """Run the blocking collector with runtime-wired dependencies."""
     return collect_sync_run_mod.run_collect_sync(
         cfg,
         force_full=force_full,
@@ -57,8 +63,8 @@ def run_collect_sync(
 def do_collect_task_factory(
     do_collect_fn: Callable[[dict, bool], "asyncio.Future[None]"],
 ) -> Callable[[dict, bool], asyncio.Task]:
+    """Create a task factory wrapping `do_collect_fn` with `asyncio.create_task`."""
     def _factory(cfg: dict, force_full: bool) -> asyncio.Task:
         return asyncio.create_task(do_collect_fn(cfg, force_full))
 
     return _factory
-

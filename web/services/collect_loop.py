@@ -1,3 +1,5 @@
+"""Auto-collect background loop implementation."""
+
 from __future__ import annotations
 
 import asyncio
@@ -40,7 +42,8 @@ async def do_collect(
         push_collect_log("starting", "Starting collect…", None, "info")
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
-            None, lambda: run_collect_sync(cfg, force_full=force_full)
+            None,
+            lambda: run_collect_sync(cfg, force_full=force_full),
         )
         collect_state["last_collected_at"] = datetime.now(tz=timezone.utc).isoformat()
     except Exception as exc:
@@ -77,4 +80,3 @@ async def collect_loop(
         interval = int(interval_seconds_getter() or 300)
         await do_collect_fn(cfg)  # force_full is decided by the wrapper bound in app.py
         await asyncio.sleep(max(5, interval))
-

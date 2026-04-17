@@ -1,9 +1,12 @@
+"""Docker/HTTP collectors used by the sync collection runner."""
+
 from __future__ import annotations
 
 import time
 
 
 def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logger) -> None:
+    """Collect container/service status via Docker monitor."""
     from docker_monitor.monitor import DockerMonitor
 
     dm_cfg = cfg.get("docker_monitor", {})
@@ -39,4 +42,3 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
                 "latency_ms": None,
             }
         )
-

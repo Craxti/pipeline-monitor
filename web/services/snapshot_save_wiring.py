@@ -1,3 +1,5 @@
+"""Wiring wrapper for snapshot persistence."""
+
 from __future__ import annotations
 
 
@@ -15,6 +17,7 @@ def save_snapshot(
     logger_warning,
     logger_debug,
 ):
+    """Delegate snapshot saving to `web.services.snapshot_store`."""
     from web.services import snapshot_store as _snapshot_store
 
     return _snapshot_store.save_snapshot(
@@ -30,4 +33,3 @@ def save_snapshot(
         logger_warning=logger_warning,
         logger_debug=logger_debug,
     )
-

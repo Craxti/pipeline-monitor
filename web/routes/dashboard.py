@@ -45,6 +45,7 @@ _templates = templates_boot.create_templates(base_dir=Path(__file__).resolve().p
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
+    """Render main dashboard page."""
     from web.services import ui_lang
 
     return await pages.index_page(
@@ -58,8 +59,9 @@ async def dashboard(request: Request):
 
 @router.get("/api/status", response_class=JSONResponse)
 async def api_status():
+    """Return high-level API status."""
     from web.services import status_endpoints
-    from web.services.build_filters import inst_label_for_build_with_cfg, is_snapshot_build_enabled
+    from web.services.build_filters import inst_label_for_build_with_cfg
 
     return status_endpoints.api_status(
         load_snapshot=rt.load_snapshot,
@@ -71,6 +73,7 @@ async def api_status():
 
 @router.get("/api/dashboard/summary", response_class=JSONResponse)
 async def api_dashboard_summary():
+    """Return dashboard summary payload."""
     return dashboard_summary.dashboard_summary_payload(
         load_yaml_config=load_yaml_config,
         load_snapshot=rt.load_snapshot,
@@ -82,6 +85,7 @@ async def api_dashboard_summary():
 
 @router.get("/api/instances/health", response_class=JSONResponse)
 async def api_instances_health():
+    """Return last known instance health."""
     return instances_health_endpoint.instances_health_payload(
         collect_state=rt.collect_state,
         instances=rt.get_instance_health(),
@@ -90,6 +94,7 @@ async def api_instances_health():
 
 @router.get("/api/meta", response_class=JSONResponse)
 async def api_meta():
+    """Return meta payload for UI."""
     def _load_events(limit: int = 300):
         from web.services import event_feed_api
 
@@ -114,6 +119,7 @@ async def api_meta():
 
 @router.get("/api/stream/events")
 async def sse_events(request: Request):
+    """SSE stream of realtime events."""
     return sse_endpoint.sse_events_response(
         request,
         sse_hub_mod=sse_hub,
@@ -126,6 +132,7 @@ async def sse_events(request: Request):
 
 @router.get("/api/trends", response_class=JSONResponse)
 async def api_trends(days: int = 14):
+    """Return trends payload."""
     def _mem_get(key: str):
         from web.services import mem_cache
 
@@ -134,7 +141,12 @@ async def api_trends(days: int = 14):
     def _mem_set(key: str, val):
         from web.services import mem_cache
 
-        return mem_cache.mem_cache_set(rt.mem_cache_rt.store, key, val, ttl_seconds=rt.mem_cache_rt.ttl_seconds)
+        return mem_cache.mem_cache_set(
+            rt.mem_cache_rt.store,
+            key,
+            val,
+            ttl_seconds=rt.mem_cache_rt.ttl_seconds,
+        )
 
     def _trends_compute(d: int):
         return trends_uptime.trends_compute(d, history_path=rt.HISTORY_FILE)
@@ -150,6 +162,7 @@ async def api_trends(days: int = 14):
 
 @router.get("/api/uptime", response_class=JSONResponse)
 async def api_uptime(days: int = 30):
+    """Return uptime payload."""
     def _mem_get(key: str):
         from web.services import mem_cache
 
@@ -158,7 +171,12 @@ async def api_uptime(days: int = 30):
     def _mem_set(key: str, val):
         from web.services import mem_cache
 
-        return mem_cache.mem_cache_set(rt.mem_cache_rt.store, key, val, ttl_seconds=rt.mem_cache_rt.ttl_seconds)
+        return mem_cache.mem_cache_set(
+            rt.mem_cache_rt.store,
+            key,
+            val,
+            ttl_seconds=rt.mem_cache_rt.ttl_seconds,
+        )
 
     def _uptime_compute(d: int):
         return trends_uptime.uptime_compute(
@@ -179,11 +197,13 @@ async def api_uptime(days: int = 30):
 
 @router.get("/api/db/stats", response_class=JSONResponse)
 async def api_db_stats():
+    """Return SQLite diagnostics (if available)."""
     return db_endpoints.api_db_stats(sqlite_available=_SQLITE_AVAILABLE, db_stats=db_stats)
 
 
 @router.get("/api/sources", response_class=JSONResponse)
 async def api_sources():
+    """Return configured sources list."""
     return sources_endpoints.api_sources(
         load_snapshot=rt.load_snapshot,
         load_yaml_config=load_yaml_config,
@@ -193,6 +213,7 @@ async def api_sources():
 
 @router.get("/api/notifications", response_class=JSONResponse)
 async def api_notifications(since_id: int = 0, limit: int = 50):
+    """Return notifications since id."""
     return notifications_endpoints.api_notifications(
         notify_state=rt.notify_state,
         since_id=since_id,
@@ -202,16 +223,21 @@ async def api_notifications(since_id: int = 0, limit: int = 50):
 
 @router.get("/api/events/persisted", response_class=JSONResponse)
 async def api_events_persisted(limit: int = 250):
+    """Return persisted event feed entries."""
     def _event_feed_load(lim: int = 300):
         from web.services import event_feed_api
 
         return event_feed_api.load(limit=lim, path=rt.EVENT_FEED_FILE)
 
-    return events_endpoints.api_events_persisted(event_feed_load=_event_feed_load, limit=limit)
+    return events_endpoints.api_events_persisted(
+        event_feed_load=_event_feed_load,
+        limit=limit,
+    )
 
 
 @router.get("/api/analytics/sparklines", response_class=JSONResponse)
 async def api_analytics_sparklines(jobs: str = "", limit_per_job: int = 12):
+    """Return per-job build duration sparklines."""
     return analytics_endpoints.api_analytics_sparklines(
         sqlite_available=_SQLITE_AVAILABLE,
         db_build_duration=_db_build_duration,
@@ -222,6 +248,7 @@ async def api_analytics_sparklines(jobs: str = "", limit_per_job: int = 12):
 
 @router.get("/api/analytics/flaky", response_class=JSONResponse)
 async def api_analytics_flaky(threshold: float = 0.4, min_runs: int = 4, days: int = 30):
+    """Return flaky analysis based on history."""
     return analytics_endpoints.api_analytics_flaky(
         sqlite_available=_SQLITE_AVAILABLE,
         db_flaky_analysis=_db_flaky_analysis,
@@ -229,4 +256,3 @@ async def api_analytics_flaky(threshold: float = 0.4, min_runs: int = 4, days: i
         min_runs=min_runs,
         days=days,
     )
-

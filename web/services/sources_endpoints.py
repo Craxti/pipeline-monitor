@@ -1,3 +1,5 @@
+"""API endpoints for listing available CI sources."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -9,6 +11,7 @@ def api_sources(
     load_yaml_config: Callable[[], dict],
     is_snapshot_build_enabled: Callable[[Any, dict], bool],
 ) -> list[str]:
+    """Return a sorted list of enabled sources present in the snapshot."""
     snap = load_snapshot()
     if snap is None:
         return []
@@ -29,4 +32,3 @@ def api_sources(
     if "gitlab" in sources and not enabled_gitlab:
         sources.discard("gitlab")
     return sorted(sources)
-

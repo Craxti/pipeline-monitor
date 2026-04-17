@@ -1,3 +1,5 @@
+"""FastAPI lifespan wiring helpers."""
+
 from __future__ import annotations
 
 import asyncio
@@ -91,4 +93,3 @@ def make_app_lifespan(
         shutdown_proxy=_shutdown_proxy,
         stop_collect_task=collect_task_lifecycle.cancel_task,
     )
-

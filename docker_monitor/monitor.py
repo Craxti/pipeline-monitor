@@ -69,6 +69,7 @@ class DockerMonitor:
     # ── public ───────────────────────────────────────────────────────────────
 
     def check_all(self) -> list[ServiceStatus]:
+        """Run all configured docker + HTTP checks."""
         results: list[ServiceStatus] = []
         results.extend(self._check_docker())
         results.extend(self._check_http())

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
 from urllib.parse import quote
 
 import httpx
 
 
 def ai_default_model(provider: str) -> str:
+    """Return default model name for the selected AI provider."""
     return {
         "openai": "gpt-4o-mini",
         "gemini": "gemini-2.0-flash",
@@ -20,6 +20,7 @@ def ai_default_model(provider: str) -> str:
 
 
 def looks_like_upstream_unreachable(err_text: str) -> bool:
+    """Heuristic: detect upstream connectivity errors from message text."""
     low = (err_text or "").lower()
     return any(
         s in low
@@ -92,4 +93,3 @@ async def http_probe_public_ip(client: httpx.AsyncClient) -> tuple[str | None, s
     except Exception as exc:
         last_err = str(exc)
     return None, last_err
-

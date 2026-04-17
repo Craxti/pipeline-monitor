@@ -1,9 +1,12 @@
+"""Merge helpers for build records."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
 
 def build_key(b: object) -> str:
+    """Return a stable unique key for a build record-like object."""
     try:
         bn = getattr(b, "build_number", None)
         inst_l = getattr(b, "source_instance", None) or ""
@@ -16,6 +19,7 @@ def build_key(b: object) -> str:
 
 
 def merge_build_records(snapshot, new_records: list) -> None:
+    """Merge new build records into snapshot, keeping newest first."""
     if not new_records:
         return
     existing = getattr(snapshot, "builds", None) or []
@@ -32,4 +36,3 @@ def merge_build_records(snapshot, new_records: list) -> None:
     except Exception:
         pass
     snapshot.builds = merged
-

@@ -1,3 +1,5 @@
+"""GitLab collectors used by the sync collection runner."""
+
 from __future__ import annotations
 
 import time
@@ -13,6 +15,7 @@ def collect_gitlab_builds(
     config_instance_label,
     logger,
 ) -> None:
+    """Collect build records from configured GitLab instances."""
     for inst in cfg.get("gitlab_instances", []):
         if not inst.get("enabled", True):
             continue
@@ -32,7 +35,10 @@ def collect_gitlab_builds(
                 source_instance=gl_key,
             )
             merge_build_records(
-                client.fetch_builds(since=since, max_builds=inst.get("max_pipelines", 10))
+                client.fetch_builds(
+                    since=since,
+                    max_builds=inst.get("max_pipelines", 10),
+                )
             )
             health.append(
                 {
@@ -54,4 +60,3 @@ def collect_gitlab_builds(
                     "latency_ms": None,
                 }
             )
-

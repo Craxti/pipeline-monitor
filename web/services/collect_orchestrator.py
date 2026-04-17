@@ -1,3 +1,5 @@
+"""Thin wrapper around the sync collection runner."""
+
 from __future__ import annotations
 
 
@@ -21,6 +23,7 @@ def run_collect_sync(
     set_collector_state_int,
     logger,
 ) -> None:
+    """Delegate to the blocking `collect_sync_run_mod.run_collect_sync`."""
     return collect_sync_run_mod.run_collect_sync(
         cfg,
         force_full=force_full,
@@ -39,4 +42,3 @@ def run_collect_sync(
         set_collector_state_int=set_collector_state_int,
         logger=logger,
     )
-

@@ -1,3 +1,5 @@
+"""API endpoints for service health records."""
+
 from __future__ import annotations
 
 import json
@@ -14,6 +16,7 @@ async def api_services(
     per_page: int,
     status: str,
 ) -> dict:
+    """Return a filtered, paginated list of services from the last snapshot."""
     snap = await load_snapshot_async()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
@@ -37,4 +40,3 @@ async def api_services(
         "total": total,
         "has_more": end < total,
     }
-

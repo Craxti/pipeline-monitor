@@ -1,7 +1,8 @@
+"""Blocking collection runner used by the async wrapper."""
+
 from __future__ import annotations
 
 import threading
-import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
@@ -102,7 +103,11 @@ def run_collect_sync(
     _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger)
 
     _docker_collect.collect_docker_services(
-        cfg=cfg, snapshot=snapshot, progress=progress, health=health, logger=logger
+        cfg=cfg,
+        snapshot=snapshot,
+        progress=progress,
+        health=health,
+        logger=logger,
     )
 
     instance_health_setter(health)
@@ -114,4 +119,3 @@ def run_collect_sync(
         len(snapshot.tests),
         len(snapshot.services),
     )
-

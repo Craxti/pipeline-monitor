@@ -1,6 +1,8 @@
+"""Analytics endpoints helpers (sparklines, flaky)."""
+
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 
 def api_analytics_sparklines(
@@ -10,6 +12,7 @@ def api_analytics_sparklines(
     jobs: str,
     limit_per_job: int,
 ) -> dict[str, list[dict]]:
+    """Return sparkline points per job (if SQLite history enabled)."""
     if (not sqlite_available) or db_build_duration is None:
         return {}
     n = max(3, min(limit_per_job, 30))
@@ -30,8 +33,8 @@ def api_analytics_flaky(
     min_runs: int,
     days: int,
 ) -> dict:
+    """Return flaky analysis items (if SQLite history enabled)."""
     if (not sqlite_available) or db_flaky_analysis is None:
         return {"items": [], "source": "none"}
     items = db_flaky_analysis(threshold, min_runs, days)
     return {"items": items, "source": "sqlite"}
-

@@ -87,6 +87,7 @@ def aggregate_top_failing_tests(
 
 
 def filter_tests_by_source(items: list[Any], source: str) -> list[Any]:
+    """Filter tests by source selector (synthetic/real/specific)."""
     s = (source or "").strip().lower()
     if not s:
         return items
@@ -103,7 +104,10 @@ def filter_tests_by_lookback_hours(
     hours: int = 0,
     days: int = 0,
 ) -> list[Any]:
-    """Keep tests whose timestamp falls within the lookback window (UTC). days overrides hours if both set."""
+    """Keep tests within the UTC lookback window.
+
+    `days` overrides `hours` if both are set.
+    """
     lookback_h = 0
     if days and int(days) > 0:
         lookback_h = int(days) * 24
@@ -126,6 +130,7 @@ def filter_tests_by_lookback_hours(
 
 
 def tests_breakdown_real_vs_synth(items: list[Any]) -> dict[str, int]:
+    """Count totals/failed for real vs synthetic tests."""
     real_total = 0
     real_failed = 0
     syn_total = 0

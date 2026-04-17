@@ -1,3 +1,5 @@
+"""Thin endpoint wrappers for export handlers."""
+
 from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
@@ -13,6 +15,7 @@ async def export_builds(
     job: str,
     hours: int,
 ) -> Any:
+    """Export builds to the requested format."""
     return await export_builds_fn(
         load_snapshot=load_snapshot,
         fmt=fmt,
@@ -34,6 +37,7 @@ async def export_tests(
     hours: int,
     source: str,
 ) -> Any:
+    """Export tests to the requested format."""
     return await export_tests_fn(
         load_snapshot=load_snapshot,
         fmt=fmt,
@@ -57,6 +61,7 @@ async def export_failures(
     hours: int,
     days: int,
 ) -> Any:
+    """Export top failures to the requested format."""
     return await export_failures_fn(
         load_snapshot=load_snapshot,
         fmt=fmt,
@@ -67,4 +72,3 @@ async def export_failures(
         hours=hours,
         days=days,
     )
-

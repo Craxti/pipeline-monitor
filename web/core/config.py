@@ -1,3 +1,5 @@
+"""Load and normalize the project's YAML configuration."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,12 +8,12 @@ import yaml
 
 from config_migrations import migrate_telegram_notifications
 
-from web.core.paths import REPO_ROOT
+from web.core import paths as paths_mod
 
 
 def config_yaml_path() -> Path:
     """Resolve ``config.yaml``: prefer repo root (next to ``web/``), else CWD (uvicorn odd cwd)."""
-    root_cfg = REPO_ROOT / "config.yaml"
+    root_cfg = paths_mod.REPO_ROOT / "config.yaml"
     if root_cfg.is_file():
         return root_cfg
     cwd_cfg = Path("config.yaml")
@@ -35,6 +37,7 @@ def normalize_config(cfg: dict) -> dict:
 
 
 def load_yaml_config() -> dict:
+    """Load `config.yaml` (if present) and normalize legacy keys."""
     p = config_yaml_path()
     if p.is_file():
         with p.open(encoding="utf-8") as fh:

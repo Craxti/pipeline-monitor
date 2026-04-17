@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from collections import deque
 from typing import Any, Deque, Dict
 
 
 @dataclass
 class CollectState:
+    """Mutable collect state + rolling logs for UI endpoints."""
     state: Dict[str, Any] = field(
         default_factory=lambda: {
             "is_collecting": False,
@@ -25,12 +27,19 @@ class CollectState:
             "progress_counts": {},
         }
     )
-    logs: Deque[dict[str, Any]] = field(default_factory=lambda: __import__("collections").deque(maxlen=2500))
-    slow: Deque[dict[str, Any]] = field(default_factory=lambda: __import__("collections").deque(maxlen=800))
+    logs: Deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=2500))
+    slow: Deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=800))
     auto_collect_enabled: bool = False
     auto_collect_enabled_at_iso: str | None = None
 
-    def push_log(self, phase: str, main: str, sub: str | None = None, level: str = "info") -> None:
+    def push_log(
+        self,
+        phase: str,
+        main: str,
+        sub: str | None = None,
+        level: str = "info",
+    ) -> None:
+        """Append a structured log record."""
         try:
             lvl = (level or "info").strip().lower()
             if lvl not in ("info", "warn", "error"):
@@ -69,6 +78,7 @@ class CollectState:
             pass
 
     def collect_logs(self, *, limit: int = 400, offset: int = 0) -> dict[str, Any]:
+        """Return recent logs with pagination-ish limit/offset."""
         try:
             lim = max(1, min(2000, int(limit)))
         except Exception:
@@ -85,6 +95,7 @@ class CollectState:
         return {"items": items, "total": total}
 
     def collect_slow(self, *, limit: int = 10) -> dict[str, Any]:
+        """Return slow-step timings (sorted by elapsed)."""
         try:
             lim = max(1, min(100, int(limit)))
         except Exception:

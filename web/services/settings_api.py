@@ -14,10 +14,12 @@ from web.core.settings_secrets import (
 
 
 def get_settings(masked_cfg: dict) -> dict:
+    """Return settings masked for UI response."""
     return mask_settings_for_response(masked_cfg)
 
 
 def get_settings_public(payload_builder: Callable[[dict], dict], cfg: dict) -> dict:
+    """Return public (non-secret) settings payload."""
     return payload_builder(cfg)
 
 
@@ -31,10 +33,11 @@ async def save_settings_and_restart_collect(
     restart_collect_after_save: Callable[[dict], None],
     sync_cursor_proxy: Callable[[dict], Awaitable[dict]],
 ) -> dict:
+    """Persist new config and restart collection loop using updated settings."""
     try:
         new_cfg = await request_json()
     except Exception:
-        raise HTTPException(400, "Invalid JSON payload")
+        raise HTTPException(400, "Invalid JSON payload") from None
 
     saved = load_cfg()
     merged = merge_settings_secrets(new_cfg, saved)

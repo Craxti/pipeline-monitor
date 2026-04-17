@@ -1,33 +1,32 @@
-from __future__ import annotations
-
 """
 Entrypoints for collect/snapshot that should not live in `web.app`.
 
 This module is safe to import from route handlers without pulling in FastAPI app wiring.
 """
 
+from __future__ import annotations
+
 import logging
+from models.models import CISnapshot, TestRecord
+
 from web.core import runtime as rt
-from web.core.config import load_yaml_config
 from web.core import snapshot_cache as snapshot_cache_mod
 from web.core import trends as trends_mod
+from web.core.config import load_yaml_config
 
 from web.services import collect_loop as collect_loop_mod
-from web.services import collect_tasks
 from web.services import collect_orchestrator
+from web.services import collect_tasks
 from web.services import notify_runtime
 from web.services import snapshot_api
+from web.services import sqlite_imports as _db_opt
 from web.services import sse_hub
 from web.services import sse_runtime
-from web.services.collect_sync import run_collect_sync as _collect_sync_run_mod
 from web.services.build_filters import config_instance_label as _config_instance_label
-
-from models.models import CISnapshot, TestRecord
+from web.services.collect_sync import run_collect_sync as _collect_sync_run_mod
 
 logger = logging.getLogger(__name__)
 
-
-from web.services import sqlite_imports as _db_opt
 
 SQLITE_AVAILABLE = bool(_db_opt.SQLITE_AVAILABLE)
 _db_append = _db_opt.append_snapshot
@@ -39,6 +38,7 @@ DATA_FILE = snapshot_cache_mod.SNAPSHOT_PATH
 
 
 def _append_trends(snapshot: CISnapshot) -> None:
+    """Append trends bucket to history."""
     return snapshot_api.append_trends(
         snapshot,
         trends_mod=trends_mod,
@@ -50,6 +50,7 @@ def _append_trends(snapshot: CISnapshot) -> None:
 
 
 def save_snapshot(snapshot: CISnapshot) -> None:
+    """Persist a full snapshot to disk (+ SQLite if available)."""
     return snapshot_api.save_snapshot(
         snapshot,
         snapshot_write_lock=rt.snapshot_write_lock,
@@ -65,6 +66,7 @@ def save_snapshot(snapshot: CISnapshot) -> None:
 
 
 def save_snapshot_partial(snapshot: CISnapshot) -> None:
+    """Persist partial snapshot used during long collect cycles."""
     return snapshot_api.save_snapshot_partial(
         snapshot,
         snapshot_write_lock=rt.snapshot_write_lock,
@@ -76,7 +78,13 @@ def save_snapshot_partial(snapshot: CISnapshot) -> None:
     )
 
 
-def maybe_save_partial(snapshot: CISnapshot, *, min_interval_s: float = 2.0, force: bool = False) -> None:
+def maybe_save_partial(
+    snapshot: CISnapshot,
+    *,
+    min_interval_s: float = 2.0,
+    force: bool = False,
+) -> None:
+    """Save partial snapshot if enough time passed (throttled)."""
     return snapshot_api.maybe_save_partial(
         snapshot,
         last_write_ts_ref=rt.partial_last_write_ts_ref,
@@ -88,32 +96,53 @@ def maybe_save_partial(snapshot: CISnapshot, *, min_interval_s: float = 2.0, for
 
 
 def detect_state_changes(snapshot: CISnapshot) -> None:
+    """Detect changes and append notifications + persisted events."""
     # `notify_state` object lives in runtime; keep it the same
     def _append_event(entries: list[dict]) -> None:
         from web.services import event_feed_api
 
-        return event_feed_api.append(entries, path=rt.EVENT_FEED_FILE, max_entries=rt.EVENT_FEED_MAX)
+        return event_feed_api.append(
+            entries,
+            path=rt.EVENT_FEED_FILE,
+            max_entries=rt.EVENT_FEED_MAX,
+        )
 
-    return notify_runtime.detect_state_changes(rt.notify_state, snapshot, append_event=_append_event)
+    return notify_runtime.detect_state_changes(
+        rt.notify_state,
+        snapshot,
+        append_event=_append_event,
+    )
 
 
 def set_instance_health(h: list[dict]) -> None:
+    """Update instance health snapshot."""
     return rt.set_instance_health(h)
 
 
-def push_collect_log(phase: str, main: str, sub: str | None = None, level: str = "info") -> None:
+def push_collect_log(
+    phase: str,
+    main: str,
+    sub: str | None = None,
+    level: str = "info",
+) -> None:
+    """Push a collect log entry into runtime state."""
     return rt.collect_rt_state.push_log(phase, main, sub, level)
 
 
 async def sse_broadcast_async(payload: dict) -> None:
+    """Broadcast payload to SSE subscribers."""
     return await sse_runtime.broadcast_async(sse_hub, rt.sse_rt, payload)
 
 
 def run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
+    """Run one sync collect cycle (blocking)."""
     if not SQLITE_AVAILABLE or get_collector_state_int is None or set_collector_state_int is None:
         # fallback no-op state fns
-        _get = lambda *_a, **_k: 0
-        _set = lambda *_a, **_k: None
+        def _get(*_a, **_k) -> int:
+            return 0
+
+        def _set(*_a, **_k) -> None:
+            return None
     else:
         _get = get_collector_state_int
         _set = set_collector_state_int
@@ -140,6 +169,7 @@ def run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
 
 
 async def do_collect(cfg: dict, *, force_full: bool = False) -> None:
+    """Run one async collect cycle (used by endpoints)."""
     return await collect_tasks.do_collect(
         cfg,
         force_full=force_full,
@@ -155,10 +185,12 @@ async def do_collect(cfg: dict, *, force_full: bool = False) -> None:
 
 
 async def collect_loop(cfg: dict) -> None:
+    """Background collect loop runner."""
     return await collect_loop_mod.collect_loop(
         cfg,
         auto_collect_enabled_getter=lambda: bool(rt.auto_collect_rt.enabled),
-        interval_seconds_getter=lambda: int(rt.collect_state.get("interval_seconds") or 300),
+        interval_seconds_getter=lambda: int(
+            rt.collect_state.get("interval_seconds") or 300
+        ),
         do_collect_fn=lambda c: do_collect(c, force_full=False),
     )
-

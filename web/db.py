@@ -15,7 +15,6 @@ Features provided:
 
 from __future__ import annotations
 
-import json
 import logging
 import sqlite3
 from contextlib import contextmanager
@@ -152,7 +151,9 @@ def append_snapshot(snapshot: Any) -> None:
                 "INSERT INTO snapshots (collected_at, builds_count, tests_count, svcs_count) "
                 "VALUES (?,?,?,?)",
                 (
-                    snapshot.collected_at.isoformat() if snapshot.collected_at else datetime.utcnow().isoformat(),
+                    snapshot.collected_at.isoformat()
+                    if snapshot.collected_at
+                    else datetime.utcnow().isoformat(),
                     len(snapshot.builds),
                     len(snapshot.tests),
                     len(snapshot.services),
@@ -167,10 +168,17 @@ def append_snapshot(snapshot: Any) -> None:
                     "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         snap_id,
-                        b.source, b.job_name, b.build_number,
-                        b.status if isinstance(b.status, str) else (b.status.value if hasattr(b.status, 'value') else str(b.status)),
+                        b.source,
+                        b.job_name,
+                        b.build_number,
+                        b.status
+                        if isinstance(b.status, str)
+                        else (b.status.value if hasattr(b.status, "value") else str(b.status)),
                         b.started_at.isoformat() if b.started_at else None,
-                        b.duration_seconds, b.branch, b.commit_sha, b.url,
+                        b.duration_seconds,
+                        b.branch,
+                        b.commit_sha,
+                        b.url,
                         1 if b.critical else 0,
                     ),
                 )
@@ -234,7 +242,8 @@ def set_collector_state_int(key: str, value: int) -> None:
         with _conn() as conn:
             conn.execute(
                 "INSERT INTO collector_state (key,value,updated_at) VALUES (?,?,?) "
-                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+                "updated_at=excluded.updated_at",
                 (
                     str(key),
                     str(int(value)),
@@ -258,7 +267,10 @@ def build_duration_history(job_name: str, limit: int = 20) -> list[dict]:
                 (job_name, limit),
             ).fetchall()
         # Return oldest first
-        return [{"d": r["duration_seconds"], "s": r["status"], "n": r["build_number"]} for r in reversed(rows)]
+        return [
+            {"d": r["duration_seconds"], "s": r["status"], "n": r["build_number"]}
+            for r in reversed(rows)
+        ]
     except Exception as exc:
         logger.debug("SQLite build_duration_history failed: %s", exc)
         return []
@@ -298,7 +310,11 @@ def query_builds_history(
                 params + [per_page, (page - 1) * per_page],
             ).fetchall()
         items = [dict(r) for r in rows]
-        return {"items": items, "total": total, "has_more": (page * per_page) < total}
+        return {
+            "items": items,
+            "total": total,
+            "has_more": (page * per_page) < total,
+        }
     except Exception as exc:
         logger.debug("SQLite query_builds_history failed: %s", exc)
         return {"items": [], "total": 0, "has_more": False}
@@ -330,12 +346,16 @@ def flaky_analysis(threshold: float = 0.4, min_runs: int = 4, days: int = 30) ->
             flips = sum(1 for i in range(1, len(statuses)) if statuses[i] != statuses[i - 1])
             rate = flips / (len(statuses) - 1)
             if rate >= threshold and flips >= 2:
-                flaky.append({
-                    "job": job, "src": src,
-                    "flips": flips, "total": len(statuses),
-                    "flip_rate": round(rate, 2),
-                    "last_status": statuses[-1],
-                })
+                flaky.append(
+                    {
+                        "job": job,
+                        "src": src,
+                        "flips": flips,
+                        "total": len(statuses),
+                        "flip_rate": round(rate, 2),
+                        "last_status": statuses[-1],
+                    }
+                )
         return sorted(flaky, key=lambda x: -x["flip_rate"])
     except Exception as exc:
         logger.debug("SQLite flaky_analysis failed: %s", exc)
@@ -358,7 +378,9 @@ def service_uptime(days: int = 30) -> dict[str, list[dict]]:
 
         result: dict[str, list] = {}
         for r in rows:
-            result.setdefault(r["name"], []).append({"date": r["day"], "status": r["status"]})
+            result.setdefault(r["name"], []).append(
+                {"date": r["day"], "status": r["status"]}
+            )
         return result
     except Exception as exc:
         logger.debug("SQLite service_uptime failed: %s", exc)

@@ -1,7 +1,10 @@
+"""Compatibility wrapper for public settings payload."""
+
 from __future__ import annotations
 
 
 def public_settings_payload(cfg: dict) -> dict:
+    """Build public settings payload with optional SQLite stats."""
     try:
         from web.db import db_stats
 
@@ -22,4 +25,3 @@ def public_settings_payload(cfg: dict) -> dict:
         sqlite_available=sqlite_available,
         db_stats=db_stats if sqlite_available else None,
     )
-

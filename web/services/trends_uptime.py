@@ -14,6 +14,7 @@ from web.core import trends as trends_core
 
 
 def trends_compute(days: int, *, history_path: Path) -> list:
+    """Compute trend aggregates for the given lookback window."""
     return trends_core.compute_trends(days, history_path=history_path)
 
 
@@ -24,6 +25,7 @@ def uptime_compute(
     sqlite_available: bool,
     db_svc_uptime: Callable[[int], dict] | None,
 ) -> dict:
+    """Compute per-service uptime history (SQLite when available, else JSON history)."""
     if sqlite_available and db_svc_uptime is not None:
         try:
             result = db_svc_uptime(days)

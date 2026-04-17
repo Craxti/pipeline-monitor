@@ -1,3 +1,5 @@
+"""Settings secret masking / merge helpers."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -6,6 +8,7 @@ SETTINGS_SECRET_MASK = "••••••••"
 
 
 def is_secret_settings_key(key: str) -> bool:
+    """Return True if config key likely contains a secret."""
     lk = key.lower()
     if lk in ("token", "password", "api_key", "bot_token", "private_token", "secret"):
         return True
@@ -18,6 +21,7 @@ def is_secret_settings_key(key: str) -> bool:
 
 
 def mask_settings_for_response(obj: Any) -> Any:
+    """Mask secrets in nested dict/list structures for API responses."""
     if isinstance(obj, dict):
         out: dict[str, Any] = {}
         for k, v in obj.items():
@@ -38,7 +42,9 @@ def merge_settings_secrets(incoming: Any, saved: Any) -> Any:
         for k, v in incoming.items():
             sv = saved.get(k)
             if is_secret_settings_key(k) and isinstance(v, str):
-                if v == SETTINGS_SECRET_MASK or (not v.strip() and isinstance(sv, str) and sv.strip()):
+                if v == SETTINGS_SECRET_MASK or (
+                    not v.strip() and isinstance(sv, str) and sv.strip()
+                ):
                     out[k] = sv if isinstance(sv, str) else v
                 else:
                     out[k] = v

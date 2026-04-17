@@ -1,3 +1,5 @@
+"""Factory for FastAPI lifespan context manager."""
+
 from __future__ import annotations
 
 import asyncio
@@ -17,6 +19,7 @@ def make_lifespan(
     shutdown_proxy: Callable[[], Awaitable[None]],
     stop_collect_task: Callable[[asyncio.Task | None], Awaitable[None]],
 ) -> Callable[[object], Awaitable[None]]:
+    """Create a FastAPI lifespan handler wired with injected functions."""
     @asynccontextmanager
     async def _lifespan(app):
         cfg = load_cfg()
@@ -37,4 +40,3 @@ def make_lifespan(
             await stop_collect_task(collect_task)
 
     return _lifespan
-

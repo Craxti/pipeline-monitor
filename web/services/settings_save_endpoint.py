@@ -1,3 +1,5 @@
+"""FastAPI endpoint for saving settings + restarting collect."""
+
 from __future__ import annotations
 
 import asyncio
@@ -18,6 +20,7 @@ async def api_save_settings(
     create_do_collect_task: Callable[[dict], asyncio.Task],
     sync_cursor_proxy: Callable[[dict], Awaitable[Any]],
 ) -> Any:
+    """Save settings and restart collection tasks if needed."""
     async def _cancel_collect_task() -> None:
         t = collect_loop_task_ref.get("task")
         if t and not t.done():
@@ -50,4 +53,3 @@ async def api_save_settings(
         restart_collect_after_save=_restart_collect_after_save,
         sync_cursor_proxy=sync_cursor_proxy,
     )
-

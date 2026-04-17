@@ -1,3 +1,5 @@
+"""Start/stop helpers for background collect loop tasks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,6 +15,7 @@ def start_collect_loop_task(
     create_task: Callable[["asyncio.Future[None]"], asyncio.Task],
     logger,
 ) -> asyncio.Task | None:
+    """Start background collect loop task if enabled in config."""
     interval = int(w_cfg.get("collect_interval_seconds", 300))
     collect_state["interval_seconds"] = interval
     if w_cfg.get("auto_collect", True):
@@ -26,6 +29,7 @@ def start_collect_loop_task(
 
 
 async def cancel_task(task: asyncio.Task | None) -> None:
+    """Cancel background task and await it."""
     if not task:
         return
     task.cancel()
@@ -33,4 +37,3 @@ async def cancel_task(task: asyncio.Task | None) -> None:
         await task
     except asyncio.CancelledError:
         pass
-

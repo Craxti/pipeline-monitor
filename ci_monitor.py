@@ -481,4 +481,4 @@ def _notify(snapshot: CISnapshot, cfg: dict) -> None:
 # ── entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    cli()
+    cli()  # pylint: disable=no-value-for-parameter

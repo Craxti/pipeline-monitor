@@ -1,3 +1,5 @@
+"""Meta endpoint payload builder (summary + analytics)."""
+
 from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
@@ -14,6 +16,7 @@ async def meta_payload(
     collect_state: dict,
     data_revision: int,
 ) -> dict[str, Any]:
+    """Build a meta payload used by the frontend for quick polling."""
     cfg = load_yaml_config()
     w_cfg = cfg.get("web", {})
     interval = int(w_cfg.get("collect_interval_seconds", 300))
@@ -39,4 +42,3 @@ async def meta_payload(
         "job_analytics": job_analytics,
         "parse_coverage": (getattr(snap, "collect_meta", None) if snap else None) or {},
     }
-

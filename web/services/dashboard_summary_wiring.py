@@ -1,3 +1,5 @@
+"""Wiring for dashboard summary payload."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -12,6 +14,7 @@ def dashboard_summary_payload(
     instance_health: list,
     data_revision: int,
 ) -> dict[str, Any]:
+    """Return dashboard summary payload from injected module/deps."""
     return dashboard_summary_mod.dashboard_summary_payload(
         load_yaml_config=load_yaml_config,
         load_snapshot=load_snapshot,
@@ -19,4 +22,3 @@ def dashboard_summary_payload(
         instance_health=instance_health,
         data_revision=data_revision,
     )
-

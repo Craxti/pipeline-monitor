@@ -1,3 +1,5 @@
+"""API endpoints for build records (filtered, paginated)."""
+
 from __future__ import annotations
 
 import json
@@ -23,6 +25,7 @@ async def api_builds(
     job: str,
     hours: int,
 ) -> dict:
+    """Return paginated build list plus analytics and group counters."""
     page = max(1, int(page or 1))
     per_page = min(max(1, int(per_page or 20)), 200)
     snap = await load_snapshot_async()
@@ -60,7 +63,10 @@ async def api_builds(
 
     group_counts: dict[str, dict[str, int]] = {}
     for b in items:
-        gk = f"{(b.source or '').strip().lower()}||{(inst_label_for_build_with_cfg(b, cfg) or '').strip().lower()}"
+        gk = (
+            f"{(b.source or '').strip().lower()}||"
+            f"{(inst_label_for_build_with_cfg(b, cfg) or '').strip().lower()}"
+        )
         if gk not in group_counts:
             group_counts[gk] = {"fail": 0, "warn": 0, "ok": 0, "total": 0}
         rec = group_counts[gk]
@@ -94,4 +100,3 @@ async def api_builds(
         "has_more": end < total,
         "group_counts": group_counts,
     }
-

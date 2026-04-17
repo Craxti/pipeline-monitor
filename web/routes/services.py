@@ -10,6 +10,7 @@ router = APIRouter(tags=["services"])
 
 @router.get("/api/services", response_class=JSONResponse)
 async def api_services_route(page: int = 1, per_page: int = 50, status: str = ""):
+    """Return paginated services list."""
     from models.models import normalize_service_status
     from web.core import runtime as rt
     from web.services import services_endpoints

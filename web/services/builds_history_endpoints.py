@@ -1,7 +1,9 @@
+"""Build history endpoints backed by SQLite (optional)."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Callable
 
 from fastapi import HTTPException
 
@@ -19,6 +21,7 @@ def api_builds_history(
     status: str,
     days: int,
 ) -> dict:
+    """Return build history page payload."""
     if (not sqlite_available) or db_query_builds_history is None:
         return {
             "items": [],
@@ -45,4 +48,3 @@ def api_builds_history(
     data["per_page"] = min(max(1, per_page), 200)
     data["source"] = "sqlite"
     return data
-

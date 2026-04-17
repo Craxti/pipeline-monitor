@@ -1,3 +1,5 @@
+"""Thin FastAPI endpoints for fetching/diffing logs."""
+
 from __future__ import annotations
 
 import logging
@@ -19,12 +21,18 @@ async def api_logs_jenkins(
     load_cfg: Callable[[], dict],
     fetch_jenkins_log: Callable[..., Any],
 ) -> Any:
+    """Fetch Jenkins console log for a job/build."""
     if not job_name.strip() or build_number < 1:
         raise HTTPException(400, "job_name and build_number are required")
     check_rate_limit(f"log:jenkins:{job_name}:{build_number}", window=2)
     logger.info("[%s] GET jenkins log %s #%s", rid, job_name, build_number)
     cfg = load_cfg()
-    return fetch_jenkins_log(cfg=cfg, job_name=job_name, build_number=build_number, instance_url=instance_url)
+    return fetch_jenkins_log(
+        cfg=cfg,
+        job_name=job_name,
+        build_number=build_number,
+        instance_url=instance_url,
+    )
 
 
 async def api_logs_gitlab(
@@ -38,12 +46,18 @@ async def api_logs_gitlab(
     load_cfg: Callable[[], dict],
     fetch_gitlab_log: Callable[..., Any],
 ) -> Any:
+    """Fetch GitLab job log for a project pipeline."""
     if not project_id.strip() or pipeline_id < 1:
         raise HTTPException(400, "project_id and pipeline_id are required")
     check_rate_limit(f"log:gitlab:{project_id}:{pipeline_id}", window=2)
     logger.info("[%s] GET gitlab log %s pipeline %s", rid, project_id, pipeline_id)
     cfg = load_cfg()
-    return fetch_gitlab_log(cfg=cfg, project_id=project_id, pipeline_id=pipeline_id, instance_url=instance_url)
+    return fetch_gitlab_log(
+        cfg=cfg,
+        project_id=project_id,
+        pipeline_id=pipeline_id,
+        instance_url=instance_url,
+    )
 
 
 async def api_logs_diff(
@@ -57,6 +71,7 @@ async def api_logs_diff(
     load_snapshot: Callable[[], Any],
     diff_logs: Callable[..., Any],
 ) -> Any:
+    """Return a unified diff between relevant logs."""
     check_rate_limit(f"diff:{source}:{job_name}:{build_number}", window=5)
     cfg = load_cfg()
     snap = load_snapshot()
@@ -79,11 +94,17 @@ async def api_pipeline_stages(
     load_cfg: Callable[[], dict],
     pipeline_stages: Callable[..., Any],
 ) -> Any:
+    """Fetch GitLab pipeline stages info."""
     if not project_id.strip() or pipeline_id < 1:
         raise HTTPException(400, "project_id and pipeline_id are required")
     check_rate_limit(f"stages:{project_id}:{pipeline_id}", window=2)
     cfg = load_cfg()
-    return pipeline_stages(cfg=cfg, project_id=project_id, pipeline_id=pipeline_id, instance_url=instance_url)
+    return pipeline_stages(
+        cfg=cfg,
+        project_id=project_id,
+        pipeline_id=pipeline_id,
+        instance_url=instance_url,
+    )
 
 
 async def api_logs_docker(
@@ -93,6 +114,7 @@ async def api_logs_docker(
     check_rate_limit: Callable[..., None],
     docker_logs_tail: Callable[..., Any],
 ) -> Any:
+    """Return recent docker logs for a container."""
     container = container.strip()
     if not container:
         raise HTTPException(400, "container is required")
@@ -112,9 +134,9 @@ async def api_logs_docker_stream(
     check_rate_limit: Callable[..., None],
     docker_logs_stream_response: Callable[..., Any],
 ) -> Any:
+    """Stream docker logs for a container."""
     container = container.strip()
     if not container:
         raise HTTPException(400, "container is required")
     check_rate_limit(f"log:docker:stream:{container}", window=3)
     return docker_logs_stream_response(container=container)
-

@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """
 Shared runtime state for the web process.
 
 Goal: keep FastAPI composition (web/app.py) thin and allow route modules to depend on
 runtime state without importing web.app (avoids circular imports).
 """
+
+from __future__ import annotations
 
 import asyncio
 import threading
@@ -86,17 +86,22 @@ rate_limit_rt = _rate_limit_runtime.RateLimitRuntime()
 
 # ---- Notifications / event feed
 notify_state = _notify_runtime.make_notify_state(_NotificationState, notify_max=200)
-event_feed_rt = _event_feed_runtime.EventFeedRuntime(path=EVENT_FEED_FILE, max_entries=EVENT_FEED_MAX)
+event_feed_rt = _event_feed_runtime.EventFeedRuntime(
+    path=EVENT_FEED_FILE,
+    max_entries=EVENT_FEED_MAX,
+)
 
 
 def bump_revision() -> int:
+    """Increase data revision counter; used for cache invalidation."""
     return revision_rt.bump()
 
 
 def get_instance_health() -> list[dict[str, Any]]:
+    """Return per-instance health snapshot for API responses."""
     return _instance_health_runtime.get_health(instance_health_rt)
 
 
 def set_instance_health(h: list[dict[str, Any]]) -> None:
+    """Replace per-instance health snapshot."""
     return _instance_health_runtime.set_health(instance_health_rt, h)
-

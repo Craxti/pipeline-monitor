@@ -205,39 +205,47 @@ async def _export_incident_response(fmt: str, request: Optional[Request] = None)
 
 @router.get("/api/export/incident.md")
 async def export_incident_md_path(request: Request):
+    """Export incident bundle as Markdown (path form)."""
     return await _export_incident_response("md", request)
 
 
 @router.get("/api/export/incident.json")
 async def export_incident_json_path(request: Request):
+    """Export incident bundle as JSON (path form)."""
     return await _export_incident_response("json", request)
 
 
 @router.get("/api/export/incident/json")
 async def export_incident_json_segment(request: Request):
+    """Export incident bundle as JSON (segment form)."""
     return await _export_incident_response("json", request)
 
 
 @router.get("/api/export/incident/md")
 async def export_incident_md_segment(request: Request):
+    """Export incident bundle as Markdown (segment form)."""
     return await _export_incident_response("md", request)
 
 
 @router.get("/api/incident.json")
 async def export_incident_json_flat(request: Request):
+    """Export incident bundle as JSON (flat form)."""
     return await _export_incident_response("json", request)
 
 
 @router.get("/api/incident.md")
 async def export_incident_md_flat(request: Request):
+    """Export incident bundle as Markdown (flat form)."""
     return await _export_incident_response("md", request)
 
 
 @router.get("/api/incident")
 async def export_incident_short(request: Request, fmt: str = "json"):
+    """Export incident bundle as JSON/Markdown (short form)."""
     return await _export_incident_response(fmt, request)
 
 
 @router.get("/api/export/incident")
 async def export_incident(request: Request, fmt: str = "json"):
+    """Export incident bundle as JSON/Markdown."""
     return await _export_incident_response(fmt, request)

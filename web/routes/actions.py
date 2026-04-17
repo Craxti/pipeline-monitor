@@ -23,6 +23,7 @@ def _check_rate_limit(key: str, window: float = 15) -> None:
     dependencies=[Depends(require_shared_token)],
 )
 async def action_jenkins_build(request: Request):
+    """Trigger Jenkins build."""
     return await actions_endpoints.action_jenkins_build(
         request,
         rid=request_id.rid(request),
@@ -38,6 +39,7 @@ async def action_jenkins_build(request: Request):
     dependencies=[Depends(require_shared_token)],
 )
 async def action_gitlab_pipeline(request: Request):
+    """Trigger GitLab pipeline."""
     return await actions_endpoints.action_gitlab_pipeline(
         request,
         rid=request_id.rid(request),
@@ -53,6 +55,7 @@ async def action_gitlab_pipeline(request: Request):
     dependencies=[Depends(require_shared_token)],
 )
 async def action_docker_container(request: Request):
+    """Execute docker action on a container."""
     return await actions_endpoints.action_docker_container(
         request,
         rid=request_id.rid(request),
@@ -67,8 +70,8 @@ async def action_docker_container(request: Request):
     dependencies=[Depends(require_shared_token)],
 )
 async def action_docker_restart(request: Request):
+    """Restart a docker container (shortcut action)."""
     return await actions_endpoints.action_docker_restart(
         request,
         docker_container_action=ops_actions.docker_container_action,
     )
-

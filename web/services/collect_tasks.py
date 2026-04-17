@@ -1,3 +1,5 @@
+"""Async task wrappers for collection entrypoints."""
+
 from __future__ import annotations
 
 import asyncio
@@ -17,6 +19,7 @@ async def do_collect(
     sse_broadcast_async: Callable[[dict], "asyncio.Future[None]"],
     data_revision: int,
 ) -> None:
+    """Delegate to `collect_loop_mod.do_collect` (async wrapper)."""
     return await collect_loop_mod.do_collect(
         cfg,
         force_full=force_full,
@@ -34,8 +37,8 @@ def do_collect_task_factory(
     *,
     collect_fn: Callable[[dict, bool], "asyncio.Future[None]"],
 ) -> Callable[[dict, bool], asyncio.Task]:
+    """Create a task factory for the collect coroutine."""
     def _factory(cfg: dict, force_full: bool) -> asyncio.Task:
         return asyncio.create_task(collect_fn(cfg, force_full))
 
     return _factory
-

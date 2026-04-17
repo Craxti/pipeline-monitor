@@ -18,6 +18,7 @@ async def api_tests_route(
     hours: int = 0,
     source: str = "",
 ):
+    """Return paginated tests list (with filtering)."""
     from models.models import normalize_test_status
     from web.core import runtime as rt
     from web.services import tests_analytics, tests_endpoints
@@ -48,6 +49,7 @@ async def api_tests_top_failures_route(
     hours: int = 0,
     days: int = 0,
 ):
+    """Return top failing tests aggregation."""
     from web.core import runtime as rt
     from web.services import tests_analytics, tests_endpoints
 
@@ -76,6 +78,7 @@ async def export_tests_route(
     hours: int = 0,
     source: str = "",
 ):
+    """Export tests as CSV or XLSX."""
     from web.core import runtime as rt
     from web.services import export_endpoints, exports
 
@@ -101,6 +104,7 @@ async def export_failures_route(
     hours: int = 0,
     days: int = 0,
 ):
+    """Export top failures as CSV or XLSX."""
     from web.core import runtime as rt
     from web.services import export_endpoints, exports
 

@@ -8,7 +8,6 @@ so the tool works even if python-telegram-bot is not installed.
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
 
 import ipaddress
 import socket

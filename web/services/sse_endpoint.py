@@ -1,3 +1,5 @@
+"""SSE response helper."""
+
 from __future__ import annotations
 
 from fastapi import Request
@@ -13,6 +15,7 @@ def sse_events_response(
     queue_maxsize: int = 64,
     ping_timeout_seconds: float = 25.0,
 ) -> StreamingResponse:
+    """Create a streaming response for SSE events."""
     return StreamingResponse(
         sse_hub_mod.events_generator(
             request,
@@ -28,4 +31,3 @@ def sse_events_response(
             "X-Accel-Buffering": "no",
         },
     )
-

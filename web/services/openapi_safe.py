@@ -1,3 +1,5 @@
+"""OpenAPI generation wrapper that never crashes the app."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -23,8 +25,9 @@ def make_safe_openapi(app, *, logger) -> Callable[[], dict[str, Any]]:
                 routes=getattr(app, "routes", []),
             )
         except Exception as exc:  # pragma: no cover
-            # Work around a Pydantic bug on some Python 3.9 builds where JSON schema generation crashes
-            # with: AttributeError: '_SpecialForm' object has no attribute 'replace'
+            # Work around a Pydantic bug on some Python 3.9 builds where JSON
+            # schema generation crashes with:
+            # AttributeError: '_SpecialForm' object has no attribute 'replace'
             msg = str(exc)
             if isinstance(exc, AttributeError) and "SpecialForm" in msg and "replace" in msg:
                 try:
@@ -37,13 +40,17 @@ def make_safe_openapi(app, *, logger) -> Callable[[], dict[str, Any]]:
                     vals = tuple(get_literal_values(core_schema.CoreSchemaType)) + tuple(
                         get_literal_values(core_schema.CoreSchemaFieldType)
                     )
-                    _pydantic_json_schema.CoreSchemaOrFieldType = Literal[vals]  # type: ignore[attr-defined]
+                    _pydantic_json_schema.CoreSchemaOrFieldType = (  # type: ignore[attr-defined]
+                        Literal[vals]
+                    )
                     schema = get_openapi(
                         title=str(getattr(app, "title", "API")),
                         version=str(getattr(app, "version", "0")),
                         routes=getattr(app, "routes", []),
                     )
-                    logger.info("OpenAPI generation recovered via Pydantic schema-type workaround.")
+                    logger.info(
+                        "OpenAPI generation recovered via Pydantic schema-type workaround."
+                    )
                 except Exception as exc2:
                     logger.warning("OpenAPI generation failed (after workaround): %s", exc2)
                     schema = {
@@ -68,4 +75,3 @@ def make_safe_openapi(app, *, logger) -> Callable[[], dict[str, Any]]:
         return schema
 
     return _openapi
-

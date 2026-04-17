@@ -1,3 +1,5 @@
+"""Persisted event feed on disk (JSON list)."""
+
 from __future__ import annotations
 
 import json
@@ -71,4 +73,3 @@ def load_events(
     except Exception as exc:
         logger.debug("event_feed load failed: %s", exc)
         return []
-

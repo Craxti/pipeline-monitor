@@ -1,3 +1,5 @@
+"""Helpers for snapshot freshness / stale detection."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -26,4 +28,3 @@ def snapshot_freshness(*, snap: Any, stale_threshold_seconds: int) -> dict[str, 
         "stale": stale,
         "stale_threshold_seconds": stale_threshold_seconds,
     }
-

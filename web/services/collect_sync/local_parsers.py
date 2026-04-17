@@ -1,7 +1,10 @@
+"""Local test parsers used by the sync collection runner."""
+
 from __future__ import annotations
 
 
 def parse_local_test_dirs(*, cfg: dict, snapshot, logger) -> None:
+    """Parse configured local directories (pytest/allure) into snapshot."""
     from parsers.pytest_parser import PytestXMLParser
     from parsers.allure_parser import AllureJsonParser
 
@@ -18,4 +21,3 @@ def parse_local_test_dirs(*, cfg: dict, snapshot, logger) -> None:
             snapshot.tests.extend(allure_parser.parse_directory(d))
         except Exception as exc:
             logger.error("allure parser failed for %s: %s", d, exc)
-

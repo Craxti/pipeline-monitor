@@ -162,6 +162,7 @@ class HtmlReporter:
         lookback: str = "7 days",
         top_n: int = 10,
     ) -> Path:
+        """Write an HTML report and return its path."""
         out = Path(output_path)
         out.parent.mkdir(parents=True, exist_ok=True)
 

@@ -1,3 +1,5 @@
+"""Trends/uptime history stored as JSON."""
+
 from __future__ import annotations
 
 import json
@@ -30,7 +32,9 @@ def append_trends(
 
     try:
         history: list[dict[str, Any]] = (
-            json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else []
+            json.loads(history_path.read_text(encoding="utf-8"))
+            if history_path.exists()
+            else []
         )
     except Exception:
         history = []
@@ -129,7 +133,11 @@ def append_trends(
                 1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")
             ),
             "tests_total": len(snapshot.tests),
-            "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
+            "tests_failed": sum(
+                1
+                for t in snapshot.tests
+                if t.status_normalized in ("failed", "error")
+            ),
             "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
             "services_down_by_kind": services_down_by_kind,
             "service_health": service_health,
@@ -156,6 +164,7 @@ def append_trends(
 
 
 def compute_trends(days: int, *, history_path: Path = HISTORY_PATH) -> list[dict[str, Any]]:
+    """Return last `days` daily trend buckets."""
     if not history_path.exists():
         return []
     try:
@@ -165,4 +174,3 @@ def compute_trends(days: int, *, history_path: Path = HISTORY_PATH) -> list[dict
         return []
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     return [e for e in history if str(e.get("date", "")) >= cutoff]
-

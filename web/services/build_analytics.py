@@ -13,6 +13,7 @@ from models.models import CISnapshot
 
 
 def status_str(val: object) -> str:
+    """Convert status enum/string to a stable string."""
     if isinstance(val, str):
         return val
     return getattr(val, "value", str(val))

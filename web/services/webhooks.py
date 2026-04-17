@@ -17,6 +17,7 @@ def handle_build_complete(
     load_cfg: Callable[[], dict],
     trigger_collect: Callable[[dict], None],
 ) -> dict[str, Any]:
+    """Append build record from webhook payload and optionally trigger collect."""
     snap = load_snapshot() or CISnapshot()
     record = BuildRecord(
         source=payload.get("source", "webhook"),

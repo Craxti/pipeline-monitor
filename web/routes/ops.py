@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
@@ -16,6 +15,7 @@ router = APIRouter(tags=["ops"])
 
 @router.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
+    """Simple liveness probe."""
     return HealthResponse(
         ts=datetime.now(tz=timezone.utc).isoformat(),
         version="1.0.0",
@@ -26,6 +26,7 @@ async def health() -> HealthResponse:
 
 @router.get("/ready", response_model=ReadyResponse)
 async def ready() -> ReadyResponse:
+    """Readiness probe: requires at least one snapshot present."""
     from web.core.snapshot_cache import SNAPSHOT_PATH, load_snapshot
 
     if SNAPSHOT_PATH.exists():
@@ -35,7 +36,9 @@ async def ready() -> ReadyResponse:
             snap_age = (
                 datetime.now(tz=timezone.utc)
                 - snap.collected_at.replace(
-                    tzinfo=timezone.utc if snap.collected_at.tzinfo is None else snap.collected_at.tzinfo,
+                    tzinfo=timezone.utc
+                    if snap.collected_at.tzinfo is None
+                    else snap.collected_at.tzinfo,
                 )
             ).total_seconds()
         return ReadyResponse(snapshot_age_seconds=snap_age)

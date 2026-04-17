@@ -1,3 +1,5 @@
+"""Auth helpers for protecting sensitive endpoints."""
+
 from __future__ import annotations
 
 import os
@@ -33,6 +35,7 @@ def shared_api_token(cfg: Optional[dict] = None) -> str:
 
 
 def token_from_headers(x_api_token: Optional[str], authorization: Optional[str]) -> str:
+    """Extract a token from X-API-Token or Authorization header."""
     if x_api_token:
         return str(x_api_token).strip()
     if authorization:
@@ -47,6 +50,7 @@ async def require_shared_token(
     x_api_token: Optional[str] = Header(default=None, alias="X-API-Token"),
     authorization: Optional[str] = Header(default=None, alias="Authorization"),
 ) -> None:
+    """FastAPI dependency: enforce shared API token if configured."""
     cfg = None
     try:
         cfg = load_yaml_config()

@@ -1,3 +1,5 @@
+"""Small helpers for runtime endpoints."""
+
 from __future__ import annotations
 
 import time
@@ -13,4 +15,3 @@ def check_rate_limit(store: dict[str, float], key: str, *, window: float) -> Non
         wait = window - (now - last)
         raise HTTPException(429, f"Rate limit: try again in {wait:.1f}s")
     store[key] = now
-

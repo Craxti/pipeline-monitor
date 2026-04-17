@@ -1,3 +1,5 @@
+"""Low-level snapshot persistence helpers (JSON file + optional SQLite)."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -17,6 +19,7 @@ def save_snapshot(
     logger_warning: Callable[[str, object], None],
     logger_debug: Callable[[str, object], None],
 ) -> None:
+    """Persist a full snapshot, bump revision, and run hooks."""
     with snapshot_write_lock:
         data_file.parent.mkdir(parents=True, exist_ok=True)
         data_file.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
@@ -26,7 +29,6 @@ def save_snapshot(
         except OSError:
             mtime = None
         prime_snapshot_cache(snapshot, mtime)
-
     try:
         append_trends(snapshot)
     except Exception as exc:
@@ -76,4 +78,3 @@ def save_snapshot_partial(
         except OSError:
             mtime = None
         prime_snapshot_cache(snapshot, mtime)
-

@@ -1,3 +1,5 @@
+"""Compatibility API wrappers for snapshot operations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -12,6 +14,7 @@ def append_trends(
     load_cfg,
     inst_label_for_build,
 ):
+    """Append trend records to snapshot history."""
     from web.services import snapshot_trends_wiring as _snapshot_trends_wiring
 
     return _snapshot_trends_wiring.append_trends(
@@ -37,6 +40,7 @@ def save_snapshot(
     bump_revision,
     logger,
 ) -> None:
+    """Persist full snapshot, update trends, and bump revision counters."""
     from web.services import snapshot_save_wiring as _snapshot_save_wiring
 
     return _snapshot_save_wiring.save_snapshot(
@@ -64,6 +68,7 @@ def save_snapshot_partial(
     collect_state: dict,
     load_snapshot,
 ) -> None:
+    """Persist partial snapshot (throttled by writer)."""
     from web.services import snapshot_partial_wiring as _snapshot_partial_wiring
 
     return _snapshot_partial_wiring.save_snapshot_partial(
@@ -86,6 +91,7 @@ def maybe_save_partial(
     save_snapshot_partial_fn,
     logger,
 ) -> None:
+    """Throttled wrapper around partial snapshot persistence."""
     from web.services import snapshot_partial_wiring as _snapshot_partial_wiring
 
     return _snapshot_partial_wiring.maybe_save_partial(
@@ -104,6 +110,7 @@ def public_settings_payload(
     sqlite_available: bool,
     db_stats,
 ) -> dict[str, Any]:
+    """Build public settings payload with injected database stats."""
     from web.services import public_settings_wiring as _public_settings_wiring
 
     return _public_settings_wiring.public_settings_payload(
@@ -111,4 +118,3 @@ def public_settings_payload(
         sqlite_available=sqlite_available,
         db_stats=db_stats if sqlite_available else None,
     )
-

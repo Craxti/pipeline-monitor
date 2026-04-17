@@ -1,7 +1,9 @@
+"""Action endpoints implementations (Jenkins/GitLab/Docker)."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable
 
 from fastapi import HTTPException, Request
 
@@ -16,6 +18,7 @@ async def action_jenkins_build(
     load_cfg: Callable[[], dict],
     trigger_jenkins_build: Callable[..., Any],
 ) -> Any:
+    """Trigger Jenkins build action."""
     body = await request.json()
     job_name = body.get("job_name", "")
     instance_url = body.get("instance_url", "")
@@ -28,7 +31,7 @@ async def action_jenkins_build(
         return trigger_jenkins_build(cfg=cfg, job_name=job_name, instance_url=instance_url)
     except Exception as exc:
         logger.error("Jenkins trigger failed: %s", exc)
-        raise HTTPException(500, f"Failed to trigger build: {exc}")
+        raise HTTPException(500, f"Failed to trigger build: {exc}") from exc
 
 
 async def action_gitlab_pipeline(
@@ -39,6 +42,7 @@ async def action_gitlab_pipeline(
     load_cfg: Callable[[], dict],
     trigger_gitlab_pipeline: Callable[..., Any],
 ) -> Any:
+    """Trigger GitLab pipeline action."""
     body = await request.json()
     project_id = body.get("project_id", "")
     ref = body.get("ref", "main")
@@ -49,10 +53,15 @@ async def action_gitlab_pipeline(
     logger.info("[%s] action gitlab pipeline project=%s ref=%s", rid, project_id, ref)
     try:
         cfg = load_cfg()
-        return trigger_gitlab_pipeline(cfg=cfg, project_id=project_id, ref=ref, instance_url=instance_url)
+        return trigger_gitlab_pipeline(
+            cfg=cfg,
+            project_id=project_id,
+            ref=ref,
+            instance_url=instance_url,
+        )
     except Exception as exc:
         logger.error("GitLab trigger failed: %s", exc)
-        raise HTTPException(500, f"Failed to trigger pipeline: {exc}")
+        raise HTTPException(500, f"Failed to trigger pipeline: {exc}") from exc
 
 
 async def action_docker_container(
@@ -62,6 +71,7 @@ async def action_docker_container(
     check_rate_limit: Callable[..., None],
     docker_container_action: Callable[..., Any],
 ) -> Any:
+    """Execute docker container action (start/stop/restart)."""
     body = await request.json()
     container_name = body.get("container_name", "")
     action = (body.get("action") or "restart").lower().strip()
@@ -85,6 +95,7 @@ async def action_docker_restart(
     *,
     docker_container_action: Callable[..., Any],
 ) -> Any:
+    """Restart docker container (shortcut action)."""
     body = await request.json()
     container_name = body.get("container_name", "")
     if not container_name:
@@ -94,4 +105,3 @@ async def action_docker_restart(
     except Exception as exc:
         logger.error("Docker restart failed: %s", exc)
         raise HTTPException(500, f"Failed to restart container: {exc}") from exc
-

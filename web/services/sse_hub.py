@@ -1,3 +1,5 @@
+"""In-memory SSE hub utilities (broadcast + per-client generator)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,6 +10,7 @@ from fastapi import Request
 
 
 async def broadcast_async(queues: set[asyncio.Queue], payload: dict) -> None:
+    """Best-effort broadcast to all client queues (drops oldest on full)."""
     for q in list(queues):
         try:
             q.put_nowait(payload)
@@ -30,6 +33,7 @@ def events_generator(
     queue_maxsize: int = 64,
     ping_timeout_seconds: float = 25.0,
 ) -> AsyncGenerator[str, None]:
+    """Create an SSE event generator tied to the request lifetime."""
     async def _gen() -> AsyncGenerator[str, None]:
         q: asyncio.Queue = asyncio.Queue(maxsize=queue_maxsize)
         queues.add(q)
@@ -47,4 +51,3 @@ def events_generator(
             queues.discard(q)
 
     return _gen()
-

@@ -23,7 +23,13 @@ def _check_rate_limit(key: str, window: float = 15) -> None:
     response_class=JSONResponse,
     dependencies=[Depends(require_shared_token)],
 )
-async def api_logs_jenkins(request: Request, job_name: str, build_number: int, instance_url: str = ""):
+async def api_logs_jenkins(
+    request: Request,
+    job_name: str,
+    build_number: int,
+    instance_url: str = "",
+):
+    """Return Jenkins console log (tail)."""
     return await logs_endpoints.api_logs_jenkins(
         request,
         job_name=job_name,
@@ -41,7 +47,13 @@ async def api_logs_jenkins(request: Request, job_name: str, build_number: int, i
     response_class=JSONResponse,
     dependencies=[Depends(require_shared_token)],
 )
-async def api_logs_gitlab(request: Request, project_id: str, pipeline_id: int, instance_url: str = ""):
+async def api_logs_gitlab(
+    request: Request,
+    project_id: str,
+    pipeline_id: int,
+    instance_url: str = "",
+):
+    """Return GitLab job log (tail)."""
     return await logs_endpoints.api_logs_gitlab(
         request,
         project_id=project_id,
@@ -60,6 +72,7 @@ async def api_logs_gitlab(request: Request, project_id: str, pipeline_id: int, i
     dependencies=[Depends(require_shared_token)],
 )
 async def api_logs_diff(source: str, job_name: str, build_number: int, instance_url: str = ""):
+    """Return diff between two recent logs."""
     return await logs_endpoints.api_logs_diff(
         source=source,
         job_name=job_name,
@@ -74,6 +87,7 @@ async def api_logs_diff(source: str, job_name: str, build_number: int, instance_
 
 @router.get("/api/pipeline/stages", response_class=JSONResponse)
 async def api_pipeline_stages(project_id: str, pipeline_id: int, instance_url: str = ""):
+    """Return pipeline stages for GitLab pipeline."""
     return await logs_endpoints.api_pipeline_stages(
         project_id=project_id,
         pipeline_id=pipeline_id,
@@ -90,6 +104,7 @@ async def api_pipeline_stages(project_id: str, pipeline_id: int, instance_url: s
     dependencies=[Depends(require_shared_token)],
 )
 async def api_logs_docker(container: str, tail: int = 4000):
+    """Return docker logs tail."""
     return await logs_endpoints.api_logs_docker(
         container=container,
         tail=tail,
@@ -103,9 +118,9 @@ async def api_logs_docker(container: str, tail: int = 4000):
     dependencies=[Depends(require_shared_token)],
 )
 async def api_logs_docker_stream(container: str):
+    """Stream docker logs via SSE/streaming response."""
     return await logs_endpoints.api_logs_docker_stream(
         container=container,
         check_rate_limit=_check_rate_limit,
         docker_logs_stream_response=logs_api.docker_logs_stream_response,
     )
-

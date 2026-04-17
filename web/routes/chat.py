@@ -15,8 +15,15 @@ router = APIRouter(tags=["chat"])
     dependencies=[Depends(require_shared_token)],
 )
 async def api_chat_route(request: Request):
+    """Main AI chat endpoint."""
     from web.core.config import config_yaml_path, load_yaml_config
-    from web.services import ai_helpers, ai_provider_bases, app_constants, chat_endpoints, cursor_proxy
+    from web.services import (
+        ai_helpers,
+        ai_provider_bases,
+        app_constants,
+        chat_endpoints,
+        cursor_proxy,
+    )
 
     return await chat_endpoints.api_chat(
         request,
@@ -37,6 +44,7 @@ async def api_chat_route(request: Request):
     dependencies=[Depends(require_shared_token)],
 )
 async def api_chat_status_route():
+    """Return chat/proxy status and config-derived defaults."""
     from web.core.config import config_yaml_path, load_yaml_config
     from web.services import ai_helpers, app_constants, chat_endpoints, cursor_proxy
 
@@ -58,12 +66,17 @@ async def api_chat_status_route():
     dependencies=[Depends(require_shared_token)],
 )
 async def api_chat_proxy_check_route():
+    """Run a proxy connectivity check with rate limiting."""
     from web.core.config import config_yaml_path, load_yaml_config
     from web.core import runtime as rt
     from web.services import ai_helpers, chat_endpoints, runtime_helpers
 
     return await chat_endpoints.api_chat_proxy_check(
-        check_rate_limit=lambda key, window=15: runtime_helpers.check_rate_limit(rt.rate_limit_rt.store, key, window=window),
+        check_rate_limit=lambda key, window=15: runtime_helpers.check_rate_limit(
+            rt.rate_limit_rt.store,
+            key,
+            window=window,
+        ),
         load_yaml_config=load_yaml_config,
         config_yaml_path=config_yaml_path,
         openai_proxy_url=ai_helpers.openai_proxy_url,
@@ -77,4 +90,5 @@ async def api_chat_proxy_check_route():
     dependencies=[Depends(require_shared_token)],
 )
 async def api_proxy_check_alias_route():
+    """Alias for chat proxy-check endpoint."""
     return await api_chat_proxy_check_route()

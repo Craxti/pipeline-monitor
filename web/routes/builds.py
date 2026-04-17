@@ -22,6 +22,7 @@ async def api_builds_route(
     job: str = "",
     hours: int = 0,
 ):
+    """Return paginated builds list (with filtering)."""
     from models.models import normalize_build_status
     from web.core.config import load_yaml_config
     from web.core import runtime as rt
@@ -48,6 +49,7 @@ async def api_builds_route(
 
 @router.get("/api/instances", response_class=JSONResponse)
 async def api_instances_route():
+    """Return instances list from config."""
     from web.core.config import load_yaml_config
     from web.services.build_filters import config_instance_label
     from web.services import instances_endpoints
@@ -67,6 +69,7 @@ async def api_builds_history_route(
     status: str = "",
     days: int = 30,
 ):
+    """Return build history from SQLite (if available)."""
     from web.services import builds_history_endpoints
     from web.services import sqlite_imports as _db_opt
 
@@ -84,6 +87,7 @@ async def api_builds_history_route(
 
 @router.get("/api/instances/health", response_class=JSONResponse)
 async def api_instances_health_route():
+    """Return current instance health."""
     from web.core import runtime as rt
     from web.services import instances_health_endpoint
 
@@ -101,6 +105,7 @@ async def export_builds_route(
     job: str = "",
     hours: int = 0,
 ):
+    """Export builds as CSV or XLSX."""
     from web.core import runtime as rt
     from web.services import export_endpoints
     from web.services import exports

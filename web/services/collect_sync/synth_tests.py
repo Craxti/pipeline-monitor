@@ -1,3 +1,5 @@
+"""Synthetic test records derived from build status."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -10,6 +12,7 @@ def append_synthetic_tests_from_builds(
     inst_key: str,
     TestRecord,
 ) -> None:
+    """Append synthetic test records derived from build outcomes."""
     try:
         for b in builds:
             st = b.status_normalized
@@ -36,4 +39,3 @@ def append_synthetic_tests_from_builds(
             )
     except Exception:
         pass
-

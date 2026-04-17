@@ -1,3 +1,5 @@
+"""API endpoints for manual/auto collection controls."""
+
 from __future__ import annotations
 
 import asyncio
@@ -15,6 +17,7 @@ def collect_status(
     auto_collect_enabled: bool,
     auto_collect_enabled_at_iso: str | None,
 ) -> dict:
+    """Return current collection status payload for the UI."""
     return collect_status_payload(
         collect_state=collect_state,
         auto_collect_enabled=auto_collect_enabled,
@@ -33,6 +36,7 @@ async def set_auto_collect(
     auto_collect_enabled_ref: dict,
     auto_collect_enabled_at_iso_ref: dict,
 ) -> dict:
+    """Enable/disable auto-collect and optionally trigger immediate collect."""
     try:
         body = await request_json()
     except Exception:
@@ -64,6 +68,7 @@ async def trigger_collect(
     do_collect_task_factory: Callable[[dict, bool], "asyncio.Task[None]"],
     started_payload: Callable[[], dict],
 ) -> dict:
+    """Trigger a one-off collection run (optionally force full refresh)."""
     if collect_state.get("is_collecting"):
         logger.info("[%s] collect rejected: already in progress", rid)
         return {"ok": False, "message": "Collection already in progress."}
@@ -81,4 +86,3 @@ async def trigger_collect(
     logger.info("[%s] manual collect started", rid)
     do_collect_task_factory(cfg, force_full)
     return started_payload()
-

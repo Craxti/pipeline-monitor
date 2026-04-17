@@ -1,3 +1,5 @@
+"""Chat endpoints (SSE streaming) for AI assistant."""
+
 from __future__ import annotations
 
 import json
@@ -23,6 +25,7 @@ async def api_chat(
     cursor_agent_unavailable_msg: str,
     provider_bases: dict[str, str],
 ) -> StreamingResponse:
+    """Stream chat completion tokens as SSE events."""
     cfg = load_yaml_config()
     ai_cfg = cfg.get("openai", {})
     provider = ai_cfg.get("provider", "openai")
@@ -55,8 +58,10 @@ async def api_chat(
         "- When analyzing logs, highlight errors, root causes, and suggest fixes.\n"
         "- Use markdown formatting (bold, code blocks, lists) for readability.\n"
         "- Answer in the same language the user writes in.\n"
-        "- When a Docker container is down or misbehaving, mention its name clearly so the dashboard can offer a restart button.\n"
-        "- When a CI job needs re-running, mention the job name clearly so the dashboard can offer a re-run button.\n"
+        "- When a Docker container is down or misbehaving, mention its name clearly so "
+        "the dashboard can offer a restart button.\n"
+        "- When a CI job needs re-running, mention the job name clearly so the dashboard "
+        "can offer a re-run button.\n"
         "- If the user asks to collect/refresh data, say 'collect' or 'refresh data'.\n"
     )
     if context_text:
@@ -76,7 +81,8 @@ async def api_chat(
     px_cfg = ai_cfg.get("proxy") if isinstance(ai_cfg.get("proxy"), dict) else {}
     if px_cfg.get("enabled") and not proxy_url:
         logger.warning(
-            "OpenAI proxy enabled in config but URL is incomplete — check host/port or full url (config=%s)",
+            "OpenAI proxy enabled in config but URL is incomplete — check host/port "
+            "or full url (config=%s)",
             config_yaml_path(),
         )
 
@@ -92,7 +98,11 @@ async def api_chat(
             if base_url:
                 client_kw["base_url"] = base_url
             if proxy_url:
-                http_client = httpx.AsyncClient(proxy=proxy_url, timeout=timeout, trust_env=False)
+                http_client = httpx.AsyncClient(
+                    proxies=proxy_url,
+                    timeout=timeout,
+                    trust_env=False,
+                )
                 client_kw["http_client"] = http_client
                 logger.info(
                     "OpenAI chat using explicit proxy (scheme=%s)",
@@ -114,7 +124,8 @@ async def api_chat(
                     yield f"data: {json.dumps({'t': delta.content})}\n\n"
             if not yielded_text:
                 empty_msg = (
-                    "Cursor: пустой ответ от прокси (см. data/cursor_proxy.log). Проверьте CURSOR_API_KEY, "
+                    "Cursor: пустой ответ от прокси (см. data/cursor_proxy.log). "
+                    "Проверьте CURSOR_API_KEY, "
                     "работу Cursor Agent и лог прокси."
                     if provider == "cursor"
                     else "Модель вернула пустой ответ. Попробуйте ещё раз или смените модель."
@@ -125,17 +136,23 @@ async def api_chat(
             msg = str(exc)
             if provider == "cursor" and looks_like_upstream_unreachable(msg):
                 msg = (
-                    "Cursor: не удалось подключиться к LLM (часто это 127.0.0.1:8765 без запущенного прокси). "
-                    "У Cursor нет публичного «прямого» HTTP chat API для токена crsr в сторонних приложениях — "
-                    "чат в IDE идёт через инфраструктуру Cursor, а ключ из дашборда — для Cloud Agents / CLI. "
+                    "Cursor: не удалось подключиться к LLM "
+                    "(часто это 127.0.0.1:8765 без запущенного прокси). "
+                    "У Cursor нет публичного «прямого» HTTP chat API для токена crsr "
+                    "в сторонних приложениях — "
+                    "чат в IDE идёт через инфраструктуру Cursor, "
+                    "а ключ из дашборда — для Cloud Agents / CLI. "
                     "Варианты: (1) установить Cursor Agent CLI, выполнить `npx cursor-api-proxy`, "
-                    "в окружении процесса прокси задать CURSOR_API_KEY с вашим crsr_ токеном, base URL оставить "
-                    "http://127.0.0.1:8765/v1; (2) переключить провайдера на Gemini или OpenRouter — там один ключ в настройках."
+                    "в окружении процесса прокси задать CURSOR_API_KEY с вашим crsr_ токеном, "
+                    "base URL оставить http://127.0.0.1:8765/v1; "
+                    "(2) переключить провайдера на Gemini или OpenRouter — "
+                    "там один ключ в настройках."
                 )
             elif "unsupported_country" in msg or "unsupported_country_region_territory" in msg:
                 msg += (
                     " — Geo-block: OpenAI still sees a blocked client region. "
-                    "Try switching provider to Gemini or OpenRouter (free, no geo-restrictions) in Settings → AI Assistant."
+                    "Try switching provider to Gemini or OpenRouter (free, no geo-restrictions) "
+                    "in Settings → AI Assistant."
                 )
             yield f"data: {json.dumps({'error': msg})}\n\n"
         finally:
@@ -156,6 +173,7 @@ async def api_chat_status(
     cursor_proxy_running: Callable[[], bool],
     cursor_proxy_autostart_enabled: Callable[[dict], bool],
 ) -> dict:
+    """Return configuration + embedded proxy status for UI."""
     cfg = load_yaml_config()
     ai_cfg = cfg.get("openai", {})
     prov = ai_cfg.get("provider", "openai")
@@ -190,6 +208,7 @@ async def api_chat_proxy_check(
     openai_proxy_url: Callable[[dict], str | None],
     http_probe_public_ip: Callable[[httpx.AsyncClient], Awaitable[tuple[str | None, str | None]]],
 ) -> dict:
+    """Check direct vs proxied connectivity."""
     check_rate_limit("chat:proxy-check", window=10.0)
     cfg = load_yaml_config()
     ai_cfg = cfg.get("openai", {})
@@ -213,7 +232,7 @@ async def api_chat_proxy_check(
 
     if proxy_url:
         try:
-            async with httpx.AsyncClient(proxy=proxy_url, timeout=timeout, trust_env=False) as pc:
+            async with httpx.AsyncClient(proxies=proxy_url, timeout=timeout, trust_env=False) as pc:
                 pip, perr = await http_probe_public_ip(pc)
                 out["via_proxy"] = {"ok": perr is None and bool(pip), "ip": pip, "error": perr}
         except Exception as exc:
@@ -227,4 +246,3 @@ async def api_chat_proxy_check(
                 "error": "Proxy is enabled but host/port (or full URL) is missing or invalid.",
             }
     return out
-

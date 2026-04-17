@@ -1,9 +1,11 @@
+"""Compute a compact dashboard summary payload."""
+
 from __future__ import annotations
 
-from datetime import timezone
 from typing import Any, Callable
 
 from web.services import freshness as _freshness
+
 
 def dashboard_summary_payload(
     *,
@@ -13,6 +15,7 @@ def dashboard_summary_payload(
     instance_health: list[dict[str, Any]],
     data_revision: int,
 ) -> dict[str, Any]:
+    """Build the dashboard summary for the UI."""
     cfg = load_yaml_config()
     w_cfg = cfg.get("web", {})
     interval = int(w_cfg.get("collect_interval_seconds", 300))
@@ -48,7 +51,9 @@ def dashboard_summary_payload(
 
     partial_errors: list[dict[str, Any]] = []
     if collect_state.get("last_error"):
-        partial_errors.append({"source": "collect", "message": collect_state["last_error"]})
+        partial_errors.append(
+            {"source": "collect", "message": collect_state["last_error"]}
+        )
     for h in instance_health:
         if not h.get("ok"):
             partial_errors.append(
@@ -83,4 +88,3 @@ def dashboard_summary_payload(
         "instance_health": list(instance_health),
         "parse_coverage": parse_coverage,
     }
-

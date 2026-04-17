@@ -1,3 +1,5 @@
+"""Public non-secret settings exposed to UI."""
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -31,4 +33,3 @@ def public_settings_payload(
         },
         "sqlite_enabled": sqlite_ok,
     }
-

@@ -6,8 +6,13 @@ from typing import Any
 
 
 def parse_force_full(body: Any) -> bool:
-    return bool(isinstance(body, dict) and body.get("force_full") in (True, "true", "1", 1))
+    """Parse `force_full` flag from JSON body."""
+    return bool(
+        isinstance(body, dict)
+        and body.get("force_full") in (True, "true", "1", 1)
+    )
 
 
 def started_payload() -> dict[str, Any]:
+    """Return a standard response for started collection."""
     return {"ok": True, "message": "Collection started."}
