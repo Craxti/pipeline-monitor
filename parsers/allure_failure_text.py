@@ -75,7 +75,10 @@ def failure_text_from_allure_steps(steps: Any, *, max_len: int = 4000, _depth: i
 
 
 def failure_text_from_allure_stages(case: dict[str, Any] | None, *, max_len: int = 4000) -> str:
-    """Collect failure text from steps / beforeStages / afterStages (Allure 2 result + report JSON)."""
+    """Collect failure text from stage lists.
+
+    Covers `steps`, `beforeStages`, `afterStages`, and `children` (Allure 2 JSON shapes).
+    """
     if not case:
         return ""
     for key in ("steps", "beforeStages", "afterStages", "children"):
@@ -86,6 +89,7 @@ def failure_text_from_allure_stages(case: dict[str, Any] | None, *, max_len: int
 
 
 def failure_text_from_status_details(status_details: Any, *, max_len: int = 4000) -> str:
+    """Extract a readable message/trace pair from Allure `statusDetails`."""
     if not status_details:
         return ""
     if isinstance(status_details, str):
@@ -95,7 +99,10 @@ def failure_text_from_status_details(status_details: Any, *, max_len: int = 4000
         return _as_text_fragment(status_details, max_len=max_len)
 
     msg = _as_text_fragment(status_details.get("message"), max_len=max_len)
-    tr = _as_text_fragment(status_details.get("trace"), max_len=max(0, max_len - len(msg) - 2))
+    tr = _as_text_fragment(
+        status_details.get("trace"),
+        max_len=max(0, max_len - len(msg) - 2),
+    )
     if msg and tr:
         joined = f"{msg}\n{tr}".strip()
         return joined[:max_len] if max_len > 0 else joined
@@ -130,15 +137,25 @@ def failure_text_from_allure_case_dict(case: dict[str, Any] | None, *, max_len: 
     return out[:max_len] if max_len > 0 else out
 
 
-def failure_text_from_allure_result_item(item: dict[str, Any] | None, *, max_len: int = 4000) -> str:
+def failure_text_from_allure_result_item(
+    item: dict[str, Any] | None,
+    *,
+    max_len: int = 4000,
+) -> str:
     """Single test object from `*-result.json` (allure-results)."""
     if not item:
         return ""
     parts: list[str] = []
-    root = failure_text_from_status_details(item.get("statusDetails"), max_len=max_len).strip()
+    root = failure_text_from_status_details(
+        item.get("statusDetails"),
+        max_len=max_len,
+    ).strip()
     if root:
         parts.append(root)
-    staged = failure_text_from_allure_stages(item, max_len=max(0, max_len - len(root) - 2) if max_len else max_len)
+    staged = failure_text_from_allure_stages(
+        item,
+        max_len=max(0, max_len - len(root) - 2) if max_len else max_len,
+    )
     if staged:
         parts.append(staged)
     out = "\n".join(parts).strip()

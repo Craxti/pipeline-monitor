@@ -11,7 +11,14 @@ from fastapi.responses import StreamingResponse
 from web.services.ops_actions import find_gitlab_instance, find_jenkins_instance
 
 
-def fetch_jenkins_log(*, cfg: dict, job_name: str, build_number: int, instance_url: str = "") -> dict[str, Any]:
+def fetch_jenkins_log(
+    *,
+    cfg: dict,
+    job_name: str,
+    build_number: int,
+    instance_url: str = "",
+) -> dict[str, Any]:
+    """Fetch Jenkins console output for a specific job/build."""
     if instance_url:
         inst = find_jenkins_instance(cfg, instance_url)
         insts = [inst] if inst else []
@@ -37,7 +44,14 @@ def fetch_jenkins_log(*, cfg: dict, job_name: str, build_number: int, instance_u
     raise HTTPException(502, detail=last_err or "Could not fetch Jenkins console log")
 
 
-def fetch_gitlab_log(*, cfg: dict, project_id: str, pipeline_id: int, instance_url: str = "") -> dict[str, Any]:
+def fetch_gitlab_log(
+    *,
+    cfg: dict,
+    project_id: str,
+    pipeline_id: int,
+    instance_url: str = "",
+) -> dict[str, Any]:
+    """Fetch GitLab pipeline logs for a project/pipeline id."""
     if instance_url:
         inst = find_gitlab_instance(cfg, instance_url)
         insts = [inst] if inst else []
@@ -70,6 +84,7 @@ def diff_logs(
     cfg: dict,
     snapshot: Any,
 ) -> dict[str, Any]:
+    """Fetch current and reference logs and return a unified diff."""
     import difflib
 
     if snapshot is None:
@@ -137,7 +152,11 @@ def diff_logs(
                 if prev_build_number is None:
                     raise HTTPException(
                         404,
-                        f"No other build for «{job_name}» in snapshot (and no reference build resolved from Jenkins) — run collect to refresh data.",
+                        (
+                            f"No other build for «{job_name}» in snapshot "
+                            "(and no reference build resolved from Jenkins) — "
+                            "run collect to refresh data."
+                        ),
                     )
 
                 prev_text = client.fetch_console_text(job_name, int(prev_build_number))
@@ -154,12 +173,18 @@ def diff_logs(
         )
         for inst in (i for i in insts if i):
             try:
-                client = GitLabClient(url=inst.get("url", ""), token=inst.get("token", ""))
+                client = GitLabClient(
+                    url=inst.get("url", ""),
+                    token=inst.get("token", ""),
+                )
                 cur_text = client.fetch_pipeline_logs(job_name, build_number)
                 if prev_build_number is None:
                     raise HTTPException(
                         404,
-                        f"No other build for «{job_name}» in snapshot — run collect to refresh data.",
+                        (
+                            f"No other build for «{job_name}» in snapshot — "
+                            "run collect to refresh data."
+                        ),
                     )
                 prev_text = client.fetch_pipeline_logs(job_name, int(prev_build_number))
                 break
@@ -170,11 +195,15 @@ def diff_logs(
 
     if not cur_text:
         raise HTTPException(
-            502, "Could not fetch current build log" + (f": {last_fetch_err}" if last_fetch_err else "")
+            502,
+            "Could not fetch current build log"
+            + (f": {last_fetch_err}" if last_fetch_err else ""),
         )
     if not prev_text:
         raise HTTPException(
-            502, "Could not fetch reference build log" + (f": {last_fetch_err}" if last_fetch_err else "")
+            502,
+            "Could not fetch reference build log"
+            + (f": {last_fetch_err}" if last_fetch_err else ""),
         )
 
     cur_lines = cur_text.splitlines()
@@ -193,7 +222,14 @@ def diff_logs(
     }
 
 
-def pipeline_stages(*, cfg: dict, project_id: str, pipeline_id: int, instance_url: str = "") -> dict[str, Any]:
+def pipeline_stages(
+    *,
+    cfg: dict,
+    project_id: str,
+    pipeline_id: int,
+    instance_url: str = "",
+) -> dict[str, Any]:
+    """Fetch GitLab jobs grouped by stage for a pipeline."""
     if instance_url:
         inst = find_gitlab_instance(cfg, instance_url)
         insts = [inst] if inst else []
@@ -205,7 +241,10 @@ def pipeline_stages(*, cfg: dict, project_id: str, pipeline_id: int, instance_ur
     last_err: str | None = None
     for inst in insts:
         try:
-            client = GitLabClient(url=inst.get("url", "https://gitlab.com"), token=inst.get("token", ""))
+            client = GitLabClient(
+                url=inst.get("url", "https://gitlab.com"),
+                token=inst.get("token", ""),
+            )
             base = inst.get("url", "https://gitlab.com").rstrip("/")
             pid_enc = project_id.replace("/", "%2F")
             resp = client.session.get(
@@ -227,7 +266,10 @@ def pipeline_stages(*, cfg: dict, project_id: str, pipeline_id: int, instance_ur
                         "id": j.get("id"),
                     }
                 )
-            ordered = [{"stage": stage_name, "jobs": jobs_list} for stage_name, jobs_list in stages.items()]
+            ordered = [
+                {"stage": stage_name, "jobs": jobs_list}
+                for stage_name, jobs_list in stages.items()
+            ]
             return {"ok": True, "stages": ordered}
         except Exception as exc:
             last_err = str(exc)
@@ -235,6 +277,7 @@ def pipeline_stages(*, cfg: dict, project_id: str, pipeline_id: int, instance_ur
 
 
 def docker_logs_tail(*, container: str, tail: int = 4000) -> dict[str, Any]:
+    """Return last N lines of docker logs for a container."""
     from docker_monitor.monitor import DockerMonitor
 
     text = DockerMonitor.container_logs_tail(container, tail=max(100, min(int(tail), 50_000)))
@@ -242,9 +285,15 @@ def docker_logs_tail(*, container: str, tail: int = 4000) -> dict[str, Any]:
 
 
 def docker_logs_stream_response(*, container: str) -> StreamingResponse:
+    """Stream docker logs for a container as plain text."""
     from docker_monitor.monitor import DockerMonitor
 
     def gen():
-        yield from DockerMonitor.iter_container_logs_stream(container, follow=True, tail=200, timestamps=True)
+        yield from DockerMonitor.iter_container_logs_stream(
+            container,
+            follow=True,
+            tail=200,
+            timestamps=True,
+        )
 
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")

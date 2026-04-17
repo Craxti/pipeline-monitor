@@ -1,3 +1,5 @@
+"""Jenkins collectors used by the sync collection runner."""
+
 from __future__ import annotations
 
 import time
@@ -24,6 +26,7 @@ def collect_jenkins(
     TestRecord,
     append_synth_tests_from_builds,
 ) -> None:
+    """Collect Jenkins builds and (optionally) console/Allure tests."""
     from clients.jenkins_client import JenkinsClient
 
     for inst in cfg.get("jenkins_instances", []):
@@ -46,7 +49,9 @@ def collect_jenkins(
             except Exception:
                 _raw_limit = 50
             show_all_limit_jobs = (
-                None if (_raw_limit is not None and int(_raw_limit) <= 0) else int(_raw_limit)
+                None
+                if (_raw_limit is not None and int(_raw_limit) <= 0)
+                else int(_raw_limit)
             )
 
             client = JenkinsClient(
@@ -64,7 +69,11 @@ def collect_jenkins(
                     else None
                 ),
                 verify_ssl=verify_ssl,
-                progress_cb=lambda msg: progress("jenkins_builds", f"Jenkins: {label}", msg),
+                progress_cb=lambda msg: progress(
+                    "jenkins_builds",
+                    f"Jenkins: {label}",
+                    msg,
+                ),
                 source_instance=inst_key,
             )
             if inst.get("show_all_jobs", False):
@@ -112,7 +121,10 @@ def collect_jenkins(
                     progress(
                         "jenkins_builds",
                         f"Jenkins: {label}",
-                        f"Fetching build history (≤{hist_n} builds/job, up to {hist_job_cap} jobs)…",
+                        (
+                            f"Fetching build history (≤{hist_n} builds/job, "
+                            f"up to {hist_job_cap} jobs)…"
+                        ),
                     )
                     seen_hist: set[str] = set()
                     n_hist = 0
@@ -130,7 +142,10 @@ def collect_jenkins(
                         crit = bool(crit_by.get(jn) or crit_by.get(short))
                         try:
                             extra_hist = client.fetch_builds_for_job(
-                                jn, since=since, max_builds=hist_n, critical=crit
+                                jn,
+                                since=since,
+                                max_builds=hist_n,
+                                critical=crit,
                             )
                             if extra_hist:
                                 merge_build_records(extra_hist)
@@ -177,7 +192,12 @@ def collect_jenkins(
                     f"Jenkins: {label}",
                     f"Fetching builds… (max_builds={effective_max_builds})",
                 )
-                merge_build_records(client.fetch_builds(since=since, max_builds=effective_max_builds))
+                merge_build_records(
+                    client.fetch_builds(
+                        since=since,
+                        max_builds=effective_max_builds,
+                    )
+                )
 
             health.append(
                 {
@@ -190,7 +210,12 @@ def collect_jenkins(
             )
         except Exception as exc:
             logger.error("Jenkins [%s] builds failed: %s", label, exc)
-            push_collect_log("jenkins_builds", f"Jenkins: {label}", f"builds failed: {exc}", "error")
+            push_collect_log(
+                "jenkins_builds",
+                f"Jenkins: {label}",
+                f"builds failed: {exc}",
+                "error",
+            )
             health.append(
                 {
                     "name": label,
@@ -215,10 +240,18 @@ def collect_jenkins(
                     discovered = shared_discovered
                     if discovered:
                         wanted = {"success", "failure", "unstable"}
-                        filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
+                        filtered = [
+                            n
+                            for n in discovered
+                            if last_status_by_job.get(n) in wanted
+                        ]
                         if filtered:
                             discovered = filtered
-                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
+                        discovered_sel = (
+                            discovered
+                            if limit <= 0
+                            else discovered[: max(1, limit)]
+                        )
                         explicit_by_name = {
                             (j.get("name") or ""): j
                             for j in (jobs_for_console or [])
@@ -231,13 +264,18 @@ def collect_jenkins(
                         jobs_for_console = [
                             {
                                 "name": n,
-                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "critical": bool(
+                                    explicit_by_name.get(n, {}).get("critical", False)
+                                ),
                                 "parse_console": True,
                             }
                             for n in merged_names
                         ]
                         logger.info(
-                            "Jenkins [%s] console: discovered %d jobs, parsing %d (limit=%s, explicit=%d)",
+                            (
+                                "Jenkins [%s] console: discovered %d jobs, parsing %d "
+                                "(limit=%s, explicit=%d)"
+                            ),
                             label,
                             len(discovered),
                             len(jobs_for_console),
@@ -246,7 +284,8 @@ def collect_jenkins(
                         )
                     else:
                         logger.warning(
-                            "Jenkins [%s] console: show_all_jobs on but no jobs discovered; skipping console parse",
+                            "Jenkins [%s] console: show_all_jobs on but no jobs discovered; "
+                            "skipping console parse",
                             label,
                         )
                 n_console_jobs_parsed = len(jobs_for_console) if jobs_for_console else 0
@@ -278,9 +317,15 @@ def collect_jenkins(
                     workers=int(inst.get("console_workers", 8) or 8),
                     verify_ssl=bool(inst.get("verify_ssl", True)),
                     retries=int(inst.get("console_retries", 3) or 3),
-                    backoff_seconds=float(inst.get("console_backoff_seconds", 0.8) or 0.8),
+                    backoff_seconds=float(
+                        inst.get("console_backoff_seconds", 0.8) or 0.8
+                    ),
                     records_cb=_append_tests_live_inst,
-                    progress_cb=lambda msg: progress("jenkins_console", f"Jenkins: {label}", msg),
+                    progress_cb=lambda msg: progress(
+                        "jenkins_console",
+                        f"Jenkins: {label}",
+                        msg,
+                    ),
                     timing_cb=lambda d: collect_slow.append(
                         {
                             "ts": datetime.now(tz=timezone.utc).isoformat(),
@@ -317,10 +362,18 @@ def collect_jenkins(
                     discovered = shared_discovered
                     if discovered:
                         wanted = {"failure", "unstable"}
-                        filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
+                        filtered = [
+                            n
+                            for n in discovered
+                            if last_status_by_job.get(n) in wanted
+                        ]
                         if filtered:
                             discovered = filtered
-                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
+                        discovered_sel = (
+                            discovered
+                            if limit <= 0
+                            else discovered[: max(1, limit)]
+                        )
                         explicit_by_name = {
                             (j.get("name") or ""): j
                             for j in (jobs_for_allure or [])
@@ -333,13 +386,18 @@ def collect_jenkins(
                         jobs_for_allure = [
                             {
                                 "name": n,
-                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "critical": bool(
+                                    explicit_by_name.get(n, {}).get("critical", False)
+                                ),
                                 "parse_allure": True,
                             }
                             for n in merged_names
                         ]
                         logger.info(
-                            "Jenkins [%s] allure: discovered %d jobs, parsing %d (limit=%s, explicit=%d)",
+                            (
+                                "Jenkins [%s] allure: discovered %d jobs, parsing %d "
+                                "(limit=%s, explicit=%d)"
+                            ),
                             label,
                             len(discovered),
                             len(jobs_for_allure),
@@ -348,7 +406,8 @@ def collect_jenkins(
                         )
                     else:
                         logger.warning(
-                            "Jenkins [%s] allure: show_all_jobs on but no jobs discovered; skipping allure parse",
+                            "Jenkins [%s] allure: show_all_jobs on but no jobs discovered; "
+                            "skipping allure parse",
                             label,
                         )
 
@@ -387,7 +446,11 @@ def collect_jenkins(
                     max_builds=allure_max_builds,
                     workers=int(inst.get("allure_workers", 6) or 6),
                     verify_ssl=bool(inst.get("verify_ssl", True)),
-                    progress_cb=lambda msg: progress("jenkins_allure", f"Jenkins: {label}", msg),
+                    progress_cb=lambda msg: progress(
+                        "jenkins_allure",
+                        f"Jenkins: {label}",
+                        msg,
+                    ),
                     retries=int(inst.get("allure_retries", 3) or 3),
                     backoff_seconds=float(inst.get("allure_backoff_seconds", 0.8) or 0.8),
                     records_cb=_append_tests_live_inst,
@@ -413,10 +476,13 @@ def collect_jenkins(
                     "error",
                 )
 
-        jobs_index_size = len(shared_discovered) if inst.get("show_all_jobs") else len(inst.get("jobs") or [])
+        jobs_index_size = (
+            len(shared_discovered)
+            if inst.get("show_all_jobs")
+            else len(inst.get("jobs") or [])
+        )
         snapshot.collect_meta[f"jenkins:{label}"] = {
             "jobs_indexed": jobs_index_size,
             "console_jobs_parsed": n_console_jobs_parsed,
             "allure_jobs_parsed": n_allure_jobs_parsed,
         }
-

@@ -1,10 +1,14 @@
-"""Remove inline dashboard <script> blocks (no src) from index.html; add /static/dashboard.js after i18n."""
+"""Remove inline dashboard <script> blocks (no src) from index.html.
+
+Adds `/static/dashboard.js` after i18n include.
+"""
 from __future__ import annotations
 
 from pathlib import Path
 
 
 def main() -> None:
+    """Strip inline dashboard scripts and add external `dashboard.js` include."""
     root = Path(__file__).resolve().parents[1]
     p = root / "web" / "templates" / "index.html"
     lines = p.read_text(encoding="utf-8").splitlines(keepends=True)
@@ -16,7 +20,11 @@ def main() -> None:
         line = lines[i]
         st = line.strip()
         # Drop inline scripts only (keep Chart.js CDN, keep any <script src="...">)
-        if st == "<script>" or (st.startswith("<script") and "src=" not in st and not st.endswith("/>")):
+        if st == "<script>" or (
+            st.startswith("<script")
+            and "src=" not in st
+            and not st.endswith("/>")
+        ):
             i += 1
             while i < n and lines[i].strip() != "</script>":
                 i += 1

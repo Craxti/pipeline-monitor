@@ -4,141 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix moduls arch">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="pep8 + docs + unittests">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ci_monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/ci_monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/gitlab_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/gitlab_client.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data/snapshot.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/snapshot.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker_monitor/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docker_monitor/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker_monitor/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/docker_monitor/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/telegram_notifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/telegram_notifier.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reports/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/reports/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reports/csv_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/reports/csv_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/reports/html_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/reports/html_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/event_feed.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/event_feed.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/notifications.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/paths.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/paths.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/settings_secrets.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/settings_secrets.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/snapshot_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/snapshot_cache.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/templates.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/templates.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/trends.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/trends.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/actions.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/actions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/builds.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/builds.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/chat.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/dashboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/incident.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/incident.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/logs.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/logs.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/ops.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/ops.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/services.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/services.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/tests.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/webhooks.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/webhooks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/actions_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/actions_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/ai_helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ai_helpers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/ai_provider_bases.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ai_provider_bases.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/ai_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ai_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/analytics_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/analytics_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/analytics_wrappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/analytics_wrappers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_boot_log.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_boot_log.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_composer.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_composer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_constants.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_constants.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/auto_collect_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/auto_collect_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/build_analytics.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/build_analytics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/builds_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/builds_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/builds_history_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/builds_history_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/chat_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/chat_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_entrypoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_entrypoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_loop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_orchestrator.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_orchestrator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_runtime_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_runtime_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_runtime_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_runtime_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/local_parsers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/local_parsers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/merge.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/merge.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/progress.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/progress.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/synth_tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/synth_tests.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_task_lifecycle.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_task_lifecycle.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_tasks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_triggers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_triggers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/cursor_proxy_facade.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/cursor_proxy_facade.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/cursor_proxy_lifecycle.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/cursor_proxy_lifecycle.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/dashboard_summary.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/dashboard_summary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/dashboard_summary_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/dashboard_summary_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/db_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/db_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/event_feed_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/event_feed_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/event_feed_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/event_feed_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/events_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/events_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/export_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/export_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/exports_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/exports_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/freshness.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/freshness.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/instance_health_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/instance_health_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/instances_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/instances_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/instances_health_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/instances_health_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/lifespan_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/lifespan_factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/logs_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/main_loop_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/main_loop_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/mem_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/mem_cache.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/mem_cache_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/mem_cache_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/meta_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/meta_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/notifications_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/notifications_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/notify_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/notify_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/openapi_safe.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/openapi_safe.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/pages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/partial_snapshot.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/partial_snapshot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/proxy_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/proxy_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/public_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/public_settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/public_settings_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/public_settings_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/rate_limit_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/rate_limit_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/request_id.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/request_id.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/revision_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/revision_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/router_include.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/router_include.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/runtime_helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/runtime_helpers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/services_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/services_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_public.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_public.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_revision.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_revision.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_save_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_save_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_store.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_store.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_trends_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_trends_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sources_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sources_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sqlite_boot.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sqlite_boot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sqlite_imports.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sqlite_imports.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sse_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sse_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sse_hub.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sse_hub.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sse_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sse_runtime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/static_mount.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/static_mount.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/status_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/status_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/templates_boot.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/templates_boot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/tests_analytics.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/tests_analytics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/tests_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/tests_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/trends_hook.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/trends_hook.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/trends_uptime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/trends_uptime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/trends_uptime_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/trends_uptime_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/ui_lang.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ui_lang.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/webhook_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/webhook_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/webhooks.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/webhooks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parsers/allure_failure_text.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/allure_failure_text.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/patch_index_onclick.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/patch_index_onclick.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/strip_dashboard_inline.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/strip_dashboard_inline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/strip_moved_route_decorators.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/strip_moved_route_decorators.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/schemas.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/cursor_proxy.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/cursor_proxy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/exports.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/exports.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/logs_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/notification_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/notification_state.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -301,7 +183,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776445098001</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="pep8 + docs + unittests">
+      <created>1776449581222</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1776449581222</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -326,6 +215,7 @@
     <MESSAGE value="fix sse_hub, collect loop" />
     <MESSAGE value="fix dashboard, cache, request_id, api, fresh" />
     <MESSAGE value="fix moduls arch" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix moduls arch" />
+    <MESSAGE value="pep8 + docs + unittests" />
+    <option name="LAST_COMMIT_MESSAGE" value="pep8 + docs + unittests" />
   </component>
 </project>

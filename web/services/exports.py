@@ -15,6 +15,7 @@ from web.services import tests_analytics
 
 
 def to_csv_bytes(headers: list[str], rows: list[list]) -> bytes:
+    """Render rows as UTF-8 CSV (with BOM for Excel)."""
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(headers)
@@ -23,11 +24,15 @@ def to_csv_bytes(headers: list[str], rows: list[list]) -> bytes:
 
 
 def to_xlsx_bytes(headers: list[str], rows: list[list], sheet_name: str = "Data") -> bytes:
+    """Render rows as XLSX bytes (requires `openpyxl`)."""
     try:
         import openpyxl
         from openpyxl.styles import Alignment, Font, PatternFill
     except ImportError:
-        raise HTTPException(501, "openpyxl not installed — install it with: pip install openpyxl")
+        raise HTTPException(
+            501,
+            "openpyxl not installed — install it with: pip install openpyxl",
+        ) from None
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -70,6 +75,7 @@ async def export_builds(
     job: str = "",
     hours: int = 0,
 ) -> Response:
+    """Export builds as CSV/XLSX."""
     snap = _must_snapshot(load_snapshot)
 
     items = snap.builds
@@ -111,7 +117,9 @@ async def export_builds(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=builds_{date_str}.xlsx"},
+            headers={
+                "Content-Disposition": f"attachment; filename=builds_{date_str}.xlsx"
+            },
         )
     data = to_csv_bytes(headers, rows)
     return Response(
@@ -131,6 +139,7 @@ async def export_tests(
     hours: int = 0,
     source: str = "",
 ) -> Response:
+    """Export tests as CSV/XLSX."""
     snap = _must_snapshot(load_snapshot)
 
     items = snap.tests
@@ -173,7 +182,9 @@ async def export_tests(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=tests_{date_str}.xlsx"},
+            headers={
+                "Content-Disposition": f"attachment; filename=tests_{date_str}.xlsx"
+            },
         )
     data = to_csv_bytes(headers, rows)
     return Response(
@@ -194,10 +205,13 @@ async def export_failures(
     hours: int = 0,
     days: int = 0,
 ) -> Response:
+    """Export top failures as CSV/XLSX."""
     snap = _must_snapshot(load_snapshot)
 
     tests_win = tests_analytics.filter_tests_by_lookback_hours(
-        snap.tests, hours=int(hours or 0), days=int(days or 0)
+        snap.tests,
+        hours=int(hours or 0),
+        days=int(days or 0),
     )
     agg = tests_analytics.aggregate_top_failing_tests(
         tests_analytics.filter_tests_by_source(tests_win, source),
@@ -220,7 +234,9 @@ async def export_failures(
         return Response(
             content=data,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename=failures_{date_str}.xlsx"},
+            headers={
+                "Content-Disposition": f"attachment; filename=failures_{date_str}.xlsx"
+            },
         )
     data = to_csv_bytes(headers, rows)
     return Response(
@@ -228,8 +244,3 @@ async def export_failures(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=failures_{date_str}.csv"},
     )
-
-"""CSV/XLSX export helpers for builds, tests, and failures.
-
-Binary/CSV response builders still live in ``web.app`` next to their routes.
-"""

@@ -30,39 +30,31 @@ MIT License (2026). See `LICENSE`.
 ## Layout (high level)
 
 ```text
-cicd_mon/
-├── clients/           # Jenkins / GitLab API clients
-├── parsers/           # JUnit, Allure, console parsers
-├── docker_monitor/    # Container + HTTP checks
-├── models/            # Shared domain models (snapshot, tests, …)
-├── notifications/   # Telegram
-├── reports/           # Rich / CSV / HTML reports
+./
+├── clients/            # Jenkins / GitLab API clients
+├── parsers/            # JUnit, Allure, console parsers
+├── docker_monitor/     # Container + HTTP checks
+├── models/             # Shared domain models (snapshot, tests, …)
+├── notifications/      # Telegram notifications
+├── reports/            # Rich / CSV / HTML reports
+├── tools/              # Small maintenance scripts
+├── scripts/            # Helper scripts (ops / install)
+├── tests/              # Unit/integration tests
 ├── web/
-│   ├── app.py         # FastAPI app, middleware, most HTTP handlers
-│   ├── db.py          # Optional SQLite persistence
-│   ├── schemas.py     # Pydantic: health, readiness, general, incident bundle
-│   ├── routes/
-│   │   ├── ops.py           # GET /health, /ready
-│   │   ├── incident.py      # /api/incident*, /api/export/incident*
-│   │   ├── collect.py       # (stub) collect — handlers still in app.py
-│   │   ├── builds.py        # (stub) builds
-│   │   ├── tests.py         # (stub) tests / failures
-│   │   ├── services.py      # (stub) services
-│   │   ├── settings.py      # (stub) settings
-│   │   └── chat.py          # (stub) chat
-│   ├── services/
-│   │   ├── incident_bundle.py
-│   │   ├── aggregation.py   # (stub)
-│   │   └── exports.py       # (stub)
-│   ├── static/
-│   │   ├── app.css          # entry: @import dashboard.css
-│   │   ├── app.js           # thin entry; logic in dashboard.js
-│   │   ├── dashboard.js
-│   │   └── dashboard.css
-│   └── templates/     # Jinja2 (index, settings, partials)
-├── tools/             # Small maintenance scripts
-├── ci_monitor.py      # CLI entrypoint
-└── config.yaml        # Instance configuration
+│   ├── app.py          # FastAPI app bootstrap (router wiring, lifespan)
+│   ├── schemas.py      # Pydantic schemas (API IO)
+│   ├── db.py           # SQLite persistence helpers (optional)
+│   ├── core/           # auth, config, runtime, snapshot/trends, notifications
+│   ├── routes/         # HTTP routers (ops, dashboard, collect, logs, chat, ...)
+│   ├── services/       # Endpoint implementations + collect runtime + exports + AI wiring
+│   ├── static/         # Dashboard JS/CSS/assets
+│   └── templates/      # Jinja2 pages/partials
+├── ci_monitor.py       # CLI entrypoint
+├── config.yaml         # Instance configuration
+├── config.example.yaml # Example configuration
+├── pyproject.toml      # Tooling config (ruff/pytest/etc.)
+├── requirements.txt    # Runtime dependencies
+└── data/               # Runtime/generated (snapshot.json, monitor.db, trends.json, ...)
 ```
 
 ---
@@ -348,12 +340,12 @@ Note: the webhook is protected by the shared token if `CICD_MON_API_TOKEN` / `we
 **Linux/macOS** (`crontab -e`):
 ```cron
 # Every hour: collect data and send notifications
-0 * * * * cd /path/to/cicd_mon && /usr/bin/python3 ci_monitor.py collect --format all --notify
+0 * * * * cd /path/to/pipeline-monitor && /usr/bin/python3 ci_monitor.py collect --format all --notify
 ```
 
 **Windows Task Scheduler** (or `.bat`):
 ```bat
-cd /d D:\prooftech\cicd_mon
+cd /d D:\prooftech\proj\pipeline-monitor
 py ci_monitor.py collect --format all --notify
 ```
 
@@ -362,46 +354,26 @@ py ci_monitor.py collect --format all --notify
 ## Project Structure
 
 ```
-cicd_mon/
+pipeline-monitor/
 ├── ci_monitor.py          # Main CLI entry point
-├── config.yaml            # Configuration
-├── seed_demo.py           # Seed demo data (offline testing)
-├── requirements.txt
+├── config.yaml            # Local instance configuration
+├── config.example.yaml    # Example configuration
+├── config_migrations.py   # Config migrations/helpers
+├── requirements.txt       # Runtime dependencies
+├── pyproject.toml         # Tooling config (ruff/pytest/etc.)
 │
-├── models/
-│   └── models.py          # Pydantic: BuildRecord, TestRecord, CISnapshot...
+├── clients/               # Jenkins/GitLab adapters
+├── parsers/               # JUnit/Allure/console parsers
+├── reports/               # Console/CSV/HTML reports
+├── notifications/         # Telegram notifier(s)
+├── docker_monitor/        # Docker + HTTP checks
+├── web/                   # FastAPI app + dashboard UI
+│   ├── routes/            # Routers
+│   ├── services/          # Endpoint implementations + runtime
+│   ├── static/            # JS/CSS/assets
+│   └── templates/         # Jinja2 pages/partials
 │
-├── clients/
-│   ├── base.py            # Abstract HTTP client with retry
-│   ├── jenkins_client.py  # Jenkins REST API adapter
-│   └── gitlab_client.py   # GitLab Pipelines API adapter
-│
-├── parsers/
-│   ├── base.py            # Abstract parser
-│   ├── pytest_parser.py   # JUnit XML (pytest --junitxml)
-│   └── allure_parser.py   # Allure *-result.json files
-│
-├── reports/
-│   ├── csv_report.py      # CSV export
-│   ├── html_report.py     # Jinja2 HTML report
-│   └── console_report.py  # Rich terminal output
-│
-├── notifications/
-│   └── telegram_notifier.py
-│
-├── docker_monitor/
-│   └── monitor.py         # Docker SDK + HTTP health checks
-│
-├── web/
-│   ├── app.py             # FastAPI app + REST endpoints
-│   └── templates/
-│       └── index.html     # Live dashboard
-│
-├── sample_logs/
-│   ├── sample_pytest.xml
-│   └── sample-allure-result.json
-│
-└── data/                  # Generated: snapshot.json, ci_report.csv, ci_report.html
+└── data/                  # Runtime/generated (snapshot.json, monitor.db, trends.json, ...)
 ```
 
 ---
@@ -445,11 +417,12 @@ cicd_mon/
 ## Demo (no CI connection needed)
 
 ```bash
-# Seed with realistic fake builds
-py seed_demo.py
+# Re-generate reports from the bundled snapshot (data/snapshot.json)
+py ci_monitor.py report --format html
+py ci_monitor.py report --format csv
 
-# Parse sample test logs + show full report
-py ci_monitor.py collect --format all
+# Optional: collect using your local parsers (configure `parsers.*_dirs` in config.yaml)
+# py ci_monitor.py collect --format all
 
 # Start dashboard
 py ci_monitor.py web

@@ -18,6 +18,7 @@ EventAppender = Callable[[List[dict]], None]
 
 @dataclass
 class NotificationState:
+    """Holds prior state and notification ring buffer for change detection."""
     notify_max: int = 200
     notifications: List[dict] = field(default_factory=list)  # ring buffer, newest last
     prev_build_statuses: dict[str, str] = field(default_factory=dict)
@@ -27,6 +28,7 @@ class NotificationState:
     notify_id_seq: int = 0
 
     def apply(self, snapshot: CISnapshot, *, append_event: EventAppender | None = None) -> None:
+        """Run state change detection and update internal caches."""
         (
             self.prev_build_statuses,
             self.prev_svc_statuses,

@@ -29,12 +29,17 @@ _cursor_agent_resolve_cache: tuple[float, str | None] | None = None
 
 
 def cursor_proxy_autostart_enabled(cfg: dict) -> bool:
-    """If False, the app does not spawn npx cursor-api-proxy (user runs it manually). Default True."""
+    """Return whether proxy autostart is enabled.
+
+    If False, the app does not spawn `npx cursor-api-proxy` (user runs it manually).
+    Default: True.
+    """
     ai = cfg.get("openai") or {}
     return ai.get("cursor_proxy_autostart", True) is not False
 
 
 def cursor_proxy_should_run(cfg: dict) -> bool:
+    """Return True when provider is cursor and embedded proxy should be managed."""
     ai = cfg.get("openai") or {}
     if ai.get("provider") != "cursor":
         return False
@@ -94,6 +99,7 @@ def _stop_cursor_proxy_unlocked() -> None:
 
 
 def cursor_proxy_running() -> bool:
+    """Return True if embedded proxy process is alive."""
     return _cursor_proxy_proc is not None and _cursor_proxy_proc.poll() is None
 
 
@@ -103,10 +109,13 @@ def _find_npx_executable() -> str | None:
     if w:
         return w
     if sys.platform == "win32":
+        pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+        pf86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+        la = os.environ.get("LocalAppData", "") or ""
         for p in (
-            Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "nodejs" / "npx.cmd",
-            Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "nodejs" / "npx.cmd",
-            Path(os.environ.get("LocalAppData", "")) / "Programs" / "nodejs" / "npx.cmd",
+            Path(pf) / "nodejs" / "npx.cmd",
+            Path(pf86) / "nodejs" / "npx.cmd",
+            Path(la) / "Programs" / "nodejs" / "npx.cmd",
         ):
             if p.is_file():
                 return str(p)
@@ -287,6 +296,7 @@ def _resolve_cursor_agent_from_config(cfg: dict) -> str | None:
 
 
 def resolve_cursor_agent_cached(cfg: dict) -> str | None:
+    """Resolve Cursor Agent binary path, caching by `config.yaml` mtime."""
     global _cursor_agent_resolve_cache
     cpath = config_yaml_path()
     try:
@@ -315,6 +325,7 @@ def _apply_cursor_agent_env(env: dict[str, str], agent_path: str) -> None:
 
 
 def cursor_proxy_log_path(cfg: dict) -> Path:
+    """Return path for embedded proxy log file."""
     dd = (cfg.get("general", {}) or {}).get("data_dir", "data")
     return REPO_ROOT / str(dd) / "cursor_proxy.log"
 
@@ -386,6 +397,7 @@ def _start_cursor_proxy_unlocked(cfg: dict) -> tuple[bool, str]:
 
 
 def shutdown_embedded_cursor_proxy() -> None:
+    """Stop embedded proxy process (if running)."""
     with _cursor_proxy_lock:
         _stop_cursor_proxy_unlocked()
 
@@ -404,10 +416,15 @@ def sync_cursor_proxy_from_config(cfg: dict) -> dict:
                 msg = "Cursor proxy autostart disabled"
             else:
                 msg = "Cursor proxy disabled"
-            return {"managed": True, "running": False, "ok": True, "message": msg, "was_running": was_running}
+            return {
+                "managed": True,
+                "running": False,
+                "ok": True,
+                "message": msg,
+                "was_running": was_running,
+            }
 
         ok, msg = _start_cursor_proxy_unlocked(cfg)
         running = cursor_proxy_running()
         warn = (not ok) and (not running) and _cursor_proxy_is_missing_node_npx(msg)
         return {"managed": True, "running": running, "ok": ok, "warning": warn, "message": msg}
-

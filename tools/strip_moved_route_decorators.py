@@ -18,22 +18,44 @@ LINES_TO_REMOVE = {
     '@app.get("/api/export/tests")',
     '@app.get("/api/export/failures")',
     '@app.get("/api/collect/status", response_class=JSONResponse)',
-    '@app.post("/api/collect/auto", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
+    (
+        '@app.post("/api/collect/auto", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
     '@app.get("/api/collect/logs", response_class=JSONResponse)',
     '@app.get("/api/collect/slow", response_class=JSONResponse)',
-    '@app.post("/api/collect", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
-    '@app.get("/api/settings", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
+    (
+        '@app.post("/api/collect", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
+    (
+        '@app.get("/api/settings", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
     '@app.get("/api/settings/public", response_class=JSONResponse)',
-    '@app.post("/api/settings", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
+    (
+        '@app.post("/api/settings", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
     '@app.get("/settings", response_class=HTMLResponse)',
     '@app.post("/api/chat", dependencies=[Depends(require_shared_token)])',
-    '@app.get("/api/chat/status", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
-    '@app.get("/api/chat/proxy-check", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
-    '@app.get("/api/proxy-check", response_class=JSONResponse, dependencies=[Depends(require_shared_token)])',
+    (
+        '@app.get("/api/chat/status", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
+    (
+        '@app.get("/api/chat/proxy-check", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
+    (
+        '@app.get("/api/proxy-check", response_class=JSONResponse, '
+        "dependencies=[Depends(require_shared_token)])"
+    ),
 }
 
 
 def main() -> None:
+    """Remove moved `@app.*` decorators from `web/app.py`."""
     text = APP.read_text(encoding="utf-8")
     lines = text.splitlines(keepends=True)
     out: list[str] = []

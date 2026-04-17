@@ -1,3 +1,5 @@
+"""Wiring helpers for partial snapshot persistence."""
+
 from __future__ import annotations
 
 
@@ -11,6 +13,7 @@ def save_snapshot_partial(
     collect_state: dict,
     load_snapshot,
 ):
+    """Delegate partial snapshot save to `web.services.snapshot_store`."""
     from web.services import snapshot_store as _snapshot_store
 
     return _snapshot_store.save_snapshot_partial(
@@ -33,6 +36,7 @@ def maybe_save_partial(
     save_snapshot_partial_fn,
     logger_debug,
 ):
+    """Delegate throttled partial save to `web.services.partial_snapshot`."""
     from web.services import partial_snapshot as _partial_snapshot
 
     return _partial_snapshot.maybe_save_partial(
@@ -43,4 +47,3 @@ def maybe_save_partial(
         save_snapshot_partial=save_snapshot_partial_fn,
         logger_debug=logger_debug,
     )
-
