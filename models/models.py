@@ -105,6 +105,9 @@ class TestRecord(BaseModel):
     """Represents a single test-case result from a parsed report."""
 
     source: str = Field(..., description="Parser type: pytest | allure | ...")
+    # Config instance name (or URL host fallback) — disambiguates merges when several
+    # Jenkins/GitLab entries are enabled and produce tests for the same suite/name.
+    source_instance: Optional[str] = Field(default=None, description="Logical CI instance label from config")
     suite: Optional[str] = None
     test_name: str
     status: str  # passed | failed | skipped | error

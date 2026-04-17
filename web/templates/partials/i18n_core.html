@@ -1,6 +1,7 @@
 {# Shared i18n: dashboard + settings. Include once per page; requires ui_language in context. #}
 <script>
 window.__UI_LANG_DEFAULT__ = {{ ui_language|default('en')|tojson }};
+{% raw %}
 const I18N = {
   en: {
     nav: { overview: 'Overview', ci: 'CI', tests: 'Tests', infra: 'Infra', trends: 'Trends' },
@@ -1373,4 +1374,5 @@ function applyUITexts() {
   const pg = document.body && document.body.getAttribute('data-page');
   document.title = pg === 'settings' ? t('st.doc_title') : t('dash.page_title');
 }
+{% endraw %}
 </script>

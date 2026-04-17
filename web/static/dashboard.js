@@ -1647,6 +1647,14 @@ async function loadFailures() {
       td1.appendChild(b);
       td1.appendChild(document.createTextNode(' '));
     }
+    if (f.source_instance) {
+      const bi = document.createElement('span');
+      bi.className = 'b b-dim';
+      bi.style.fontSize = '.66rem';
+      bi.textContent = String(f.source_instance).slice(0, 24);
+      td1.appendChild(bi);
+      td1.appendChild(document.createTextNode(' '));
+    }
     td1.appendChild(document.createTextNode(String(f.test_name || '')));
 
     const td2 = document.createElement('td');

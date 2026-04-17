@@ -1756,6 +1756,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                         t_status = "passed" if st == "success" else "failed" if st in ("failure", "unstable") else "skipped"
                         snapshot.tests.append(TestRecord(
                             source="jenkins_build",
+                            source_instance=getattr(b, "source_instance", None) or inst_key,
                             suite=b.job_name,
                             test_name=b.job_name,
                             status=t_status,
@@ -1852,6 +1853,18 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                         f"Jenkins: {label}",
                         f"Parsing console ({len(jobs_for_console)} job(s))…",
                     )
+
+                def _append_tests_live_inst(recs: list[TestRecord]) -> None:
+                    if not recs:
+                        return
+                    try:
+                        for r in recs:
+                            if getattr(r, "source_instance", None) in (None, ""):
+                                r.source_instance = inst_key
+                    except Exception:
+                        pass
+                    _append_tests_live(recs)
+
                 console_parser = JenkinsConsoleParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
@@ -1862,7 +1875,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                     verify_ssl=bool(inst.get("verify_ssl", True)),
                     retries=int(inst.get("console_retries", 3) or 3),
                     backoff_seconds=float(inst.get("console_backoff_seconds", 0.8) or 0.8),
-                    records_cb=_append_tests_live,
+                    records_cb=_append_tests_live_inst,
                     progress_cb=lambda msg: _progress("jenkins_console", f"Jenkins: {label}", msg),
                     timing_cb=lambda d: _collect_slow.append({
                         "ts": datetime.now(tz=timezone.utc).isoformat(),
@@ -1941,6 +1954,18 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                         f"Jenkins: {label}",
                         f"Parsing Allure ({len(jobs_for_allure)} job(s))…",
                     )
+
+                def _append_tests_live_inst(recs: list[TestRecord]) -> None:
+                    if not recs:
+                        return
+                    try:
+                        for r in recs:
+                            if getattr(r, "source_instance", None) in (None, ""):
+                                r.source_instance = inst_key
+                    except Exception:
+                        pass
+                    _append_tests_live(recs)
+
                 try:
                     _ab_raw = inst.get("allure_builds")
                     if _ab_raw is None:
@@ -1959,7 +1984,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                     progress_cb=lambda msg: _progress("jenkins_allure", f"Jenkins: {label}", msg),
                     retries=int(inst.get("allure_retries", 3) or 3),
                     backoff_seconds=float(inst.get("allure_backoff_seconds", 0.8) or 0.8),
-                    records_cb=_append_tests_live,
+                    records_cb=_append_tests_live_inst,
                     timing_cb=lambda d: _collect_slow.append({
                         "ts": datetime.now(tz=timezone.utc).isoformat(),
                         "level": "info",
@@ -2656,11 +2681,17 @@ def _aggregate_top_failing_tests(
     name_sub: str = "",
     message_max: int = 300,
 ) -> list[dict[str, Any]]:
-    """Group failed/error runs by test_name; pick error text from the latest run that has one."""
+    """Group failed/error runs by test_name; pick error text from the latest run that has one.
+
+    Key includes source_instance + parser source so "real" mode doesn't mix different parsers.
+    """
     by_name: dict[str, list[Any]] = defaultdict(list)
     for t in tests:
         if t.status_normalized in ("failed", "error"):
-            by_name[t.test_name].append(t)
+            inst = getattr(t, "source_instance", None) or ""
+            src = getattr(t, "source", None) or "unknown"
+            key = f"{inst}::{src}::{t.test_name}"
+            by_name[key].append(t)
 
     def _ts(rec: Any) -> datetime:
         ts = rec.timestamp
@@ -2672,9 +2703,17 @@ def _aggregate_top_failing_tests(
 
     rows: list[dict[str, Any]] = []
     no_detail = "(no failure text in report)"
-    for tname, recs in by_name.items():
+    for key, recs in by_name.items():
         recs_sorted = sorted(recs, key=_ts, reverse=True)
         latest = recs_sorted[0]
+        inst = ""
+        src = None
+        tname = key
+        if "::" in key:
+            parts = key.split("::", 2)
+            inst = parts[0] if len(parts) > 0 else ""
+            src = parts[1] if len(parts) > 1 else None
+            tname = parts[2] if len(parts) > 2 else key
         suite_val = latest.suite
         msg: str | None = None
         for r in recs_sorted:
@@ -2687,6 +2726,8 @@ def _aggregate_top_failing_tests(
         if message_max > 0 and len(msg) > message_max:
             msg = msg[:message_max]
         rows.append({
+            "source_instance": inst or None,
+            "source": src or getattr(latest, "source", None) or None,
             "test_name": tname,
             "count": len(recs),
             "suite": suite_val,
@@ -2885,7 +2926,8 @@ async def api_top_failures(
 
         for t in tests_items:
             if t.status_normalized in ("failed", "error"):
-                key = f"{(t.source or 'unknown')}::{t.test_name}"
+                inst = getattr(t, "source_instance", None) or ""
+                key = f"{inst}::{(t.source or 'unknown')}::{t.test_name}"
                 counter[key] += 1
                 sources[key] = (t.source or "unknown")
                 ts = _rec_ts(t)
@@ -2907,7 +2949,8 @@ async def api_top_failures(
         all_items = [
             {
                 "source": sources.get(k),
-                "test_name": k.split("::", 1)[1],
+                "source_instance": (k.split("::", 2)[0] or None),
+                "test_name": k.split("::", 2)[2],
                 "count": c,
                 "suite": suites.get(k),
                 "message": (messages.get(k) or no_detail),
