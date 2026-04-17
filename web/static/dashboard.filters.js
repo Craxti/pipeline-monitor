@@ -17,6 +17,21 @@ const _FILTER_PARAMS = [
   { id:'f-svstatus', key:'svstatus' },
 ];
 
+/** If the URL names any of these, treat it as a builds deep-link: do not fill other build dimensions from localStorage. */
+const _BUILD_DEEP_LINK_KEYS = ['source', 'instance', 'status', 'job'];
+
+function _applyBuildsHoursFromInt(h) {
+  document.querySelectorAll('.time-filter-btn').forEach((b) => b.classList.remove('active'));
+  if (h === 24 || h === 168) {
+    _buildsHours = h;
+    const id = h === 24 ? 'tf-24h' : 'tf-7d';
+    document.getElementById(id)?.classList.add('active');
+  } else {
+    _buildsHours = 0;
+  }
+  try { localStorage.setItem('cimon-builds-hours', String(_buildsHours)); } catch { /* ignore */ }
+}
+
 function updateFilterSummary() {
   const fb = [];
   const fs = document.getElementById('f-source');
@@ -104,21 +119,26 @@ function _persistFiltersFromForm() {
 
 function _maybeRestoreFiltersFromLS() {
   const p = new URLSearchParams(location.search);
+  const buildDeepLink = _BUILD_DEEP_LINK_KEYS.some((k) => p.has(k));
+
   _FILTER_PARAMS.forEach(({ id, key }) => {
     if (p.has(key)) return;
+    if (_BUILD_DEEP_LINK_KEYS.includes(key)) {
+      if (buildDeepLink) {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+        return;
+      }
+    }
     const v = localStorage.getItem('cimon-f-' + key);
     const el = document.getElementById(id);
     if (el && v != null && v !== '') el.value = v;
   });
   const bh = localStorage.getItem('cimon-builds-hours');
-  if (bh && !p.has('hours')) {
+  // Deep links (?status=&job=…) must not inherit a saved 24h/7d window or hidden source/instance — that often yields an empty table.
+  if (bh && !p.has('hours') && !buildDeepLink) {
     const h = parseInt(bh, 10);
-    if (h === 24 || h === 168) {
-      _buildsHours = h;
-      document.querySelectorAll('.time-filter-btn').forEach(b => b.classList.remove('active'));
-      const id = h === 24 ? 'tf-24h' : 'tf-7d';
-      document.getElementById(id)?.classList.add('active');
-    }
+    if (h === 24 || h === 168) _applyBuildsHoursFromInt(h);
   }
 }
 
@@ -128,6 +148,12 @@ function _readURLFilters() {
     const el = document.getElementById(id);
     if (el && p.has(key)) el.value = p.get(key);
   });
+  if (p.has('hours')) {
+    const raw = (p.get('hours') || '').trim();
+    const h = parseInt(raw, 10);
+    if (raw === '' || raw === '0') _applyBuildsHoursFromInt(0);
+    else if (h === 24 || h === 168) _applyBuildsHoursFromInt(h);
+  }
 }
 
 function _writeURLFilters() {
@@ -136,6 +162,7 @@ function _writeURLFilters() {
     const el = document.getElementById(id);
     if (el && el.value) p.set(key, el.value);
   });
+  if (_buildsHours === 24 || _buildsHours === 168) p.set('hours', String(_buildsHours));
   if (_dashTab && _dashTab !== 'overview') p.set('tab', _dashTab);
   const str = p.toString();
   const h = location.hash || '';
