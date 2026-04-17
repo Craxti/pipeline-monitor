@@ -74,6 +74,43 @@ MIT License (2026). See `LICENSE`.
 
 ## Quick Start
 
+### Run with Docker (recommended)
+
+The repository includes a `Dockerfile` and a `compose.yml` to run the web dashboard in a container while keeping `config.yaml` and `data/` on your host machine.
+
+```bash
+# Build and start
+docker compose up --build
+
+# Open the dashboard
+# http://127.0.0.1:8000
+
+# Stop
+docker compose down
+```
+
+Notes:
+- **Config**: `./config.yaml` is mounted read-only to `/app/config.yaml` in the container.
+- **Data persistence**: `./data/` is mounted to `/app/data` (SQLite DB, snapshots, trends, exports).
+- **Port**: `8000:8000` (change in `compose.yml` if needed).
+- **API token (optional)**: set `CICD_MON_API_TOKEN` in `compose.yml` (or use `web.api_token` in `config.yaml`).
+
+### Run with Docker (without compose)
+
+```bash
+docker build -t pipeline-monitor-web:local .
+```
+
+PowerShell example:
+
+```powershell
+docker run --rm -p 8000:8000 `
+  -e PYTHONUNBUFFERED=1 `
+  -v "${PWD}\config.yaml:/app/config.yaml:ro" `
+  -v "${PWD}\data:/app/data" `
+  pipeline-monitor-web:local
+```
+
 ### 1. Install dependencies
 
 ```bash
