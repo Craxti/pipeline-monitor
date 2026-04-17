@@ -131,6 +131,8 @@ async def api_logs_docker(
 async def api_logs_docker_stream(
     *,
     container: str,
+    follow: bool,
+    tail: int,
     check_rate_limit: Callable[..., None],
     docker_logs_stream_response: Callable[..., Any],
 ) -> Any:
@@ -139,4 +141,4 @@ async def api_logs_docker_stream(
     if not container:
         raise HTTPException(400, "container is required")
     check_rate_limit(f"log:docker:stream:{container}", window=3)
-    return docker_logs_stream_response(container=container)
+    return docker_logs_stream_response(container=container, follow=follow, tail=tail)

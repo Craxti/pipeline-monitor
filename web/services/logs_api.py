@@ -274,15 +274,22 @@ def docker_logs_tail(*, container: str, tail: int = 4000) -> dict[str, Any]:
     return {"ok": True, "log": text}
 
 
-def docker_logs_stream_response(*, container: str) -> StreamingResponse:
+def docker_logs_stream_response(
+    *,
+    container: str,
+    follow: bool = True,
+    tail: int = 200,
+) -> StreamingResponse:
     """Stream docker logs for a container as plain text."""
     from docker_monitor.monitor import DockerMonitor
+
+    t = max(100, min(int(tail), 50_000))
 
     def gen():
         yield from DockerMonitor.iter_container_logs_stream(
             container,
-            follow=True,
-            tail=200,
+            follow=follow,
+            tail=t,
             timestamps=True,
         )
 

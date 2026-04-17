@@ -895,13 +895,66 @@ async function loadGitlabLogsIntoModal(p) {
 }
 
 async function loadDockerLogsIntoModal(container) {
-  _setLogText(t('dash.log_fetching'));
   const name = String(container || '').trim();
-  const r = await fetch(apiUrl('api/logs/docker?container=' + encodeURIComponent(name) + '&tail=4000'));
-  const rawText = await r.text();
-  let data = {};
-  try { data = JSON.parse(rawText); } catch { /* not JSON */ }
-  _setLogText(r.ok ? (data.log || t('dash.log_empty')) : t('dash.log_error_prefix') + _formatLogFetchError(r, data, rawText));
+  stopLogStream();
+  _setLogText(t('dash.log_fetching'));
+  _logAbort = new AbortController();
+  const dec = new TextDecoder('utf-8');
+  const u = apiUrl(
+    'api/logs/docker/stream?container=' + encodeURIComponent(name) + '&follow=false&tail=4000'
+  );
+  try {
+    const r = await fetch(u, { signal: _logAbort.signal });
+    if (!r.ok) {
+      const rawText = await r.text();
+      let data = {};
+      try { data = JSON.parse(rawText); } catch { /* not JSON */ }
+      _setLogText(t('dash.log_error_prefix') + _formatLogFetchError(r, data, rawText));
+      return;
+    }
+    const reader = r.body && r.body.getReader ? r.body.getReader() : null;
+    if (!reader) {
+      const rawText = await r.text();
+      _setLogText(rawText || t('dash.log_empty'));
+      return;
+    }
+    _logRawText = '';
+    let started = false;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = dec.decode(value, { stream: true });
+      if (!chunk) continue;
+      if (!started) {
+        started = true;
+        _logRawText = chunk;
+        _renderLogLines();
+      } else {
+        _appendLogChunk(chunk);
+      }
+    }
+    const tail = dec.decode();
+    if (tail) {
+      if (!started) {
+        started = true;
+        _logRawText = tail;
+        _renderLogLines();
+      } else {
+        _appendLogChunk(tail);
+      }
+    }
+    clearTimeout(_logStreamRenderTimer);
+    if (!started || _logRawText === '') {
+      _setLogText(t('dash.log_empty'));
+    } else {
+      _renderLogLines();
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+    _setLogText(t('dash.log_error_prefix') + (e.message || String(e)));
+  } finally {
+    _logAbort = null;
+  }
 }
 
 async function startDockerLogStream(container) {
@@ -910,7 +963,10 @@ async function startDockerLogStream(container) {
   _logAbort = new AbortController();
   _logIsStreaming = true;
   try {
-    const res = await fetch(apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container)), { signal: _logAbort.signal });
+    const res = await fetch(
+      apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container) + '&follow=true&tail=200'),
+      { signal: _logAbort.signal }
+    );
     if (!res.ok) {
       const t0 = await res.text();
       let errData = {};

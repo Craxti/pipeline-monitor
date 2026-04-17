@@ -117,10 +117,16 @@ async def api_logs_docker(container: str, tail: int = 4000):
     "/api/logs/docker/stream",
     dependencies=[Depends(require_shared_token)],
 )
-async def api_logs_docker_stream(container: str):
-    """Stream docker logs via SSE/streaming response."""
+async def api_logs_docker_stream(
+    container: str,
+    follow: bool = True,
+    tail: int = 200,
+):
+    """Stream docker logs (chunked). Use follow=false for buffered tail only."""
     return await logs_endpoints.api_logs_docker_stream(
         container=container,
+        follow=follow,
+        tail=tail,
         check_rate_limit=_check_rate_limit,
         docker_logs_stream_response=logs_api.docker_logs_stream_response,
     )
