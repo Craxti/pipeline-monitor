@@ -940,15 +940,6 @@ mark.log-hl{background:#ca8a04;color:#000;border-radius:2px;padding:0 1px;font-w
 .exec-health-line .eh-ok{color:var(--ok);font-weight:700}
 .exec-health-line .eh-warn{color:var(--warn);font-weight:700}
 .exec-health-line .eh-bad{color:var(--fail);font-weight:700}
-.freshness-bar{
-  font-size:.8rem;color:var(--muted);margin:.35rem 0 1rem;padding:.55rem .95rem;
-  background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);line-height:1.45;
-}
-.freshness-bar.fresh-stale{border-color:var(--warn);background:rgba(245,158,11,.08)}
-.freshness-bar.fresh-err{border-color:var(--fail);background:rgba(239,68,68,.08)}
-.freshness-bar .fresh-warn{color:var(--warn);font-weight:600}
-.freshness-bar.fresh-err .fresh-warn{color:var(--fail)}
-.freshness-bar .utc-note{font-size:.72rem;color:var(--muted);font-weight:500}
 .empty-hint{display:block;margin-top:.6rem;font-size:.84rem;color:var(--muted);line-height:1.45}
 .empty-hint strong{color:var(--text)}
 .empty-actions{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center;margin-top:.85rem}
