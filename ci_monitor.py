@@ -234,7 +234,6 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
         )
         snapshot.builds.extend(client.fetch_builds(since=since, max_builds=inst.get("max_builds", 10)))
         if inst.get("parse_console", False):
-
             console_parser = JenkinsConsoleParser(
                 url=inst["url"],
                 username=username,
