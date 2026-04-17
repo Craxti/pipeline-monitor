@@ -18,6 +18,16 @@ header{
   background:var(--surface);border-bottom:1px solid var(--border);
   padding:.75rem 1.5rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
 }
+header .app-logo{
+  height:2.15rem;
+  width:auto;
+  display:block;
+  flex-shrink:0;
+  padding:.22rem;
+  border-radius:.65rem;
+  background:var(--surface2);
+  border:1px solid var(--border);
+}
 header h1{font-size:1.15rem;font-weight:700;white-space:nowrap}
 .app-tagline{margin:0;font-size:.78rem;color:var(--muted);font-weight:500;max-width:min(520px,90vw);line-height:1.35}
 #tbody-builds tr.row-flash-highlight{animation:icRowFlash 1.1s ease-in-out 2;outline:2px solid rgba(59,130,246,.85);outline-offset:-2px}
@@ -430,6 +440,9 @@ body.compact .b{text-shadow:none}
 @media(max-width:900px){.trends-grid{grid-template-columns:1fr}}
 .chart-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;position:relative}
 .chart-card h3{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;padding-right:2rem}
+.chart-card h3.chart-title-link{cursor:pointer;color:var(--info);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:.18em;text-transform:none;letter-spacing:normal}
+.chart-card h3.chart-title-link:hover{opacity:.92}
+.chart-card h3.chart-title-link:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:.25rem}
 .chart-card canvas{max-height:var(--trend-chart-h,220px);width:100%!important}
 .chart-zoom-btn{position:absolute;top:.65rem;right:.65rem;background:var(--surface3);border:1px solid var(--border);border-radius:.35rem;width:26px;height:26px;font-size:.75rem;cursor:pointer;color:var(--muted);line-height:1;display:flex;align-items:center;justify-content:center;font-family:inherit;z-index:2}
 .chart-zoom-btn:hover{background:var(--info);color:#fff;border-color:var(--info)}

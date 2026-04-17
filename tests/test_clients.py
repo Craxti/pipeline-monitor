@@ -47,6 +47,25 @@ class TestJenkinsClient:
         patcher = patch.object(client, "_get", return_value=return_value)
         return patcher
 
+    def test_job_names_equivalent(self) -> None:
+        assert JenkinsClient.job_names_equivalent("Regress", "Regress")
+        assert JenkinsClient.job_names_equivalent("Folder/Regress", "Regress")
+        assert JenkinsClient.job_names_equivalent("Regress", "Folder/Regress")
+        assert JenkinsClient.job_names_equivalent(r"Folder\Regress", "Regress")
+        assert not JenkinsClient.job_names_equivalent("", "x")
+        assert not JenkinsClient.job_names_equivalent("a", "b")
+
+    def test_fetch_builds_for_job(self) -> None:
+        client = _make_jenkins(jobs=[])
+        data = {"builds": [RAW_BUILD_SUCCESS, RAW_BUILD_FAILURE]}
+        with self._patch_get(client, data):
+            records = client.fetch_builds_for_job(
+                "folder/myjob", since=None, max_builds=5, critical=True
+            )
+        assert len(records) == 2
+        assert all(r.job_name == "folder/myjob" for r in records)
+        assert records[0].critical is True
+
     def test_fetch_builds_success(self) -> None:
         client = _make_jenkins(jobs=[{"name": "myjob", "critical": True}])
         data = {"builds": [RAW_BUILD_SUCCESS]}

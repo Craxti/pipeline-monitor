@@ -213,6 +213,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             "on" if allowlist_applies else "off",
             bool(inst.get("show_all_jobs", False)),
         )
+        inst_label = str(inst.get("name") or "").strip() or str(inst.get("url") or "Jenkins")[:240]
         client = JenkinsClient(
             url=inst["url"],
             username=username,
@@ -221,11 +222,13 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             timeout=15,
             show_all=inst.get("show_all_jobs", False),
             verify_ssl=verify_ssl,
+            source_instance=inst_label,
         )
         snapshot.builds.extend(
             client.fetch_builds(since=since, max_builds=inst.get("max_builds", 10))
         )
         if inst.get("parse_console", False):
+
             console_parser = JenkinsConsoleParser(
                 url=inst["url"],
                 username=username,
@@ -242,6 +245,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                             timeout=15,
                             show_all=False,
                             verify_ssl=verify_ssl,
+                            source_instance=inst_label,
                         ).fetch_job_list()[: max(1, int(inst.get("console_jobs_limit", 25) or 25))]]
                         if inst.get("show_all_jobs", False)
                         else []
@@ -269,6 +273,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                             timeout=15,
                             show_all=False,
                             verify_ssl=verify_ssl,
+                            source_instance=inst_label,
                         ).fetch_job_list()[: max(1, int(inst.get("allure_jobs_limit", 25) or 25))]]
                         if inst.get("show_all_jobs", False)
                         else []
@@ -283,11 +288,13 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
     for inst in cfg.get("gitlab_instances", []):
         if not inst.get("enabled", True):
             continue
+        gl_label = str(inst.get("name") or "").strip() or str(inst.get("url") or "GitLab")[:240]
         client = GitLabClient(
             url=inst.get("url", "https://gitlab.com"),
             token=inst.get("token", ""),
             projects=inst.get("projects", []),
             show_all=inst.get("show_all_projects", False),
+            source_instance=gl_label,
         )
         snapshot.builds.extend(
             client.fetch_builds(since=since, max_builds=inst.get("max_pipelines", 10))

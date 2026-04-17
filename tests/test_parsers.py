@@ -77,8 +77,11 @@ class _FakeParser(JenkinsConsoleParser):
     def _fetch_console(self, job_name: str, build_number: int) -> str:
         return self._console_text
 
-    def _fetch_build_started_at(self, job_name: str, build_number: int) -> datetime | None:
-        return datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    def _fetch_build_timing(
+        self, job_name: str, build_number: int
+    ) -> tuple[datetime | None, float | None]:
+        # 285 s = 4m 45s — same as Jenkins duration field (ms) / 1000
+        return datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc), 285.0
 
 
 class TestJenkinsConsoleParser:
@@ -118,6 +121,12 @@ class TestJenkinsConsoleParser:
         parser = _FakeParser(CONSOLE_SAMPLE)
         for r in parser.fetch_tests():
             assert r.source == "jenkins_console"
+
+    def test_console_records_have_no_build_wide_duration(self) -> None:
+        """Per-scenario console rows must not reuse whole-pipeline duration (misleading)."""
+        parser = _FakeParser(CONSOLE_SAMPLE)
+        for r in parser.fetch_tests():
+            assert r.duration_seconds is None
 
     def test_records_use_build_timestamp_not_parse_time(self) -> None:
         parser = _FakeParser(CONSOLE_SAMPLE)

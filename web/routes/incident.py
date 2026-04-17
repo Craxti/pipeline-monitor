@@ -61,6 +61,7 @@ def _incident_browser_page(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32">
 <title>{html.escape(title)}</title>
 <style>
 :root {{

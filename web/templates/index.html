@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title></title>
+<link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
+<link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
+<title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260423" />
+<link rel="stylesheet" href="/static/app.css?v=20260417i" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
-<script src="/static/app.js?v=20260423" defer></script>
-<script src="/static/dashboard.js?v=20260423" defer></script>
+<script src="/static/app.js?v=20260417g" defer></script>
+<script src="/static/dashboard.js?v=20260417h" defer></script>
 
 <!-- ── Header ── -->
 <header>
-  <span style="font-size:1.4rem">&#128678;</span>
+  <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
   <h1 data-i18n="dash.app_title">CI/CD Monitor</h1>
   <p class="app-tagline" data-i18n="dash.tagline">One panel for CI + tests + services.</p>
   <div class="live-block">
@@ -569,12 +571,8 @@
     </div>
     <div class="trends-filter-group">
       <span class="trends-toolbar-label" data-i18n="dash.trends_topn">Top failures bar</span>
-      <select id="trends-topn" style="background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .5rem;font-size:.78rem;cursor:pointer">
-        <option value="5">5</option>
-        <option value="10" selected>10</option>
-        <option value="15">15</option>
-        <option value="20">20</option>
-      </select>
+      <input type="number" id="trends-topn" min="3" max="100" step="1" value="10" title="" data-i18n-title="dash.trends_topn_hint"
+        style="width:4.25rem;background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .45rem;font-size:.78rem" />
     </div>
     <div class="trends-filter-group trends-range-group">
       <span class="trends-toolbar-label" data-i18n="dash.trends_range">Dates</span>
@@ -608,11 +606,22 @@
       </div>
       <div class="chart-card" id="chart-card-svcs">
         <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-svcs",2]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
-        <h3 data-i18n="dash.chart_svcs">Services Down</h3>
+        <h3
+          class="chart-title-link"
+          data-i18n="dash.chart_svcs"
+          data-i18n-title="dash.chart_svcs_click_title"
+          title=""
+          tabindex="0"
+          role="button"
+          data-dash-action="goToServicesDownFromSituation"
+        >Services Down</h3>
         <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-          <span class="trends-toolbar-label">Instance</span>
-          <select class="f-select" id="trends-inst-svcs" disabled style="width:auto;min-width:220px">
-            <option value="">All (n/a)</option>
+          <span class="trends-toolbar-label" data-i18n="dash.trends_svcs_kind">Check type</span>
+          <select class="f-select" id="trends-inst-svcs" style="width:auto;min-width:200px">
+            <option value="" data-i18n="dash.trends_svcs_kind_all">All</option>
+            <option value="docker" data-i18n="dash.trends_svcs_kind_docker">Docker</option>
+            <option value="http" data-i18n="dash.trends_svcs_kind_http">HTTP</option>
+            <option value="other" data-i18n="dash.trends_svcs_kind_other">Other</option>
           </select>
         </div>
         <canvas id="chart-svcs"></canvas>

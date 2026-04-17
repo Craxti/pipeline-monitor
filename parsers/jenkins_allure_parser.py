@@ -167,6 +167,7 @@ class JenkinsAllureParser:
             t = leaf.get("time") or {}
             dur_ms = t.get("duration")
             start_ms = t.get("start")
+            stop_ms = t.get("stop")
 
             failure_message = None
             if uid and status in ("failed", "broken"):
@@ -186,10 +187,18 @@ class JenkinsAllureParser:
 
             duration_seconds = None
             try:
-                if dur_ms is not None:
+                if dur_ms is not None and dur_ms != "":
                     duration_seconds = float(dur_ms) / 1000.0
             except Exception:
                 duration_seconds = None
+            # suites.json often has start/stop but omits duration — derive like Allure result JSON
+            if duration_seconds is None and start_ms is not None and stop_ms is not None:
+                try:
+                    ds = (int(stop_ms) - int(start_ms)) / 1000.0
+                    if ds >= 0:
+                        duration_seconds = ds
+                except Exception:
+                    pass
 
             # Map Allure statuses to our small set
             if status == "passed":

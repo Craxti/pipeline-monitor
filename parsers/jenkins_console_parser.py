@@ -155,9 +155,11 @@ def enrich_jenkins_console_failure_messages(records: list[TestRecord], console_t
     for rec in records:
         if rec.status not in ("failed", "error"):
             continue
-        if not _failure_msg_is_jenkins_noise(rec.failure_message):
-            continue
         msg = rec.failure_message or ""
+        noisy = _failure_msg_is_jenkins_noise(rec.failure_message)
+        empty = not str(msg).strip()
+        if not noisy and not empty:
+            continue
         candidates: list[str] = []
         m_pid = _PIPELINE_TEST_ID_IN_NOISE_RE.search(msg)
         if m_pid:
@@ -165,9 +167,26 @@ def enrich_jenkins_console_failure_messages(records: list[TestRecord], console_t
         m_no = re.search(r"\N{NUMERO SIGN}\s*(\d+)", rec.test_name or "")
         if m_no:
             num = m_no.group(1)
+            try:
+                ni = int(num)
+            except ValueError:
+                ni = None
             for fn in pytest_map:
                 if fn == f"test_{num}" or fn.startswith(f"test_{num}_"):
                     candidates.append(fn)
+                elif ni is not None and (fn == f"test_{ni}" or fn.startswith(f"test_{ni}_")):
+                    candidates.append(fn)
+                elif ni is not None and re.search(rf"(?:^|_)test_0*{ni}(?:_|$)", fn):
+                    candidates.append(fn)
+        # Last segment of node id sometimes matches human title token (e.g. test_pagination)
+        tn = (rec.test_name or "").strip()
+        if tn:
+            tail = re.sub(r"^№\d+\s*", "", tn).strip()
+            if len(tail) >= 4:
+                low_tail = tail.lower().replace(" ", "_")
+                for fn in pytest_map:
+                    if low_tail and low_tail in fn.lower():
+                        candidates.append(fn)
         seen: set[str] = set()
         chosen = ""
         for c in candidates:
@@ -322,21 +341,49 @@ class JenkinsConsoleParser:
                     pass
             return ""
 
-    def _fetch_build_started_at(self, job_name: str, build_number: int) -> datetime | None:
-        """Jenkins build `timestamp` (ms since epoch) for accurate lookback filters / top-failures."""
+    def _fetch_build_timing(
+        self, job_name: str, build_number: int
+    ) -> tuple[datetime | None, float | None]:
+        """
+        Jenkins build `timestamp` (ms) and `duration` (ms) for the run start time.
+
+        Console echo lines do not carry per-scenario duration; callers pass ``duration_seconds=None``
+        into ``_parse_console`` so the Tests table does not show whole-pipeline time on every row.
+        """
         jp = JenkinsClient.job_path(job_name)
-        url = f"{self.base_url}{jp}/{int(build_number)}/api/json?tree=timestamp"
+        url = f"{self.base_url}{jp}/{int(build_number)}/api/json?tree=timestamp,duration,estimatedDuration"
         try:
             r = self._get_with_retry(url)
             if not r:
-                return None
+                return None, None
             j = r.json()
             ts_ms = j.get("timestamp")
-            if ts_ms is None:
-                return None
-            return datetime.fromtimestamp(int(ts_ms) / 1000.0, tz=timezone.utc)
+            started = None
+            if ts_ms is not None:
+                try:
+                    started = datetime.fromtimestamp(int(ts_ms) / 1000.0, tz=timezone.utc)
+                except Exception:
+                    started = None
+            duration_ms = j.get("duration")
+            duration_seconds = None
+            if duration_ms is not None:
+                try:
+                    duration_seconds = float(duration_ms) / 1000.0
+                except (TypeError, ValueError):
+                    duration_seconds = None
+            # Some Jenkins variants omit duration; estimatedDuration is ms (same as Run.getEstimatedDuration).
+            if duration_seconds is None:
+                est_ms = j.get("estimatedDuration")
+                if est_ms is not None:
+                    try:
+                        est_sec = float(est_ms) / 1000.0
+                        if est_sec > 0:
+                            duration_seconds = est_sec
+                    except (TypeError, ValueError):
+                        pass
+            return started, duration_seconds
         except Exception:
-            return None
+            return None, None
 
     def _parse_console(
         self,
@@ -345,6 +392,7 @@ class JenkinsConsoleParser:
         build_number: int,
         *,
         record_ts: datetime,
+        duration_seconds: float | None = None,
     ) -> list[TestRecord]:
         records: list[TestRecord] = []
         in_results = False
@@ -375,6 +423,7 @@ class JenkinsConsoleParser:
                             suite=job_name,
                             test_name=test_id.strip(),
                             status="error" if kind == "error" else "failed",
+                            duration_seconds=duration_seconds,
                             failure_message=(msg or "").strip()[:_FAILURE_MSG_MAX] if msg else None,
                             timestamp=ts,
                         ))
@@ -399,6 +448,7 @@ class JenkinsConsoleParser:
                     suite=job_name,
                     test_name=m.group(1).strip(),
                     status="passed",
+                    duration_seconds=duration_seconds,
                     timestamp=ts,
                 ))
                 continue
@@ -411,6 +461,7 @@ class JenkinsConsoleParser:
                     suite=job_name,
                     test_name=m.group(1).strip(),
                     status="failed",
+                    duration_seconds=duration_seconds,
                     failure_message=m.group(2).strip()[:_FAILURE_MSG_MAX],
                     timestamp=ts,
                 ))
@@ -451,9 +502,13 @@ class JenkinsConsoleParser:
             console = self._fetch_console(job_name, build_num)
             if not console:
                 return []
-            bts = self._fetch_build_started_at(job_name, build_num)
+            # Timestamp from the Jenkins run; do not attach whole-build duration to each
+            # echo scenario row — it reads like "total for all tests" and is not per-scenario.
+            bts, _dur_ignored = self._fetch_build_timing(job_name, build_num)
             rec_ts = bts if bts is not None else datetime.now(tz=timezone.utc)
-            recs = self._parse_console(console, job_name, build_num, record_ts=rec_ts)
+            recs = self._parse_console(
+                console, job_name, build_num, record_ts=rec_ts, duration_seconds=None
+            )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             if self.timing_cb:
                 try:

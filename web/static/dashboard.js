@@ -31,7 +31,12 @@ function fmtUtcIso(v) {
     return d.toISOString().replace('T', ' ').slice(0, 19) + ' ' + t('time.utc_suffix');
   } catch { return '—'; }
 }
-const dur  = s => !s ? '—' : s < 60 ? `${Math.round(s)}s` : `${Math.floor(s/60)}m ${Math.round(s%60)}s`;
+const dur = (s) => {
+  if (s == null || Number.isNaN(Number(s))) return '—';
+  const x = Number(s);
+  if (x < 60) return `${Math.round(x)}s`;
+  return `${Math.floor(x / 60)}m ${Math.round(x % 60)}s`;
+};
 // Escaping helpers:
 // - esc(): safe for HTML text nodes (also safe-ish in attributes; use _svgTitleAttr for title="" specifically)
 // Note: we escape quotes too because this project often interpolates values into HTML attributes.
@@ -401,6 +406,8 @@ function runbookFocusServicesProblems() {
 const _DASH_ACTION_PASS_EL = new Set(['loadTrends', 'setTrendsSize']);
 
 function initDashDelegatedActions() {
+  // Capture phase so clicks inside modals still reach us even when `[role=dialog]`
+  // stops propagation on bubble (see listener below).
   document.addEventListener('click', (ev) => {
     const el = ev.target.closest('[data-dash-action]');
     if (!el) return;
@@ -421,7 +428,7 @@ function initDashDelegatedActions() {
       return;
     }
     fn(ev);
-  });
+  }, true);
 
   document.querySelectorAll('[data-dash-overlay-dismiss]').forEach((overlay) => {
     overlay.addEventListener('click', (ev) => {
@@ -497,10 +504,18 @@ function initDashFormControlBindings() {
   const trSm = byId('trends-smooth');
   if (trSm) trSm.addEventListener('change', () => { onTrendsSmoothChange(trSm); });
   const trTop = byId('trends-topn');
-  if (trTop) trTop.addEventListener('change', () => { onTrendsTopNChange(trTop); });
-  ['trends-inst-builds', 'trends-inst-tests', 'trends-inst-top'].forEach((id) => {
+  if (trTop) {
+    trTop.addEventListener('change', () => { onTrendsTopNChange(trTop); });
+    trTop.addEventListener('blur', () => { onTrendsTopNChange(trTop); });
+  }
+  ['trends-inst-builds', 'trends-inst-tests', 'trends-inst-top', 'trends-inst-svcs'].forEach((id) => {
     const el = byId(id);
-    if (el) el.addEventListener('change', renderTrendsFromCache);
+    if (el) el.addEventListener('change', () => {
+      try {
+        if (id === 'trends-inst-svcs') localStorage.setItem('cimon-trends-inst-svcs', el.value || '');
+      } catch { /* ignore */ }
+      renderTrendsFromCache();
+    });
   });
 
   ['f-cl-level', 'f-cl-inst', 'f-cl-phase'].forEach((id) => {
@@ -1103,7 +1118,7 @@ function setUILang(code) {
   try { _refreshChatHelloI18n(); } catch { /* ignore */ }
   try { updateFailuresExportLinks(); } catch { /* ignore */ }
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
-  else loadTrends(_trendsViewDays, document.querySelector('.trend-period-btn.active'));
+  else loadTrends(_trendsViewDays, null);
   _renderFavPanel();
   initBackToTop();
 }
@@ -1184,6 +1199,8 @@ function debounce(fn, ms) {
 // ─────────────────────────────────────────────────────────────────────────────
 const _fetchCtl = new Map(); // key -> AbortController
 const _fetchInFlight = new Map(); // key -> Promise<Response|null>
+/** Resolved when fetch was superseded by a newer fetchKeyed for the same key — do not clear UI. */
+const FETCH_ABORTED = Symbol('fetch_aborted');
 function fetchKeyed(key, url, opts) {
   // Abort any previous request for this key.
   const prev = _fetchCtl.get(key);
@@ -1195,7 +1212,7 @@ function fetchKeyed(key, url, opts) {
   const p = fetch(url, { ...(opts || {}), signal: ctl.signal })
     .then(res => res)
     .catch((e) => {
-      if (e && (e.name === 'AbortError' || String(e).includes('AbortError'))) return null;
+      if (e && (e.name === 'AbortError' || String(e).includes('AbortError'))) return FETCH_ABORTED;
       return null;
     })
     .finally(() => {
@@ -1366,7 +1383,8 @@ function clearBuildFilters() {
   _buildsHours = 0;
   document.querySelectorAll('.time-filter-btn').forEach(b => b.classList.remove('active'));
   try { localStorage.setItem('cimon-builds-hours', '0'); } catch { /* ignore */ }
-  _syncURLAndFilterSummary();
+  // Persist empty values to localStorage and strip ?job=… from URL, otherwise F5 restores job from LS.
+  try { _persistFiltersFromForm(); } catch { /* ignore */ }
   resetBuilds();
 }
 // Called from stat cards
@@ -1395,6 +1413,7 @@ async function loadBuilds() {
   s.loading = false;
 
   const tbody = document.getElementById('tbody-builds');
+  if (res === FETCH_ABORTED) return;
   if (!res || !res.ok) {
     const detail = await fetchApiErrorDetail(res);
     srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
@@ -1567,6 +1586,7 @@ async function loadFailures() {
   s.loading = false;
 
   const tbody = document.getElementById('tbody-failures');
+  if (res === FETCH_ABORTED) return;
   if (!res || !res.ok) {
     if (res && res.status === 404) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`; }
     else {
@@ -1583,6 +1603,12 @@ async function loadFailures() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
+    if (_dashIsCollecting && tbody && tbody.querySelector('tr:not(.empty-row)')) {
+      s.done = true;
+      updateFilterSummary();
+      _applyGlobalSearch();
+      return;
+    }
     tbody.innerHTML = `<tr class="empty-row"><td colspan="5"><div>${esc(t('dash.table_no_failures'))}</div><div class="empty-hint">${t('dash.empty_failures_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
   }
@@ -1720,6 +1746,7 @@ async function loadTests() {
   s.loading = false;
 
   const tbody = document.getElementById('tbody-tests');
+  if (res === FETCH_ABORTED) return;
   if (!res || !res.ok) {
     if (res && res.status === 404) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`; }
     else {
@@ -1741,6 +1768,12 @@ async function loadTests() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
+    if (_dashIsCollecting && tbody && tbody.querySelector('tr:not(.empty-row)')) {
+      s.done = true;
+      updateFilterSummary();
+      _applyGlobalSearch();
+      return;
+    }
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6"><div>${esc(t('dash.table_no_tests'))}</div><div class="empty-hint">${t('dash.empty_tests_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
   }
@@ -1886,6 +1919,7 @@ async function loadServices() {
   s.loading = false;
 
   const tbody = document.getElementById('tbody-svcs');
+  if (res === FETCH_ABORTED) return;
   if (!res || !res.ok) {
     if (res && res.status === 404) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
@@ -1903,6 +1937,11 @@ async function loadServices() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
+    if (_dashIsCollecting && tbody && tbody.querySelector('tr:not(.empty-row)')) {
+      s.done = true;
+      updateFilterSummary();
+      return;
+    }
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); return;
   }
@@ -2134,6 +2173,10 @@ async function loadSummary() {
     fetchKeyed('summary.meta', apiUrl('api/meta')).catch(() => null),
     fetchKeyed('summary.summary', apiUrl('api/dashboard/summary')).catch(() => null),
   ]);
+
+  if (res === FETCH_ABORTED || pres === FETCH_ABORTED || metaRes === FETCH_ABORTED || sumRes === FETCH_ABORTED) {
+    return;
+  }
 
   let metaObj = null;
   if (metaRes && metaRes.ok) {
@@ -2923,6 +2966,8 @@ function refreshBuildSparkCells() {
 // Collection status bar
 // ─────────────────────────────────────────────────────────────────────────────
 let _collectInterval = 300, _lastCollectedAt = null, _ticker = null;
+/** True while server reports collect in progress — used to avoid flashing empty tables on transient snapshot gaps. */
+let _dashIsCollecting = false;
 let _liveMode = false;
 let _ivPollCollect = null, _ivLoadSummary = null, _ivNotif = null;
 let _ivAutoRefresh = null;
@@ -2938,6 +2983,8 @@ function updateCollectBar(state) {
   const errEl = document.getElementById('collect-err');
   const btn = document.getElementById('btn-collect');
   if (!dot || !btn) return;
+
+  _dashIsCollecting = !!(state && state.is_collecting);
 
   const hasErr = state.last_error != null && String(state.last_error).trim() !== '';
 
@@ -3108,11 +3155,12 @@ async function triggerCollect() {
   if (_collectElapsedTimer) clearInterval(_collectElapsedTimer);
   _collectElapsedTimer = setInterval(tickPre, 1000);
   const forceFull = !!document.getElementById('collect-full')?.checked;
-  await fetch(apiUrl('api/collect'), {
+  const cr = await fetch(apiUrl('api/collect'), {
     method:'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ force_full: forceFull }),
   }).catch(()=>null);
+  if (cr && cr.ok) _dashIsCollecting = true;
   _prevCollecting = true;
   pollCollect();
 }
@@ -4108,9 +4156,12 @@ function onTrendsSmoothChange(el) {
 }
 
 function onTrendsTopNChange(el) {
-  const n = parseInt(el && el.value, 10);
-  _trendsTopN = [5, 10, 15, 20].includes(n) ? n : 10;
-  localStorage.setItem('cimon-trends-topn', String(_trendsTopN));
+  let n = parseInt(el && el.value, 10);
+  if (!Number.isFinite(n)) n = 10;
+  n = Math.min(100, Math.max(3, n));
+  _trendsTopN = n;
+  if (el && 'value' in el) el.value = String(n);
+  try { localStorage.setItem('cimon-trends-topn', String(_trendsTopN)); } catch { /* ignore */ }
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
@@ -4133,7 +4184,7 @@ function applyTrendsDateRange() {
   localStorage.setItem('cimon-trends-rfrom', df);
   localStorage.setItem('cimon-trends-rto', dt);
   document.querySelectorAll('.trend-period-btn').forEach((b) => b.classList.remove('active'));
-  if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
+  void loadTrends(_trendsViewDays, null);
 }
 
 function clearTrendsDateRange() {
@@ -4153,6 +4204,9 @@ function clearTrendsDateRange() {
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
+window.applyTrendsDateRange = applyTrendsDateRange;
+window.clearTrendsDateRange = clearTrendsDateRange;
+
 function initTrendsFiltersFromStorage() {
   const tsm = localStorage.getItem('cimon-trends-smooth');
   if (['none', 'ma3', 'ma7'].includes(tsm)) _trendsSmooth = tsm;
@@ -4163,9 +4217,12 @@ function initTrendsFiltersFromStorage() {
   const elSrc = document.getElementById('trends-source');
   if (elSrc) elSrc.value = _trendsSource;
   const ttn = parseInt(localStorage.getItem('cimon-trends-topn'), 10);
-  if ([5, 10, 15, 20].includes(ttn)) _trendsTopN = ttn;
+  if (Number.isFinite(ttn) && ttn >= 3 && ttn <= 100) _trendsTopN = ttn;
   const elTn = document.getElementById('trends-topn');
-  if (elTn) elTn.value = String(_trendsTopN);
+  if (elTn && 'value' in elTn) elTn.value = String(_trendsTopN);
+  const elSvKind = document.getElementById('trends-inst-svcs');
+  const tsk = (localStorage.getItem('cimon-trends-inst-svcs') || '').trim();
+  if (elSvKind && ['', 'docker', 'http', 'other'].includes(tsk)) elSvKind.value = tsk;
   const tp = parseInt(localStorage.getItem('cimon-trends-period'), 10);
   if ([3, 7, 14, 21, 30].includes(tp)) _trendsViewDays = tp;
   const rf = localStorage.getItem('cimon-trends-rfrom');
@@ -4243,8 +4300,15 @@ function renderTrendsChartsFromData(data) {
     { label: t('dash.chart_failed'), data: sl(testFailsLine), borderColor: cFail, backgroundColor: _hexToRgba(cFail, 0.12), tension: 0.3, fill: true },
   ]);
 
+  const svcsKind = (document.getElementById('trends-inst-svcs')?.value || '').trim();
+  const svcDownSeries = data.map((d) => {
+    if (!svcsKind) return d.services_down;
+    const bk = d.services_down_by_kind;
+    if (bk && typeof bk[svcsKind] === 'number') return bk[svcsKind];
+    return 0;
+  });
   const cSvcs = _mkLine('chart-svcs', labels, [
-    { label: t('dash.chart_down'), data: sl(data.map((d) => d.services_down)), borderColor: cFail, backgroundColor: _hexToRgba(cFail, 0.2), tension: 0.3, fill: true },
+    { label: t('dash.chart_down'), data: sl(svcDownSeries), borderColor: cFail, backgroundColor: _hexToRgba(cFail, 0.2), tension: 0.3, fill: true },
   ]);
 
   const wantTopSrc = instToTestSrc(instTop);
@@ -4255,7 +4319,7 @@ function renderTrendsChartsFromData(data) {
       : (d.top_test_failures || []);
     (arr || []).forEach(([n, c]) => { testTotals[n] = (testTotals[n] || 0) + c; });
   });
-  const topN = Math.min(20, Math.max(5, parseInt(_trendsTopN, 10) || 10));
+  const topN = Math.min(100, Math.max(3, parseInt(String(_trendsTopN), 10) || 10));
   const topSlice = Object.entries(testTotals).sort((a, b) => b[1] - a[1]).slice(0, topN);
   const cTop = topSlice.length ? _mkBar('chart-top-tests',
     topSlice.map(([n]) => (n.length > 35 ? n.slice(0, 35) + '…' : n)),
@@ -4277,6 +4341,32 @@ function renderTrendsChartsFromData(data) {
   });
 }
 
+function _utcIsoDate() {
+  const n = new Date();
+  return `${n.getUTCFullYear()}-${String(n.getUTCMonth() + 1).padStart(2, '0')}-${String(n.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Inclusive calendar span between two YYYY-MM-DD strings (UTC noon; matches backend trend day_key). */
+function _isoYmdInclusiveSpan(a, b) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(b))) return 0;
+  const t0 = Date.parse(`${a}T12:00:00.000Z`);
+  const t1 = Date.parse(`${b}T12:00:00.000Z`);
+  if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 < t0) return 0;
+  return Math.floor((t1 - t0) / 864e5) + 1;
+}
+
+/** `days` for /api/trends: cover preset window and custom range start (server uses UTC dates). */
+function _trendsApiDaysFetch() {
+  const preset = Math.min(730, Math.max(30, Number(_trendsViewDays) || 14));
+  let n = preset;
+  if (_trendsRangeActive && _trendsRangeFrom && _trendsRangeTo && _trendsRangeFrom <= _trendsRangeTo) {
+    const todayUtc = _utcIsoDate();
+    const needBack = _isoYmdInclusiveSpan(_trendsRangeFrom, todayUtc);
+    n = Math.min(730, Math.max(n, needBack));
+  }
+  return n;
+}
+
 async function loadTrends(days, btn) {
   if (typeof days === 'number') _trendsViewDays = days;
   if (btn) {
@@ -4295,7 +4385,9 @@ async function loadTrends(days, btn) {
   const errEl = document.getElementById('trends-error');
   let data;
   try {
-    const res = await fetchKeyed('trends', apiUrl('api/trends?days=30')).catch(() => null);
+    const nd = _trendsApiDaysFetch();
+    const res = await fetchKeyed('trends', apiUrl(`api/trends?days=${nd}`)).catch(() => null);
+    if (res === FETCH_ABORTED) return;
     if (!res || !res.ok) {
       if (errEl) {
         errEl.style.display = 'flex';
@@ -5266,7 +5358,8 @@ function _onLogSearch(val) {
 
 function setLogLevel(lvl) {
   _logLevelFilter = lvl;
-  document.querySelectorAll('.log-lvl-btn').forEach(b => {
+  // Only buttons inside the log modal (same class is reused for Tests "Real/Jobs" toggles).
+  document.querySelectorAll('#log-modal .log-lvl-btn[data-level]').forEach((b) => {
     b.classList.remove('lv-active', 'lv-active-err', 'lv-active-warn');
     if (b.dataset.level === lvl) {
       b.classList.add(lvl === 'error' ? 'lv-active-err' : lvl === 'warn' ? 'lv-active-warn' : 'lv-active');
@@ -5289,7 +5382,7 @@ function _resetLogSearch() {
   if (rx) rx.checked = false;
   const cnt = document.getElementById('log-search-count');
   if (cnt) cnt.textContent = '';
-  document.querySelectorAll('.log-lvl-btn').forEach(b => {
+  document.querySelectorAll('#log-modal .log-lvl-btn[data-level]').forEach((b) => {
     b.classList.remove('lv-active', 'lv-active-err', 'lv-active-warn');
     if (b.dataset.level === 'all') b.classList.add('lv-active');
   });
@@ -5389,40 +5482,48 @@ async function startDockerLogStream(container) {
 }
 
 async function openLogViewer(kind, params) {
+  const ov = document.getElementById('log-modal');
+  const title = document.getElementById('log-modal-title');
+  if (!ov || !title) return;
+
   _logModalPrevFocus = document.activeElement;
   stopLogStream();
   _resetLogSearch();
   const followChk = document.getElementById('log-follow');
-  followChk.checked = false;
-  followChk.onchange = null;
-  const ov = document.getElementById('log-modal');
-  const title = document.getElementById('log-modal-title');
+  if (followChk) {
+    followChk.checked = false;
+    followChk.onchange = null;
+  }
   const followWrap = document.getElementById('log-follow-wrap');
   const btnRef = document.getElementById('log-btn-refresh');
 
   if (kind === 'docker') {
     title.textContent = 'Docker: ' + (params.container || '');
-    followWrap.classList.add('visible');
+    if (followWrap) followWrap.classList.add('visible');
     const running = (params.status || '').toLowerCase() === 'up';
-    followChk.disabled = !running;
-    followChk.title = running ? t('dash.log_follow_on') : t('dash.log_follow_off');
-    btnRef.style.display = '';
-    btnRef.onclick = () => {
+    if (followChk) {
+      followChk.disabled = !running;
+      followChk.title = running ? t('dash.log_follow_on') : t('dash.log_follow_off');
+    }
+    if (btnRef) btnRef.style.display = '';
+    if (btnRef) btnRef.onclick = () => {
       stopLogStream();
-      followChk.checked = false;
+      if (followChk) followChk.checked = false;
       loadDockerLogsIntoModal(params.container);
     };
     _setLogText(t('dash.log_fetching'));
     ov.classList.add('open');
     ov.setAttribute('aria-hidden', 'false');
-    followChk.onchange = () => {
-      if (followChk.checked) startDockerLogStream(params.container);
-      else stopLogStream();
-    };
+    if (followChk) {
+      followChk.onchange = () => {
+        if (followChk.checked) startDockerLogStream(params.container);
+        else stopLogStream();
+      };
+    }
     await loadDockerLogsIntoModal(params.container);
   } else {
-    followWrap.classList.remove('visible');
-    btnRef.style.display = '';
+    if (followWrap) followWrap.classList.remove('visible');
+    if (btnRef) btnRef.style.display = '';
     if (kind === 'jenkins') {
       title.textContent = 'Jenkins: ' + params.job_name + ' #' + params.build_number;
       btnRef.onclick = () => loadJenkinsLogsIntoModal(params);
@@ -5444,7 +5545,8 @@ async function openLogViewer(kind, params) {
 function closeLogModal() {
   stopLogStream();
   _resetLogSearch();
-  document.getElementById('log-follow').checked = false;
+  const lf = document.getElementById('log-follow');
+  if (lf) lf.checked = false;
   const ov = document.getElementById('log-modal');
   if (ov) { ov.classList.remove('open'); ov.setAttribute('aria-hidden', 'true'); }
   const prev = _logModalPrevFocus;

@@ -40,6 +40,7 @@ class JenkinsClient(BaseCIClient):
         show_all_limit_jobs: int | None = None,
         verify_ssl: bool = True,
         progress_cb: callable | None = None,
+        source_instance: str | None = None,
     ) -> None:
         super().__init__(url, token, timeout, verify_ssl=verify_ssl)
         self.session.auth = (username, token)
@@ -47,6 +48,7 @@ class JenkinsClient(BaseCIClient):
         self.show_all = show_all
         self.show_all_limit_jobs = show_all_limit_jobs
         self.progress_cb = progress_cb
+        self.source_instance = (source_instance or "").strip() or None
 
     # ── helpers ─────────────────────────────────────────────────────────────
 
@@ -55,15 +57,22 @@ class JenkinsClient(BaseCIClient):
         started = (
             datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc) if ts_ms else None
         )
-        duration_ms = raw.get("duration", 0)
+        duration_ms = raw.get("duration")
         result = raw.get("result")
+        duration_seconds = None
+        if duration_ms is not None:
+            try:
+                duration_seconds = float(duration_ms) / 1000.0
+            except (TypeError, ValueError):
+                duration_seconds = None
         return BuildRecord(
             source="jenkins",
+            source_instance=self.source_instance,
             job_name=job_name,
             build_number=raw.get("number"),
             status=_STATUS_MAP.get(result, BuildStatus.UNKNOWN),
             started_at=started,
-            duration_seconds=duration_ms / 1000 if duration_ms else None,
+            duration_seconds=duration_seconds,
             url=raw.get("url"),
             critical=critical,
         )
@@ -140,6 +149,7 @@ class JenkinsClient(BaseCIClient):
                 out.append(
                     BuildRecord(
                         source="jenkins",
+                        source_instance=self.source_instance,
                         job_name=name,
                         build_number=None,
                         status=BuildStatus.UNKNOWN,
@@ -216,11 +226,62 @@ class JenkinsClient(BaseCIClient):
         logger.info("Jenkins: fetched %d build records", len(records))
         return records
 
+    def fetch_builds_for_job(
+        self,
+        job_name: str,
+        *,
+        since: datetime | None = None,
+        max_builds: int = 10,
+        critical: bool = False,
+    ) -> list[BuildRecord]:
+        """Fetch up to ``max_builds`` recent builds for a single job (by full folder path)."""
+        if not job_name or not str(job_name).strip():
+            return []
+        jp = self.job_path(job_name)
+        if int(max_builds) <= 0:
+            path = f"{jp}/api/json?tree=builds[number,result,timestamp,duration,url]"
+        else:
+            path = (
+                f"{jp}/api/json?tree=builds[number,result,timestamp,duration,url]"
+                f"{{0,{int(max_builds)}}}"
+            )
+        data = self._get(path)
+        if not data:
+            return []
+        builds_raw = data.get("builds") or []
+        records: list[BuildRecord] = []
+        for i, raw_build in enumerate(builds_raw):
+            if not isinstance(raw_build, dict):
+                continue
+            record = self._parse_build(raw_build, job_name, critical)
+            if i > 0 and since and record.started_at and record.started_at < since:
+                break
+            records.append(record)
+        return records
+
     @staticmethod
     def job_path(job_name: str) -> str:
         """Build `/job/.../job/...` path segment for Jenkins REST API."""
         parts = [p for p in job_name.replace("\\", "/").split("/") if p]
         return "/job/" + "/job/".join(quote(p, safe="") for p in parts)
+
+    @staticmethod
+    def job_names_equivalent(a: str, b: str) -> bool:
+        """
+        True if two Jenkins job identifiers refer to the same job.
+
+        Bulk API / folder trees often yield ``Folder/Sub/Regress`` while console
+        config may list only ``Regress`` (or the reverse).
+        """
+        xa = (a or "").strip().replace("\\", "/")
+        xb = (b or "").strip().replace("\\", "/")
+        if not xa or not xb:
+            return False
+        if xa == xb:
+            return True
+        if xa.endswith("/" + xb) or xb.endswith("/" + xa):
+            return True
+        return False
 
     def fetch_console_text(self, job_name: str, build_number: int) -> str:
         """Download plain-text console output for a finished build."""

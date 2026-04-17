@@ -6,7 +6,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
-<title></title>
+<link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
+<link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
+<title>Settings — CI/CD Monitor</title>
 <style>
   :root{
     --ok:#22c55e;--fail:#ef4444;--warn:#f59e0b;--info:#3b82f6;
@@ -25,6 +27,16 @@
   body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:2rem}
 
   header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:20}
+  header .app-logo{
+    height:2.15rem;
+    width:auto;
+    display:block;
+    flex-shrink:0;
+    padding:.22rem;
+    border-radius:.65rem;
+    background:var(--surface2);
+    border:1px solid var(--border);
+  }
   header h1{font-size:1.25rem;font-weight:700}
   .pill{background:var(--surface2);color:var(--muted);border-radius:999px;font-size:.7rem;padding:.2rem .65rem;font-weight:600}
 
@@ -130,7 +142,7 @@
 {% include 'partials/i18n_core.html' %}
 
 <header>
-  <span style="font-size:1.4rem">&#9881;</span>
+  <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
   <h1 data-i18n="st.title">Settings</h1>
   <span class="pill" data-i18n="dash.app_title">CI/CD Monitor</span>
   <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">

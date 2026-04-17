@@ -38,11 +38,13 @@ class GitLabClient(BaseCIClient):
         timeout: int = 15,
         show_all: bool = False,
         verify_ssl: bool = True,
+        source_instance: str | None = None,
     ) -> None:
         super().__init__(url, token, timeout, verify_ssl=verify_ssl)
         self.session.headers.update({"PRIVATE-TOKEN": token})
         self.projects: list[dict[str, Any]] = projects or []
         self.show_all = show_all
+        self.source_instance = (source_instance or "").strip() or None
 
     # ── helpers ─────────────────────────────────────────────────────────────
 
@@ -65,6 +67,7 @@ class GitLabClient(BaseCIClient):
             duration = (updated - started).total_seconds()
         return BuildRecord(
             source="gitlab",
+            source_instance=self.source_instance,
             job_name=project_id,
             build_number=raw.get("id"),
             status=_STATUS_MAP.get(raw.get("status", ""), BuildStatus.UNKNOWN),

@@ -272,6 +272,12 @@ def _append_trends(snapshot: CISnapshot) -> None:
         cfg_for_inst = None
 
     def _inst_label_for_build_trends(b: object) -> str | None:
+        try:
+            stored = getattr(b, "source_instance", None)
+        except Exception:
+            stored = None
+        if isinstance(stored, str) and stored.strip():
+            return stored.strip()
         if not cfg_for_inst:
             return None
         try:
@@ -340,6 +346,18 @@ def _append_trends(snapshot: CISnapshot) -> None:
     # Per-service status snapshot (for uptime history)
     service_health = {s.name: s.status for s in snapshot.services}
 
+    services_down_by_kind: dict[str, int] = {"docker": 0, "http": 0, "other": 0}
+    for s in snapshot.services:
+        if normalize_service_status(s.status) != "down":
+            continue
+        kind = str(getattr(s, "kind", "") or "").strip().lower()
+        if kind == "docker":
+            services_down_by_kind["docker"] += 1
+        elif kind == "http":
+            services_down_by_kind["http"] += 1
+        else:
+            services_down_by_kind["other"] += 1
+
     history.append({
         "date": day_key,
         "ts": now.isoformat(),
@@ -348,6 +366,7 @@ def _append_trends(snapshot: CISnapshot) -> None:
         "tests_total": len(snapshot.tests),
         "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
         "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
+        "services_down_by_kind": services_down_by_kind,
         "service_health": service_health,
         "builds_by_source": builds_by_source,
         "builds_by_instance": builds_by_instance,
@@ -409,6 +428,18 @@ def save_snapshot_partial(snapshot: CISnapshot) -> None:
     Intentionally skips trends/notifications/DB to keep it cheap.
     """
     global _data_revision
+    # Do not publish a snapshot that wipes tests on disk while a collect is still running
+    # and the previous file still had rows — the UI would flash empty (incremental collect
+    # clears tests in memory before parsers repopulate).
+    try:
+        if _collect_state.get("is_collecting"):
+            n_new = len(getattr(snapshot, "tests", None) or [])
+            if n_new == 0:
+                prev = _load_snapshot()
+                if prev is not None and len(prev.tests or []) > 0:
+                    return
+    except Exception:
+        pass
     with _snapshot_write_lock:
         _DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
         _DATA_FILE.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
@@ -1358,6 +1389,8 @@ def _check_rate_limit(key: str, window: float = _RATE_LIMIT_SECONDS) -> None:
 _notifications: list[dict] = []          # ring-buffer, newest last
 _prev_build_statuses: dict[str, str] = {}
 _prev_svc_statuses: dict[str, str] = {}
+_prev_incident_active: bool = False
+_prev_incident_sig: tuple[int, int, int, bool] = (0, 0, 0, False)  # (failed_builds, failed_tests, down_svcs, has_critical)
 _NOTIFY_MAX = 200
 _notify_id_seq = 0
 
@@ -1417,7 +1450,7 @@ def _event_feed_load(limit: int = 300) -> list[dict]:
 
 def _detect_state_changes(snapshot: "CISnapshot") -> None:
     """Diff current snapshot vs previous; append entries to _notifications."""
-    global _prev_build_statuses, _prev_svc_statuses, _notify_id_seq
+    global _prev_build_statuses, _prev_svc_statuses, _prev_incident_active, _prev_incident_sig, _notify_id_seq
     now_iso = datetime.now(tz=timezone.utc).isoformat()
     fail_st = {"failure", "unstable"}
     ok_st = {"success"}
@@ -1491,6 +1524,38 @@ def _detect_state_changes(snapshot: "CISnapshot") -> None:
                 _event_feed_append([ev])
         _prev_svc_statuses[svc.name] = curr
 
+    # Incident (aggregate) notification: emit once when an incident first appears.
+    try:
+        failed_builds = sum(1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st)
+        failed_tests = sum(1 for t in snapshot.tests if getattr(t, "status_normalized", None) in ("failed", "error"))
+        down_svcs = sum(1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down")
+        has_critical = any(
+            getattr(b, "critical", False) and getattr(b, "status_normalized", None) in fail_st
+            for b in snapshot.builds
+        )
+        active = (failed_builds > 0) or (failed_tests > 0) or (down_svcs > 0)
+        sig = (failed_builds, failed_tests, down_svcs, bool(has_critical))
+        if active and not _prev_incident_active:
+            _notify_id_seq += 1
+            lvl = "error" if (down_svcs > 0 or has_critical) else "warn"
+            ev = {
+                "id": _notify_id_seq,
+                "ts": now_iso,
+                "kind": "incident",
+                "level": lvl,
+                "title": "Incident detected",
+                "detail": f"Failed builds: {failed_builds}, failed tests: {failed_tests}, services down: {down_svcs}",
+                "url": "/?tab=incidents",
+                "critical": bool(has_critical) or (down_svcs > 0),
+            }
+            _notifications.append(ev)
+            _event_feed_append([ev])
+        _prev_incident_active = active
+        _prev_incident_sig = sig
+    except Exception:
+        # Never block build/service notifications on incident aggregation.
+        pass
+
     # Trim ring-buffer
     if len(_notifications) > _NOTIFY_MAX:
         del _notifications[:len(_notifications) - _NOTIFY_MAX]
@@ -1553,7 +1618,8 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
     def _build_key(b: object) -> str:
         try:
             bn = getattr(b, "build_number", None)
-            return f"{getattr(b,'source','')}|{getattr(b,'job_name','')}|{bn}|{getattr(b,'url','') or ''}"
+            inst_l = getattr(b, "source_instance", None) or ""
+            return f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|{bn}|{getattr(b,'url','') or ''}"
         except Exception:
             return str(id(b))
 
@@ -1576,6 +1642,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
         if not inst.get("enabled", True):
             continue
         label = inst.get("name", inst.get("url", "Jenkins"))
+        inst_key = _config_instance_label(inst, kind="jenkins")
         shared_discovered: list[str] = []
         n_console_jobs_parsed = 0
         n_allure_jobs_parsed = 0
@@ -1608,6 +1675,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                 ),
                 verify_ssl=verify_ssl,
                 progress_cb=lambda msg: _progress("jenkins_builds", f"Jenkins: {label}", msg),
+                source_instance=inst_key,
             )
             if inst.get("show_all_jobs", False):
                 try:
@@ -1638,7 +1706,42 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                     depth=int(inst.get("show_all_depth", 4) or 4),
                 )
                 _merge_build_records(bulk_builds)
-                _maybe_save_partial(snapshot, force=True)
+                # Bulk returns only lastCompletedBuild per job; optionally pull recent history per job.
+                hist_n = int(inst.get("show_all_history_builds", 0) or 0)
+                hist_job_cap = int(inst.get("show_all_history_jobs_cap", 45) or 45)
+                if hist_n > 0 and bulk_builds:
+                    crit_by: dict[str, bool] = {}
+                    for j in inst.get("jobs") or []:
+                        jn = (j.get("name") or "").strip()
+                        if jn:
+                            crit_by[jn] = bool(j.get("critical", False))
+                    _progress(
+                        "jenkins_builds",
+                        f"Jenkins: {label}",
+                        f"Fetching build history (≤{hist_n} builds/job, up to {hist_job_cap} jobs)…",
+                    )
+                    seen_hist: set[str] = set()
+                    n_hist = 0
+                    for b in bulk_builds:
+                        if n_hist >= max(1, hist_job_cap):
+                            break
+                        jn = getattr(b, "job_name", None) or ""
+                        if not jn or jn in seen_hist:
+                            continue
+                        if getattr(b, "build_number", None) is None:
+                            continue
+                        seen_hist.add(jn)
+                        n_hist += 1
+                        short = jn.rsplit("/", 1)[-1]
+                        crit = bool(crit_by.get(jn) or crit_by.get(short))
+                        try:
+                            extra_hist = client.fetch_builds_for_job(
+                                jn, since=since, max_builds=hist_n, critical=crit
+                            )
+                            if extra_hist:
+                                _merge_build_records(extra_hist)
+                        except Exception as exc:
+                            logger.debug("Jenkins history fetch for %s: %s", jn, exc)
                 # If /api/json?tree=jobs[name] (fetch_job_list) failed but bulk succeeded,
                 # derive a stable "discovered jobs" list from the bulk payload so console/allure
                 # parsing can still work and meta doesn't show "~0 jobs in index".
@@ -1689,7 +1792,8 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                         ))
                 except Exception:
                     pass
-                _maybe_save_partial(snapshot)
+                # Single write after builds + synthetic tests so the file never briefly holds tests=[].
+                _maybe_save_partial(snapshot, force=True)
             else:
                 _progress("jenkins_builds", f"Jenkins: {label}", f"Fetching builds… (max_builds={effective_max_builds})")
                 _merge_build_records(
@@ -1909,6 +2013,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
         if not inst.get("enabled", True):
             continue
         label = inst.get("name", inst.get("url", "GitLab"))
+        gl_key = _config_instance_label(inst, kind="gitlab")
         t0 = time.monotonic()
         try:
             _progress("gitlab", f"GitLab: {label}", "Fetching pipelines…")
@@ -1919,6 +2024,7 @@ def _run_collect_sync(cfg: dict, *, force_full: bool = False) -> None:
                 projects=inst.get("projects", []),
                 show_all=inst.get("show_all_projects", False),
                 verify_ssl=bool(inst.get("verify_ssl", True)),
+                source_instance=gl_key,
             )
             _merge_build_records(
                 client.fetch_builds(since=since, max_builds=inst.get("max_pipelines", 10))
@@ -2121,6 +2227,19 @@ def _rid(request: Request | None) -> str:
     return getattr(request.state, "request_id", "-")
 
 
+def _config_instance_label(inst: dict[str, Any], *, kind: str) -> str:
+    """Stable label for a jenkins_instances / gitlab_instances entry (merge + UI grouping)."""
+    n = str(inst.get("name") or "").strip()
+    if n:
+        return n[:240]
+    u = str(inst.get("url") or "").strip()
+    if u:
+        try:
+            net = urlparse(u).netloc
+            return (net or u.rstrip("/"))[:240]
+        except Exception:
+            return u[:240]
+    return "Jenkins" if kind == "jenkins" else "GitLab"
 
 
 
@@ -2152,6 +2271,12 @@ async def api_status():
     enabled_gitlab = _enabled_urls("gitlab")
 
     def _inst_label_for_build(b: Any) -> str | None:
+        try:
+            stored = getattr(b, "source_instance", None)
+        except Exception:
+            stored = None
+        if isinstance(stored, str) and stored.strip():
+            return stored.strip()
         try:
             src = (b.source or "").lower()
         except Exception:
@@ -2215,6 +2340,8 @@ async def api_builds(
                   job (substring), hours (0=all, >0 filter by started_at recency)
     Returns: {items, page, per_page, total, has_more}
     """
+    page = max(1, int(page or 1))
+    per_page = min(max(1, int(per_page or 20)), 200)
     snap = await _load_snapshot_async()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
@@ -2257,6 +2384,12 @@ async def api_builds(
         return True
 
     def _inst_label_for_build(b: Any) -> str | None:
+        try:
+            stored = getattr(b, "source_instance", None)
+        except Exception:
+            stored = None
+        if isinstance(stored, str) and stored.strip():
+            return stored.strip()
         try:
             src = (b.source or "").lower()
         except Exception:
@@ -3787,6 +3920,7 @@ async def webhook_build_complete(request: Request):
     from models.models import BuildRecord
     record = BuildRecord(
         source=payload.get("source", "webhook"),
+        source_instance=(payload.get("source_instance") or None),
         job_name=payload.get("job", "unknown"),
         build_number=payload.get("build_number"),
         status=payload.get("status", "unknown"),

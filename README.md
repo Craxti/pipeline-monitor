@@ -1,6 +1,10 @@
 # CI/CD Monitor
 
-**Одна панель для CI + тестов + сервисов.** · EN: *One panel for CI + tests + services.*
+<p align="center">
+  <img src="web/static/logo-wide.png" alt="CI/CD Monitor — pipeline status at a glance" width="420" />
+</p>
+
+*One panel for CI + tests + services.*
 
 A practical Python tool for DevOps and QA engineers that collects CI/CD pipeline statuses, parses test reports, generates reports, and optionally sends Telegram alerts and monitors Docker services.
 

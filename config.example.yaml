@@ -14,6 +14,10 @@ jenkins_instances:
   parse_console: true
   console_builds: 5
   show_all_jobs: false
+  # If show_all_jobs: true, bulk Jenkins API returns only the latest build per job.
+  # Set show_all_history_builds > 0 to fetch older runs per job (extra API calls; capped by show_all_history_jobs_cap).
+  show_all_history_builds: 0
+  show_all_history_jobs_cap: 45
   verify_ssl: true
   parse_allure: false
   show_all_limit_jobs: 25

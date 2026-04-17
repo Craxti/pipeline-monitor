@@ -80,6 +80,9 @@ class BuildRecord(BaseModel):
     """Represents a single CI/CD build / pipeline run."""
 
     source: str = Field(..., description="CI system: jenkins | gitlab | ...")
+    # Config instance name (or URL host fallback) — disambiguates merges when several
+    # Jenkins/GitLab entries share one server URL or build URLs are missing.
+    source_instance: Optional[str] = Field(default=None, description="Logical CI instance label from config")
     job_name: str
     build_number: Optional[int] = None
     status: BuildStatus
