@@ -4,19 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix ai chat">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix settings UI">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data/snapshot.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/snapshot.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_loop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/progress.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/progress.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -298,7 +290,21 @@
       <option name="project" value="LOCAL" />
       <updated>1776455761473</updated>
     </task>
-    <option name="localTasksCounter" value="35" />
+    <task id="LOCAL-00035" summary="add button stop&#10;add tests in actions">
+      <created>1776456200578</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1776456200578</updated>
+    </task>
+    <task id="LOCAL-00036" summary="fix settings UI">
+      <created>1776456618792</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1776456618792</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -334,6 +340,8 @@
     <MESSAGE value="fix docker logs" />
     <MESSAGE value="fix live/reload" />
     <MESSAGE value="fix ai chat" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix ai chat" />
+    <MESSAGE value="add button stop&#10;add tests in actions" />
+    <MESSAGE value="fix settings UI" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix settings UI" />
   </component>
 </project>
