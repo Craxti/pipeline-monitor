@@ -45,8 +45,14 @@ from models.models import (
 
 from web.schemas import MonitorGeneralConfig
 
+from web.core.paths import REPO_ROOT as _REPO_ROOT
 from web.core.config import config_yaml_path as _config_yaml_path, load_yaml_config as _load_yaml_config
 from web.core.auth import require_shared_token
+from web.core.settings_secrets import (
+    SETTINGS_SECRET_MASK as _SETTINGS_SECRET_MASK,
+    mask_settings_for_response as _mask_settings_for_response,
+    merge_settings_secrets as _merge_settings_secrets,
+)
 from web.core import snapshot_cache as _snapshot_cache_mod
 
 logger = logging.getLogger(__name__)
