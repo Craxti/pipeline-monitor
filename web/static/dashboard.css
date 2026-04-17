@@ -104,19 +104,13 @@ body.dashboard-live header{box-shadow:0 0 0 1px rgba(34,197,94,.25)}
 }
 
 /* ── Layout ── */
-main{padding:1.5rem;max-width:1480px;margin:0 auto}
-/* Builds tab: wider content area on large screens (pipelines table + filters) */
-main:has(#tab-panel-builds:not([hidden])){
-  max-width:min(100vw - 2rem,1920px);
-}
+/* Wider default content width (matches Builds feel) */
+main{padding:1.5rem;max-width:min(100vw - 2rem,1920px);margin:0 auto}
+/* Builds tab: keep same content width as other tabs (table already scrolls horizontally). */
 main:has(#tab-panel-builds:not([hidden])) .tbl-scroll-x table.tbl-grouped.tbl-sticky-lead{
   min-width:1180px;
   --pin-w-job:340px;
   --pin-w-src:172px;
-}
-main:has(#tab-panel-builds:not([hidden])) #wrap-builds.tbl-wrap,
-main:has(#tab-panel-builds:not([hidden])) #wrap-fav.tbl-wrap{
-  max-height:min(68vh,780px);
 }
 
 /* ── Stats ── */
@@ -244,6 +238,22 @@ body:not(.compact) .tab-panel:not(#tab-panel-overview) .tbl-wrap table td,
 body:not(.compact) .tab-panel:not(#tab-panel-overview) .tbl-wrap table th{padding:.42rem .72rem;font-size:.8rem}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:var(--surface3)}
+
+/* Stacked cell content (badge + main text) to avoid overlap */
+.cell-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:.2rem;
+  min-width:0;
+}
+.cell-stack .cell-main{
+  line-height:1.25;
+  min-width:0;
+}
+.cell-stack .b{
+  align-self:flex-start;
+}
 
   /* Badges (unified) */
 .b{
@@ -675,9 +685,27 @@ table.tbl-grouped thead tr.th-groups th{
   position:sticky;top:0;z-index:14;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;
   color:var(--muted);background:var(--surface3);padding:.38rem .5rem .4rem;border-bottom:1px solid var(--border);
   border-left:2px solid var(--border);text-align:left;font-weight:700;
+  /* Keep consistent height so the 2nd sticky header row (top:1.65rem) never overlaps. */
+  height:1.65rem;
+  box-sizing:border-box;
 }
 table.tbl-grouped thead tr.th-groups th:first-child{border-left:none}
 table.tbl-grouped thead tr.th-cols th{position:sticky;top:1.65rem;z-index:13}
+
+/* Tests table: prevent long suite/name text from spilling into соседние колонки */
+#panel-tests table.tbl-grouped{
+  table-layout:fixed;
+}
+#panel-tests table.tbl-grouped thead tr.th-cols th:nth-child(1){width:34%} /* Test name */
+#panel-tests table.tbl-grouped thead tr.th-cols th:nth-child(2){width:20%} /* Suite */
+#panel-tests table.tbl-grouped thead tr.th-cols th:nth-child(3){width:12%} /* Status */
+#panel-tests table.tbl-grouped thead tr.th-cols th:nth-child(4){width:10%} /* Duration */
+#panel-tests table.tbl-grouped thead tr.th-cols th:nth-child(5){width:16%} /* Timestamp */
+#panel-tests table.tbl-grouped tbody td:nth-child(2){
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 .status-legend-inline{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem .85rem;margin-bottom:1.1rem;padding:.55rem .85rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);font-size:.72rem;color:var(--muted)}
 .status-legend-inline .sl-title{font-weight:700;color:var(--text);margin-right:.15rem}
 .status-legend-inline .sl-item{display:inline-flex;align-items:center;gap:.28rem}

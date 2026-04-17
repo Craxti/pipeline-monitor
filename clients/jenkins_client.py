@@ -289,6 +289,38 @@ class JenkinsClient(BaseCIClient):
         path = f"{jp}/{int(build_number)}/consoleText"
         return self._get_text(path)
 
+    def fetch_reference_build_number(self, job_name: str, *, prefer_success: bool = True) -> int | None:
+        """
+        Return a "good reference" build number for log diffing.
+
+        Jenkins snapshots may only contain the most recent build per job; in that case we try to
+        resolve lastSuccessfulBuild directly from Jenkins job metadata.
+        """
+        jp = self.job_path(job_name)
+        tree = "lastSuccessfulBuild[number],lastCompletedBuild[number],lastBuild[number]"
+        data = self._get(f"{jp}/api/json?tree={tree}")
+        if not isinstance(data, dict):
+            return None
+
+        def _num(k: str) -> int | None:
+            v = data.get(k)
+            if not isinstance(v, dict):
+                return None
+            n = v.get("number")
+            try:
+                return int(n) if n is not None else None
+            except Exception:
+                return None
+
+        if prefer_success:
+            n = _num("lastSuccessfulBuild")
+            if n is not None:
+                return n
+        n = _num("lastCompletedBuild")
+        if n is not None:
+            return n
+        return _num("lastBuild")
+
     def trigger_build(self, job_name: str) -> dict:
         """Trigger a new build for the given job. Returns status info."""
         jp = self.job_path(job_name)

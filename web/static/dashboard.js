@@ -1802,11 +1802,16 @@ async function loadTests() {
     td0.style.maxWidth = '260px';
     td0.style.wordBreak = 'break-word';
     td0.title = String(row.test_name || '');
+    const stack = document.createElement('div');
+    stack.className = 'cell-stack';
     if (row.source) {
-      td0.appendChild(mkSrcBadge(row.source));
-      td0.appendChild(document.createTextNode(' '));
+      stack.appendChild(mkSrcBadge(row.source));
     }
-    td0.appendChild(document.createTextNode(String(row.test_name || '')));
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'cell-main';
+    nameSpan.textContent = String(row.test_name || '');
+    stack.appendChild(nameSpan);
+    td0.appendChild(stack);
 
     const td1 = document.createElement('td');
     td1.style.maxWidth = '160px';
@@ -4193,8 +4198,16 @@ function onTrendsSourceChange(el) {
 }
 
 function applyTrendsDateRange() {
-  const df = document.getElementById('trends-d-from')?.value;
-  const dt = document.getElementById('trends-d-to')?.value;
+  const _norm = (v) => {
+    const s = String(v || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // Accept RU-style manual input too (dd.mm.yyyy) — some browsers keep the dots.
+    const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    return '';
+  };
+  const df = _norm(document.getElementById('trends-d-from')?.value);
+  const dt = _norm(document.getElementById('trends-d-to')?.value);
   if (!df || !dt || df > dt) {
     showToast(t('dash.trends_range_invalid'), 'warn');
     return;

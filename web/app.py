@@ -3681,7 +3681,9 @@ async def api_logs_diff(
     _check_rate_limit(f"diff:{source}:{job_name}:{build_number}", window=5)
     import difflib
 
-    # Reference build from snapshot: prefer last successful, else last any other build
+    # Reference build from snapshot: prefer last successful, else last any other build.
+    # If snapshot doesn't contain *any* other build for this job, we may fall back to the CI API
+    # (at least for Jenkins) because snapshot typically stores only the latest build per job.
     snap = _load_snapshot()
     if snap is None:
         raise HTTPException(404, "No snapshot data")
@@ -3695,30 +3697,26 @@ async def api_logs_diff(
             and b.build_number != build_number
         ]
 
+    prev_build_number: int | None = None
+    reference_kind = ""
+    reference_status: str | None = None
+
     same_job_success = [b for b in _same_job_rows() if b.status_normalized == "success"]
     same_job_any = _same_job_rows()
     if same_job_success:
-        same_job_success.sort(
-            key=lambda b: b.started_at or datetime.min,
-            reverse=True,
-        )
-        prev = same_job_success[0]
+        same_job_success.sort(key=lambda b: b.started_at or datetime.min, reverse=True)
+        prev_build_number = int(same_job_success[0].build_number)
         reference_kind = "last_success"
+        reference_status = same_job_success[0].status
     elif same_job_any:
-        same_job_any.sort(
-            key=lambda b: b.started_at or datetime.min,
-            reverse=True,
-        )
-        prev = same_job_any[0]
+        same_job_any.sort(key=lambda b: b.started_at or datetime.min, reverse=True)
+        prev_build_number = int(same_job_any[0].build_number)
         reference_kind = "last_build"
-    else:
-        raise HTTPException(
-            404,
-            f"No other build for «{job_name}» in snapshot — run collect to refresh data.",
-        )
+        reference_status = same_job_any[0].status
 
     cur_text = prev_text = ""
     cfg = _load_yaml_config()
+    last_fetch_err: str | None = None
 
     if source.lower() == "jenkins":
         from clients.jenkins_client import JenkinsClient
@@ -3728,10 +3726,31 @@ async def api_logs_diff(
             try:
                 client = JenkinsClient(url=inst.get("url",""), username=inst.get("username",""), token=inst.get("token",""))
                 cur_text  = client.fetch_console_text(job_name, build_number)
-                prev_text = client.fetch_console_text(job_name, prev.build_number)
+
+                # If snapshot couldn't provide a reference build, ask Jenkins directly.
+                if prev_build_number is None:
+                    ref = client.fetch_reference_build_number(job_name, prefer_success=True)
+                    if ref is not None and int(ref) != int(build_number):
+                        prev_build_number = int(ref)
+                        reference_kind = "jenkins_last_success"
+                        reference_status = "success"
+                    else:
+                        ref2 = client.fetch_reference_build_number(job_name, prefer_success=False)
+                        if ref2 is not None and int(ref2) != int(build_number):
+                            prev_build_number = int(ref2)
+                            reference_kind = "jenkins_last_completed"
+                            reference_status = "unknown"
+
+                if prev_build_number is None:
+                    raise HTTPException(
+                        404,
+                        f"No other build for «{job_name}» in snapshot (and no reference build resolved from Jenkins) — run collect to refresh data.",
+                    )
+
+                prev_text = client.fetch_console_text(job_name, int(prev_build_number))
                 break
-            except Exception:
-                pass
+            except Exception as exc:
+                last_fetch_err = str(exc)
     elif source.lower() == "gitlab":
         from clients.gitlab_client import GitLabClient
         insts = ([_find_gitlab_instance(cfg, instance_url)] if instance_url else
@@ -3740,17 +3759,22 @@ async def api_logs_diff(
             try:
                 client = GitLabClient(url=inst.get("url",""), token=inst.get("token",""))
                 cur_text  = client.fetch_pipeline_logs(job_name, build_number)
-                prev_text = client.fetch_pipeline_logs(job_name, prev.build_number)
+                if prev_build_number is None:
+                    raise HTTPException(
+                        404,
+                        f"No other build for «{job_name}» in snapshot — run collect to refresh data.",
+                    )
+                prev_text = client.fetch_pipeline_logs(job_name, int(prev_build_number))
                 break
-            except Exception:
-                pass
+            except Exception as exc:
+                last_fetch_err = str(exc)
     else:
         raise HTTPException(400, f"Diff not supported for source: {source}")
 
     if not cur_text:
-        raise HTTPException(502, "Could not fetch current build log")
+        raise HTTPException(502, "Could not fetch current build log" + (f": {last_fetch_err}" if last_fetch_err else ""))
     if not prev_text:
-        raise HTTPException(502, "Could not fetch reference build log")
+        raise HTTPException(502, "Could not fetch reference build log" + (f": {last_fetch_err}" if last_fetch_err else ""))
 
     # Compute unified diff (context=5 lines)
     cur_lines  = cur_text.splitlines()
@@ -3760,8 +3784,8 @@ async def api_logs_diff(
     return {
         "ok": True,
         "current_build": build_number,
-        "reference_build": prev.build_number,
-        "reference_status": prev.status,
+        "reference_build": prev_build_number,
+        "reference_status": reference_status,
         "reference_kind": reference_kind,
         "diff": diff,
         "cur_lines": len(cur_lines),
