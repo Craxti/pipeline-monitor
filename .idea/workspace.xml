@@ -4,7 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix filter for service">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix failed tests whith ai assist chat">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -343,7 +344,28 @@
       <option name="project" value="LOCAL" />
       <updated>1776613351968</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="fix setting + safety">
+      <created>1776613742469</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613742469</updated>
+    </task>
+    <task id="LOCAL-00044" summary="fix setting + safety">
+      <created>1776613844135</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613844135</updated>
+    </task>
+    <task id="LOCAL-00045" summary="fix failed tests whith ai assist chat">
+      <created>1776614117134</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1776614117134</updated>
+    </task>
+    <option name="localTasksCounter" value="46" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -358,8 +380,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix arch" />
-    <MESSAGE value="fix builds" />
     <MESSAGE value="fix visuals" />
     <MESSAGE value="fix moduls" />
     <MESSAGE value="fix cursor" />
@@ -383,6 +403,8 @@
     <MESSAGE value="fix json files&#10;fix filters&#10;fix slow requests&#10;fix tap settings" />
     <MESSAGE value="fix git" />
     <MESSAGE value="fix filter for service" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix filter for service" />
+    <MESSAGE value="fix setting + safety" />
+    <MESSAGE value="fix failed tests whith ai assist chat" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix failed tests whith ai assist chat" />
   </component>
 </project>
