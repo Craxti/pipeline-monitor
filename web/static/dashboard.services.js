@@ -69,7 +69,8 @@ async function loadServices() {
   if (s.loading || s.done) return;
   s.loading = true;
 
-  const status = document.getElementById('f-svstatus').value;
+  const rawStatus = document.getElementById('f-svstatus')?.value || '';
+  const status = _svcProblemsOnly ? 'problems' : rawStatus;
   const url = apiUrl(`api/services?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}`);
 
   const res = await fetchKeyed('services', url).catch(()=>null);

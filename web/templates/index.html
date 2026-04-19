@@ -499,13 +499,14 @@
     <div class="filters">
       <select class="f-select" id="f-svstatus">
         <option value="" data-i18n="dash.svc_all">All statuses</option>
+        <option value="problems" data-i18n="dash.svc_problems">Problems (Down+Degraded)</option>
         <option value="up" data-i18n="dash.svc_up">Up</option>
         <option value="down" data-i18n="dash.svc_down">Down</option>
         <option value="degraded" data-i18n="dash.svc_degraded">Degraded</option>
       </select>
-      <label class="live-toggle" style="margin-left:.25rem" title="Down + Degraded only">
+      <label class="live-toggle" style="margin-left:.25rem" data-i18n-title="dash.svc_problems_only_hint" title="">
         <input type="checkbox" id="sv-problems-only">
-        <span class="pill" style="font-size:.72rem">Problems</span>
+        <span class="pill" style="font-size:.72rem" data-i18n="dash.svc_problems_only">Problems</span>
       </label>
       <button class="f-clear" data-dash-action="clearSvcFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
     </div>
