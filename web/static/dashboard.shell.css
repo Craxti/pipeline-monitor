@@ -1,0 +1,346 @@
+/* ── Shell layer: modern visual polish (loads after dashboard.css) ─────────
+   Same layout & components — refined typography, depth, focus, and motion. */
+
+:root {
+  /* Used by incident cards / timeline hovers (was implicit before) */
+  --accent: #60a5fa;
+  --shell-radius: 1rem;
+  --shell-radius-sm: 0.625rem;
+  --shell-line: rgba(148, 163, 184, 0.14);
+  --shadow-float: 0 4px 6px -1px rgba(0, 0, 0, 0.22), 0 10px 28px -8px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.18);
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.32);
+}
+
+html.light {
+  --shell-line: rgba(15, 23, 42, 0.08);
+  --shadow-float: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 16px 40px -12px rgba(15, 23, 42, 0.12);
+  --shadow-soft: 0 2px 10px rgba(15, 23, 42, 0.06);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.22);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html,
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", "Liberation Sans", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* Slightly richer page canvas (keeps contrast for tables & charts) */
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(1200px 520px at 12% -8%, rgba(59, 130, 246, 0.09), transparent 55%),
+    radial-gradient(900px 420px at 88% 0%, rgba(139, 92, 246, 0.07), transparent 50%);
+  background-attachment: fixed;
+}
+
+html.light body {
+  background-image: radial-gradient(1000px 480px at 10% -10%, rgba(59, 130, 246, 0.06), transparent 55%),
+    radial-gradient(800px 400px at 92% 0%, rgba(99, 102, 241, 0.05), transparent 48%);
+}
+
+/* Header — glass strip */
+header {
+  padding: 0.85rem 1.6rem;
+  gap: 0.85rem;
+  background: rgba(30, 41, 59, 0.78);
+  border-bottom: 1px solid var(--shell-line);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+}
+
+html.light header {
+  background: rgba(255, 255, 255, 0.82);
+}
+
+header .app-logo {
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+header h1 {
+  font-size: 1.22rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.app-tagline {
+  font-size: 0.8rem;
+  opacity: 0.95;
+}
+
+body.dashboard-live header {
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35), var(--shadow-soft);
+}
+
+/* Primary actions */
+.btn {
+  border-radius: var(--shell-radius-sm);
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  background: linear-gradient(165deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  opacity: 1;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 2px 10px rgba(37, 99, 235, 0.25);
+}
+
+.btn-ghost {
+  box-shadow: none;
+  background: var(--surface2);
+  font-weight: 650;
+}
+
+.btn-ghost:hover {
+  background: var(--surface3);
+  border-color: var(--border);
+}
+
+/* Layout rhythm */
+main {
+  padding: 1.65rem 1.65rem 2rem;
+}
+
+/* Stat cards */
+.stat {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-float);
+}
+
+#tab-panel-overview .stat {
+  border-radius: calc(var(--shell-radius) + 2px);
+}
+
+/* Panels */
+.panel {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--shell-line);
+  overflow: hidden;
+}
+
+.panel-head {
+  padding: 0.85rem 1.05rem;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.panel-head h2 {
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.panel-count {
+  font-weight: 650;
+  border: 1px solid var(--shell-line);
+}
+
+/* Filters */
+.f-input,
+.f-select {
+  border-radius: var(--shell-radius-sm);
+  font-weight: 500;
+}
+
+.f-input:focus,
+.f-select:focus {
+  box-shadow: var(--focus-ring);
+}
+
+/* Tables */
+th {
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+tbody tr:hover td {
+  transition: background 0.12s ease;
+}
+
+/* Status chips */
+.b {
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+/* Tabs — clearer hierarchy */
+.dash-page-tabs {
+  gap: 0.45rem 0.55rem;
+  padding: 0.65rem 0 1.05rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid var(--shell-line);
+  background: linear-gradient(180deg, var(--bg) 0%, transparent 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dash-tab {
+  border-radius: 999px;
+  padding: 0.38rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.dash-tab:hover {
+  border-color: var(--info);
+  color: var(--text);
+}
+
+.dash-tab.active,
+.dash-tab[aria-selected="true"] {
+  background: linear-gradient(165deg, #3b82f6, #2563eb);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.dash-tab-sub {
+  font-weight: 550;
+  opacity: 0.92;
+}
+
+/* Situation + incident blocks */
+.situation-strip {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--shell-line);
+  background: var(--surface);
+}
+
+.incident-center {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-float);
+  border: 1px solid var(--shell-line);
+}
+
+.ic-ev {
+  border-radius: var(--shell-radius-sm);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.ic-ev:hover {
+  transform: translateY(-1px);
+}
+
+.ic-tl-seg {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Top meta bar */
+.topbar {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--shell-line);
+  background: var(--surface2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Toast + modals */
+.toast {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+#notif-panel {
+  border-radius: var(--shell-radius);
+  box-shadow: var(--shadow-float);
+}
+
+/* Global search */
+#global-search {
+  border: 1px solid var(--shell-line);
+  background: var(--surface2);
+  font-weight: 500;
+}
+
+#global-search:focus {
+  box-shadow: var(--focus-ring);
+}
+
+/* Secondary controls */
+.act-btn,
+.time-filter-btn,
+.expand-btn,
+.preset-btn,
+.log-lvl-btn {
+  border-radius: var(--shell-radius-sm);
+  font-weight: 650;
+}
+
+.act-btn:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+}
+
+.lang-toggle {
+  border-radius: 999px;
+  border: 1px solid var(--shell-line);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+}
+
+.pill {
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+/* Scrollbars — slim */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Back-to-top */
+.btn-back-top {
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .stat:hover,
+  .ic-ev:hover {
+    transform: none;
+  }
+}
