@@ -247,3 +247,10 @@ When changing behavior, update documentation in the same PR:
 - `docs/USER_GUIDE.md` (operational usage)
 - `docs/DEVELOPER_GUIDE.md` (architecture/extension points)
 
+For stability/quality docs, also keep in sync:
+
+- `docs/adr/0001-quality-gates-and-mock-first-testing.md`
+- `docs/HOW_FILTERS_WORK_END_TO_END.md`
+- `docs/RUNBOOK_INCIDENTS.md`
+- `docs/KPI_FAQ.md`
+
