@@ -21,9 +21,9 @@
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
 <script src="/static/dashboard.builds.js?v=20260417i" defer></script>
-<script src="/static/dashboard.failures.js?v=20260417i" defer></script>
-<script src="/static/dashboard.tests.js?v=20260417i" defer></script>
-<script src="/static/dashboard.services.js?v=20260417i" defer></script>
+<script src="/static/dashboard.failures.js?v=20260420d" defer></script>
+<script src="/static/dashboard.tests.js?v=20260420d" defer></script>
+<script src="/static/dashboard.services.js?v=20260420d" defer></script>
 <script src="/static/dashboard.collect-panel.js?v=20260417i" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
@@ -33,7 +33,7 @@
 <script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
 <script src="/static/dashboard.collect-bar.js?v=20260419a" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
-<script src="/static/dashboard.trends.js?v=20260420b" defer></script>
+<script src="/static/dashboard.trends.js?v=20260420d" defer></script>
 <script src="/static/dashboard.actions.js?v=20260417i" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
@@ -600,6 +600,14 @@
         <option value="" data-i18n="dash.opt_all_sources">All</option>
         <option value="jenkins">jenkins</option>
         <option value="gitlab">gitlab</option>
+        <option value="docker">docker</option>
+        <option value="http">http</option>
+      </select>
+    </div>
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+      <select id="trends-instance-all" class="f-select" style="width:auto;min-width:220px">
+        <option value="" data-i18n="dash.collect_logs_all_instances">All instances</option>
       </select>
     </div>
     <div class="trends-filter-group">

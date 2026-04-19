@@ -23,7 +23,8 @@ function clearTestFilters() {
   _testsHours = 0;
   ['tf-t-6h','tf-t-24h','tf-t-7d'].forEach((id) => document.getElementById(id)?.classList.remove('active'));
   try { localStorage.setItem('cimon-tests-hours', '0'); } catch {}
-  _syncURLAndFilterSummary();
+  // Persist cleared values so F5 does not restore previous test filters from localStorage.
+  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
   updateTestsExportLinks();
   resetTests();
 }

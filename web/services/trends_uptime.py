@@ -52,22 +52,79 @@ def _job_name_from_event_title(title: str, *, prefix: str) -> str:
     return t[len(prefix) :].strip()
 
 
+def _normalize_source(source: str | None) -> str:
+    s = str(source or "").strip().lower()
+    return s or ""
+
+
+def _derive_event_source(ev: dict) -> str:
+    s = _normalize_source(ev.get("source"))
+    if s:
+        return s
+    u = str(ev.get("url") or "").lower()
+    if "gitlab" in u or "/-/pipelines/" in u:
+        return "gitlab"
+    if "/job/" in u:
+        return "jenkins"
+    return ""
+
+
 def trends_history_summary(
     days: int,
     *,
     trends_compute: Callable[[int], list],
     event_feed_load: Callable[[int], list[dict]],
+    source_filter: str = "",
+    instance_filter: str = "",
 ) -> dict:
     """Compute history KPIs for Trends dashboard cards."""
+    src_filter = _normalize_source(source_filter)
+    inst_filter = str(instance_filter or "").strip()
     data = trends_compute(days) or []
     days_count = max(1, len(data))
-    failed_builds = sum(int(d.get("builds_failed", 0) or 0) for d in data)
+    failed_builds = 0
+    for d in data:
+        if inst_filter:
+            rec = (d.get("builds_by_instance") or {}).get(inst_filter) or {}
+            failed_builds += int(rec.get("failed", 0) or 0)
+        elif src_filter:
+            rec = (d.get("builds_by_source") or {}).get(src_filter) or {}
+            failed_builds += int(rec.get("failed", 0) or 0)
+        else:
+            failed_builds += int(d.get("builds_failed", 0) or 0)
     crash_freq = failed_builds / float(days_count)
 
     by_job: dict[str, dict[str, int]] = {}
     for d in data:
-        jf = d.get("job_failures", {}) or {}
-        jt = d.get("job_totals", {}) or {}
+        jf_all = d.get("job_failures", {}) or {}
+        jt_all = d.get("job_totals", {}) or {}
+        if inst_filter:
+            jf_by_inst = d.get("job_failures_by_instance")
+            jt_by_inst = d.get("job_totals_by_instance")
+            # Legacy fallback only when per-instance maps are absent in row schema.
+            if isinstance(jf_by_inst, dict):
+                jf = jf_by_inst.get(inst_filter, {}) or {}
+            else:
+                jf = jf_all
+            if isinstance(jt_by_inst, dict):
+                jt = jt_by_inst.get(inst_filter, {}) or {}
+            else:
+                jt = jt_all
+        elif src_filter:
+            jf_by_src = d.get("job_failures_by_source")
+            jt_by_src = d.get("job_totals_by_source")
+            # Legacy fallback only when per-source maps are absent in row schema.
+            if isinstance(jf_by_src, dict):
+                jf = jf_by_src.get(src_filter, {}) or {}
+            else:
+                jf = jf_all
+            if isinstance(jt_by_src, dict):
+                jt = jt_by_src.get(src_filter, {}) or {}
+            else:
+                jt = jt_all
+        else:
+            jf = jf_all
+            jt = jt_all
         for job, cnt in jf.items():
             rec = by_job.setdefault(str(job), {"failed": 0, "total": 0})
             rec["failed"] += int(cnt or 0)
@@ -105,12 +162,19 @@ def trends_history_summary(
     for dt, e in parsed_events:
         kind = str(e.get("kind") or "")
         title = str(e.get("title") or "")
+        ev_source = _derive_event_source(e)
+        ev_inst = str(e.get("source_instance") or "").strip()
+        if src_filter and ev_source != src_filter:
+            continue
+        if inst_filter and f"{ev_source}|{ev_inst}" != inst_filter:
+            continue
+        ev_job = str(e.get("job_name") or "").strip()
         if kind == "build_fail":
-            job = _job_name_from_event_title(title, prefix="Job FAILED:")
+            job = ev_job or _job_name_from_event_title(title, prefix="Job FAILED:")
             if job and job not in opened_fail_ts:
                 opened_fail_ts[job] = dt
         elif kind == "build_recovered":
-            job = _job_name_from_event_title(title, prefix="Job RECOVERED:")
+            job = ev_job or _job_name_from_event_title(title, prefix="Job RECOVERED:")
             if job and job in opened_fail_ts:
                 delta = (dt - opened_fail_ts[job]).total_seconds() / 60.0
                 if delta >= 0:

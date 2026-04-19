@@ -95,6 +95,9 @@ def detect_state_changes(
                     "detail": f"Status changed {prev} → {curr}",
                     "url": getattr(b, "url", None),
                     "critical": bool(getattr(b, "critical", False)),
+                    "source": getattr(b, "source", None),
+                    "source_instance": getattr(b, "source_instance", None),
+                    "job_name": job_name,
                 }
                 _append_or_group_event(ev=ev, notifications=notifications, append_event=append_event)
             elif curr in ok_st and prev in fail_st:
@@ -108,6 +111,9 @@ def detect_state_changes(
                     "detail": f"Status changed {prev} → {curr}",
                     "url": getattr(b, "url", None),
                     "critical": bool(getattr(b, "critical", False)),
+                    "source": getattr(b, "source", None),
+                    "source_instance": getattr(b, "source_instance", None),
+                    "job_name": job_name,
                 }
                 _append_or_group_event(ev=ev, notifications=notifications, append_event=append_event)
         prev_build_statuses[job_name] = curr

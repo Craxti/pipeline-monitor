@@ -163,7 +163,7 @@ async def api_trends(days: int = 14):
 
 
 @router.get("/api/trends/history-summary", response_class=JSONResponse)
-async def api_trends_history_summary(days: int = 30):
+async def api_trends_history_summary(days: int = 30, source: str = "", instance: str = ""):
     """Return aggregated history KPIs for trends dashboard."""
 
     def _mem_get(key: str):
@@ -181,7 +181,7 @@ async def api_trends_history_summary(days: int = 30):
             ttl_seconds=rt.mem_cache_rt.ttl_seconds,
         )
 
-    cache_key = f"trends:hist:{days}:{rt.revision_rt.revision}"
+    cache_key = f"trends:hist:{days}:{source}:{instance}:{rt.revision_rt.revision}"
     cached = _mem_get(cache_key)
     if cached is not None:
         return JSONResponse(content=cached)
@@ -192,6 +192,8 @@ async def api_trends_history_summary(days: int = 30):
         days,
         trends_compute=lambda d: trends_uptime.trends_compute(d, history_path=None),
         event_feed_load=lambda lim: event_feed_api.load(limit=lim),
+        source_filter=source,
+        instance_filter=instance,
     )
     _mem_set(cache_key, payload)
     return JSONResponse(content=payload)

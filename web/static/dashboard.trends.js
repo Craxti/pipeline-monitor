@@ -12,6 +12,25 @@ let _trendsTopN = 10;
 let _trendsSource = '';
 let _trendsTopTestSource = '';
 let _trendsInstSel = { builds: '', tests: '', top: '' };
+let _trendsInstanceAll = '';
+
+function _activeTrendsSource() {
+  return (_trendsSource || '').trim().toLowerCase();
+}
+
+function _activeTrendsInstance() {
+  const globalInst = (_trendsInstanceAll || '').trim();
+  if (globalInst) return globalInst;
+  const pick = (id) => (document.getElementById(id)?.value || '').trim();
+  // If user changes instance in local Trends blocks, KPI cards should follow too.
+  return pick('trends-inst-top') || pick('trends-inst-builds') || pick('trends-inst-tests') || '';
+}
+
+function _sourceFromInstanceKey(v) {
+  const s = String(v || '').trim();
+  if (!s.includes('|')) return '';
+  return s.split('|', 1)[0].trim().toLowerCase();
+}
 
 async function loadTrendsHistorySummary(days) {
   const crashEl = document.getElementById('tr-kpi-crash');
@@ -20,7 +39,11 @@ async function loadTrendsHistorySummary(days) {
   const jobsEl = document.getElementById('tr-kpi-jobs');
   if (!crashEl || !recEl || !jobsEl) return;
   try {
-    const res = await fetch(apiUrl(`api/trends/history-summary?days=${days}`)).catch(() => null);
+    const activeInst = _activeTrendsInstance();
+    const srcFromInst = _sourceFromInstanceKey(activeInst);
+    const src = encodeURIComponent((_activeTrendsSource() || srcFromInst || '').trim().toLowerCase());
+    const inst = encodeURIComponent(activeInst);
+    const res = await fetch(apiUrl(`api/trends/history-summary?days=${days}&source=${src}&instance=${inst}`)).catch(() => null);
     if (!res || !res.ok) return;
     const p = await res.json();
     const crash = typeof p.crash_frequency_per_day === 'number' ? p.crash_frequency_per_day : null;
@@ -57,6 +80,7 @@ async function loadTrendsHistorySummary(days) {
 
 async function populateTrendsInstanceFilters() {
   const ids = {
+    all: 'trends-instance-all',
     builds: 'trends-inst-builds',
     tests: 'trends-inst-tests',
     top: 'trends-inst-top',
@@ -67,7 +91,8 @@ async function populateTrendsInstanceFilters() {
     if (res && res.ok) items = (await res.json()) || [];
   } catch { /* ignore */ }
 
-  const opts = [{ value: '', label: 'All instances' }];
+  const allInstancesLabel = (typeof t === 'function') ? t('dash.collect_logs_all_instances') : 'All instances';
+  const opts = [{ value: '', label: allInstancesLabel }];
   (items || []).forEach((it) => {
     const src = String(it.source || '').toLowerCase();
     const name = String(it.name || '').trim();
@@ -83,6 +108,35 @@ async function populateTrendsInstanceFilters() {
     if (saved && opts.some((o) => o.value === saved)) sel.value = saved;
     sel.addEventListener('change', () => {
       try { localStorage.setItem('cimon-trends-inst-' + k, sel.value || ''); } catch { /* ignore */ }
+      if (k === 'all') {
+        _trendsInstanceAll = (sel.value || '').trim();
+        const srcFromInst = _sourceFromInstanceKey(_trendsInstanceAll);
+        if (srcFromInst) {
+          _trendsSource = srcFromInst;
+          const srcEl = document.getElementById('trends-source');
+          if (srcEl) srcEl.value = srcFromInst;
+          try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
+        }
+        ['builds', 'tests', 'top'].forEach((sub) => {
+          const child = document.getElementById(ids[sub]);
+          if (!child) return;
+          if (_trendsInstanceAll && opts.some((o) => o.value === _trendsInstanceAll)) child.value = _trendsInstanceAll;
+          try { localStorage.setItem('cimon-trends-inst-' + sub, child.value || ''); } catch { /* ignore */ }
+        });
+      } else if (!_trendsInstanceAll) {
+        _trendsInstSel[k] = (sel.value || '').trim();
+        const srcFromLocal = _sourceFromInstanceKey(_trendsInstSel[k]);
+        if (srcFromLocal) {
+          _trendsSource = srcFromLocal;
+          const srcEl = document.getElementById('trends-source');
+          if (srcEl) srcEl.value = srcFromLocal;
+          try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
+        }
+      }
+      if (_trendsRawCache && _trendsRawCache.length) {
+        renderTrendsFromCache();
+        void loadTrendsHistorySummary(_trendsViewDays);
+      }
     }, { passive: true });
   });
 }
@@ -694,7 +748,7 @@ function getTrendsViewData() {
     view = view.slice(-n);
   }
 
-  const src = (_trendsSource || '').trim().toLowerCase();
+  const src = _activeTrendsSource();
   if (!src) return view;
 
   // Override totals used by default charts using per-source breakdowns (if present in history).
@@ -707,11 +761,11 @@ function getTrendsViewData() {
       : null;
     return {
       ...be,
-      builds_total: bsrc && typeof bsrc.total === 'number' ? bsrc.total : be.builds_total,
-      builds_failed: bsrc && typeof bsrc.failed === 'number' ? bsrc.failed : be.builds_failed,
-      tests_total: tsrc && typeof tsrc.total === 'number' ? tsrc.total : be.tests_total,
-      tests_failed: tsrc && typeof tsrc.failed === 'number' ? tsrc.failed : be.tests_failed,
-      top_test_failures: Array.isArray(topBySrc) ? topBySrc : be.top_test_failures,
+      builds_total: bsrc && typeof bsrc.total === 'number' ? bsrc.total : 0,
+      builds_failed: bsrc && typeof bsrc.failed === 'number' ? bsrc.failed : 0,
+      tests_total: tsrc && typeof tsrc.total === 'number' ? tsrc.total : 0,
+      tests_failed: tsrc && typeof tsrc.failed === 'number' ? tsrc.failed : 0,
+      top_test_failures: Array.isArray(topBySrc) ? topBySrc : [],
     };
   });
 }
@@ -738,8 +792,20 @@ function onTrendsTopNChange(el) {
 
 function onTrendsSourceChange(el) {
   _trendsSource = el && typeof el.value === 'string' ? el.value.trim().toLowerCase() : '';
+  if (_trendsInstanceAll) {
+    const instSrc = _sourceFromInstanceKey(_trendsInstanceAll);
+    if (_trendsSource && instSrc && _trendsSource !== instSrc) {
+      _trendsInstanceAll = '';
+      const allEl = document.getElementById('trends-instance-all');
+      if (allEl) allEl.value = '';
+      try { localStorage.setItem('cimon-trends-inst-all', ''); } catch { /* ignore */ }
+    }
+  }
   try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
-  if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
+  if (_trendsRawCache && _trendsRawCache.length) {
+    renderTrendsFromCache();
+    void loadTrendsHistorySummary(_trendsViewDays);
+  }
 }
 
 function onTrendsTopTestSourceChange(el) {
@@ -809,6 +875,8 @@ function initTrendsFiltersFromStorage() {
   if (Number.isFinite(ttn) && ttn >= 3 && ttn <= 100) _trendsTopN = ttn;
   const elTn = document.getElementById('trends-topn');
   if (elTn && 'value' in elTn) elTn.value = String(_trendsTopN);
+  const allInstSaved = (localStorage.getItem('cimon-trends-inst-all') || '').trim();
+  if (allInstSaved) _trendsInstanceAll = allInstSaved;
   const elSvKind = document.getElementById('trends-inst-svcs');
   const tsk = (localStorage.getItem('cimon-trends-inst-svcs') || '').trim();
   if (elSvKind && ['', 'docker', 'http', 'other'].includes(tsk)) elSvKind.value = tsk;
@@ -853,19 +921,21 @@ function renderTrendsChartsFromData(data) {
   const cOk = _cssVar('--st-success');
 
   const getInstVal = (id) => (document.getElementById(id)?.value || '').trim();
-  const instBuilds = getInstVal('trends-inst-builds');
-  const instTests = getInstVal('trends-inst-tests');
-  const instTop = getInstVal('trends-inst-top');
+  const globalInst = getInstVal('trends-instance-all');
+  _trendsInstanceAll = globalInst;
+  const instBuilds = globalInst || getInstVal('trends-inst-builds');
+  const instTests = globalInst || getInstVal('trends-inst-tests');
+  const instTop = globalInst || getInstVal('trends-inst-top');
 
   const buildTotals = data.map((d) => {
     if (!instBuilds) return d.builds_total;
     const m = d.builds_by_instance && d.builds_by_instance[instBuilds];
-    return m && typeof m.total === 'number' ? m.total : d.builds_total;
+    return m && typeof m.total === 'number' ? m.total : 0;
   });
   const buildFails = data.map((d) => {
     if (!instBuilds) return d.builds_failed;
     const m = d.builds_by_instance && d.builds_by_instance[instBuilds];
-    return m && typeof m.failed === 'number' ? m.failed : d.builds_failed;
+    return m && typeof m.failed === 'number' ? m.failed : 0;
   });
   const cBuilds = _mkLine('chart-builds', labels, [
     { label: t('dash.chart_total'), data: sl(buildTotals), borderColor: cInfo, backgroundColor: _hexToRgba(cInfo, 0.12), tension: 0.3, fill: true },
@@ -877,12 +947,12 @@ function renderTrendsChartsFromData(data) {
   const testTotalsLine = data.map((d) => {
     if (!wantTestSrc) return d.tests_total;
     const m = d.tests_by_source && d.tests_by_source[wantTestSrc];
-    return m && typeof m.total === 'number' ? m.total : d.tests_total;
+    return m && typeof m.total === 'number' ? m.total : 0;
   });
   const testFailsLine = data.map((d) => {
     if (!wantTestSrc) return d.tests_failed;
     const m = d.tests_by_source && d.tests_by_source[wantTestSrc];
-    return m && typeof m.failed === 'number' ? m.failed : d.tests_failed;
+    return m && typeof m.failed === 'number' ? m.failed : 0;
   });
   const cTests = _mkLine('chart-tests', labels, [
     { label: t('dash.chart_total'), data: sl(testTotalsLine), borderColor: cOk, backgroundColor: _hexToRgba(cOk, 0.12), tension: 0.3, fill: true },
