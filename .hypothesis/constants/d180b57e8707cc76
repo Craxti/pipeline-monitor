@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\instances_health_endpoint.py
+# hypothesis_version: 6.141.1
+
+['instances', 'last_collected_at']

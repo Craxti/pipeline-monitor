@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\docker_collect.py
+# hypothesis_version: 6.141.1
+
+[1000, 'Docker / HTTP', 'Docker monitor', 'Running checks…', 'containers', 'docker', 'docker_monitor', 'enabled', 'error', 'http_checks', 'kind', 'latency_ms', 'name', 'ok', 'show_all_containers', 'timeout_seconds']

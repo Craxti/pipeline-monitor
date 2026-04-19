@@ -17,3 +17,4 @@ lxml>=5.1.0
 openpyxl>=3.1.0
 openai>=1.59.0
 markdown>=3.5
+hypothesis>=6.92.0

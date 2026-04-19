@@ -1,85 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-const badge = (s) => {
-  s = (s||'').toLowerCase();
-  const cls = ['success','passed','up'].includes(s) ? 'b-ok'
-    : ['failure','failed','error','down'].includes(s) ? 'b-fail'
-    : ['unstable','degraded','skipped'].includes(s) ? 'b-warn'
-    : ['running','pending'].includes(s) ? 'b-info'
-    : 'b-dim';
-  const code = ['success','passed','up'].includes(s) ? 'OK'
-    : ['failure','failed','error','down'].includes(s) ? 'FAIL'
-    : ['unstable','degraded','skipped'].includes(s) ? '~'
-    : ['running','pending'].includes(s) ? '…'
-    : '·';
-  return `<span class="b ${cls}" role="status" data-status="${_svgTitleAttr(s)}"><span class="b-code" aria-hidden="true">${code}</span>${esc(s)}</span>`;
-};
-const fmt = (v) => {
-  if (!v) return '—';
-  try {
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return String(v).replace('T', ' ').slice(0, 16);
-    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
-  } catch { return '—'; }
-};
-function fmtUtcIso(v) {
-  if (!v) return '—';
-  try {
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return String(v).slice(0, 19);
-    return d.toISOString().replace('T', ' ').slice(0, 19) + ' ' + t('time.utc_suffix');
-  } catch { return '—'; }
-}
-const dur = (s) => {
-  if (s == null || Number.isNaN(Number(s))) return '—';
-  const x = Number(s);
-  if (x < 60) return `${Math.round(x)}s`;
-  return `${Math.floor(x / 60)}m ${Math.round(x % 60)}s`;
-};
-// Escaping helpers:
-// - esc(): safe for HTML text nodes (also safe-ish in attributes; use _svgTitleAttr for title="" specifically)
-// Note: we escape quotes too because this project often interpolates values into HTML attributes.
-const esc  = s => s == null ? '—' : String(s)
-  .replace(/&/g,'&amp;')
-  .replace(/</g,'&lt;')
-  .replace(/>/g,'&gt;')
-  .replace(/"/g,'&quot;')
-  .replace(/'/g,'&#39;');
-
-function safeUrl(u) {
-  // Allow only http(s) URLs; otherwise return empty string.
-  try {
-    const s = String(u || '').trim();
-    if (!s) return '';
-    const x = new URL(s, window.location.origin);
-    if (x.protocol !== 'http:' && x.protocol !== 'https:') return '';
-    return x.href;
-  } catch {
-    return '';
-  }
-}
-const fmtSec = s => s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
-
-function _cssVar(name) {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || '#94a3b8';
-}
-function _hexToRgba(hex, a) {
-  const h = (hex || '').replace('#', '');
-  if (h.length !== 6) return `rgba(148,163,184,${a})`;
-  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
-}
-function _statusColorHex(status) {
-  const k = String(status || '').toLowerCase();
-  const map = {
-    success: '--st-success', failure: '--st-failure', running: '--st-running', unstable: '--st-unstable',
-    aborted: '--st-unknown', passed: '--st-success', failed: '--st-failure', error: '--st-failure',
-    down: '--st-failure', up: '--st-success', degraded: '--st-unstable', skipped: '--st-unknown',
-  };
-  return _cssVar(map[k] || '--st-unknown');
-}
-
+// Split from dashboard.helpers.js — preserve script order in web/templates/index.html
 function _setCollectLines(main, sub) {
   const m = document.getElementById('collect-line-main');
   const s = document.getElementById('collect-line-sub');
@@ -125,16 +44,6 @@ function emptyStateActionsHtml() {
     <a href="settings" class="btn btn-ghost">${esc(t('dash.settings'))}</a>
   </div>`;
 }
-
-/** API URL относительно текущей страницы (работает за nginx с префиксом /monitor/ и т.п.; не используйте ведущий /api). */
-function apiUrl(path) {
-  const p = path.startsWith('/') ? path.slice(1) : path;
-  const base = window.location.origin + window.location.pathname;
-  return new URL(p, base).href;
-}
-
-/** Per-job analytics from /api/meta (for starred rows). */
-let _jobAnalytics = {};
 
 function _fmtBuildContext(analytics) {
   const a = analytics || {};
@@ -260,13 +169,6 @@ function initEventSource() {
   } catch { /* ignore */ }
 }
 
-let _lastSit = { failB: 0, failT: 0, downS: 0 };
-let _uptimeData = {}; // service name → [{date, status}]
-let _lastBuildsForIc = [];
-let _lastIncidentReasons = [];
-let _lastIcReasonFacts = null;
-let _lastIncidentSeverity = 'ok';
-
 function icReasonLines() {
   const f = _lastIcReasonFacts;
   if (!f) return [];
@@ -321,54 +223,6 @@ function refreshIncidentReasonsI18n() {
   }
   const rb = document.getElementById('runbook-modal');
   if (rb && rb.classList.contains('open')) refreshRunbookModalBody();
-}
-
-let _collectAutoRefreshTs = 0;
-let _collectLogsOffset = 0;
-let _collectLogsTotal = 0;
-let _collectLogsPollTs = 0;
-let _collectLogsWarn = 0;
-let _collectLogsErr = 0;
-let _collectLogsInstances = new Set();
-let _collectLogsLastCollectId = '';
-let _collectLogsSlowPollTs = 0;
-
-const DASH_TABS = ['overview', 'builds', 'tests', 'services', 'trends', 'incidents', 'logs'];
-let _dashTab = 'overview';
-
-function setDashboardTab(name, opts) {
-  opts = opts || {};
-  const skipUrl = opts.skipUrl;
-  const skipStore = opts.skipStore;
-  if (!DASH_TABS.includes(name)) name = 'overview';
-  _dashTab = name;
-  DASH_TABS.forEach((id) => {
-    const panel = document.getElementById('tab-panel-' + id);
-    if (panel) panel.hidden = (id !== name);
-  });
-  document.querySelectorAll('#dash-page-tabs .dash-tab').forEach((btn) => {
-    const sel = btn.dataset.tab === name;
-    btn.setAttribute('aria-selected', sel ? 'true' : 'false');
-    btn.classList.toggle('active', sel);
-  });
-  try {
-    if (!skipStore) localStorage.setItem('cimon-dash-tab', name);
-  } catch { /* ignore */ }
-  if (!skipUrl) _writeURLFilters();
-  if (name === 'trends') {
-    requestAnimationFrame(() => { _trendsCharts.forEach((c) => c && c.resize()); });
-  }
-  // Prevent stale panel requests from overriding current UI.
-  if (name !== 'builds') abortFetchKey('builds');
-  if (name !== 'tests') abortFetchKey('tests');
-  if (name !== 'tests') abortFetchKey('failures');
-  if (name !== 'services') abortFetchKey('services');
-  if (name !== 'trends') abortFetchKey('trends');
-}
-
-function goToInTab(tab, elId) {
-  setDashboardTab(tab);
-  requestAnimationFrame(() => document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth' }));
 }
 
 function _openAiChatAndSendPrompt(prompt) {
@@ -1064,7 +918,6 @@ function icOpenFirstFailureLog() {
   }
 }
 
-let _backTopInit = false;
 function initBackToTop() {
   const btn = document.getElementById('btn-back-top');
   if (!btn) return;
@@ -1234,23 +1087,3 @@ function _finalizeStatTrends() {
   });
   sessionStorage.setItem('cimon-stat-snap', JSON.stringify(cur));
 }
-
-function _svgTitleAttr(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-// Debounce factory (returns the same debounced fn each call via closure map)
-const _debMap = new Map();
-function debounce(fn, ms) {
-  if (!_debMap.has(fn)) {
-    let t;
-    _debMap.set(fn, (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); });
-  }
-  return _debMap.get(fn);
-}
-

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\local_parsers.py
+# hypothesis_version: 6.141.1
+
+['allure_json_dirs', 'parsers', 'pytest_xml_dirs']

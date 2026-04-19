@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\auth.py
+# hypothesis_version: 6.141.1
+
+[401, 'Authorization', 'CICD_MON_API_TOKEN', 'Unauthorized', 'X-API-Token', 'api_token', 'bearer ', 'web']

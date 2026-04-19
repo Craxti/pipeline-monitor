@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\models\models.py
+# hypothesis_version: 6.141.1
+
+['aborted', 'degraded', 'docker | http', 'down', 'err', 'error', 'fail', 'failed', 'failure', 'healthy', 'offline', 'ok', 'pass', 'passed', 'pend', 'pending', 'running', 'skip', 'skipped', 'stopped', 'success', 'unhealthy', 'unknown', 'unstable', 'up', 'use_enum_values', 'value', 'warn', 'warning', 'xfail', 'xfailed', 'xpass', 'xpassed']

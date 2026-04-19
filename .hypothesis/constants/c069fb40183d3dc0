@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\merge.py
+# hypothesis_version: 6.141.1
+
+['build_number', 'builds', 'source_instance', 'started_at']

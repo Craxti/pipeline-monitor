@@ -7,6 +7,61 @@
 let _mapVisible = true;
 let _mapTooltipTimer = null;
 
+function _mapFilterConfig() {
+  const q = (document.getElementById('map-q')?.value || '').trim().toLowerCase();
+  const onlyCritical = !!document.getElementById('map-only-critical')?.checked;
+  return {
+    q,
+    onlyCritical,
+    statuses: {
+      failure: !!document.getElementById('map-st-failure')?.checked,
+      running: !!document.getElementById('map-st-running')?.checked,
+      unstable: !!document.getElementById('map-st-unstable')?.checked,
+      success: !!document.getElementById('map-st-success')?.checked,
+      unknown: !!document.getElementById('map-st-unknown')?.checked,
+    },
+  };
+}
+
+function _mapBuildStatusBucket(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'failure') return 'failure';
+  if (s === 'running') return 'running';
+  if (s === 'unstable') return 'unstable';
+  if (s === 'success') return 'success';
+  return 'unknown';
+}
+
+function _mapServiceStatusBucket(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'down') return 'failure';
+  if (s === 'degraded') return 'unstable';
+  if (s === 'up') return 'success';
+  return 'unknown';
+}
+
+function _mapTextMatches(q, parts) {
+  if (!q) return true;
+  return parts.some((p) => String(p || '').toLowerCase().includes(q));
+}
+
+function clearMapFilters() {
+  const mapQ = document.getElementById('map-q');
+  if (mapQ) mapQ.value = '';
+  const critical = document.getElementById('map-only-critical');
+  if (critical) critical.checked = false;
+  ['map-st-failure', 'map-st-running', 'map-st-unstable', 'map-st-success', 'map-st-unknown'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.checked = true;
+  });
+  renderStatusMapFromState();
+}
+
+function renderStatusMapFromState() {
+  const snap = _lastSnap || {};
+  renderStatusMap(snap.builds || [], snap.services || []);
+}
+
 function toggleMapPanel() {
   _mapVisible = !_mapVisible;
   const body = document.getElementById('map-body');
@@ -24,9 +79,24 @@ function renderStatusMap(builds, services) {
   const STATUS_CLS = { success:'mc-ok', failure:'mc-fail', running:'mc-run', unstable:'mc-warn', aborted:'mc-unknown', unknown:'mc-unknown' };
   const SVC_CLS   = { up:'mc-ok', down:'mc-fail', degraded:'mc-warn' };
 
+  const mf = _mapFilterConfig();
+
+  const mapBuilds = (Array.isArray(builds) ? builds : []).filter((b) => {
+    const bucket = _mapBuildStatusBucket(b && b.status);
+    if (!mf.statuses[bucket]) return false;
+    if (mf.onlyCritical && !(b && b.critical)) return false;
+    return _mapTextMatches(mf.q, [b && b.job_name, b && b.source, b && b.instance, b && b.branch, b && b.status]);
+  });
+
+  const mapServices = (Array.isArray(services) ? services : []).filter((sv) => {
+    const bucket = _mapServiceStatusBucket(sv && sv.status);
+    if (!mf.statuses[bucket]) return false;
+    return _mapTextMatches(mf.q, [sv && sv.kind, sv && sv.name, sv && sv.status, sv && sv.detail]);
+  });
+
   // Latest build per job+instance (most recent first)
   const jobLatest = {};
-  builds.forEach(b => {
+  mapBuilds.forEach(b => {
     const key = `${b.source || ''}||${b.instance || ''}||${b.job_name || ''}`;
     const prev = jobLatest[key];
     if (!prev || (b.started_at || '') > (prev.started_at || '')) jobLatest[key] = b;
@@ -71,7 +141,7 @@ function renderStatusMap(builds, services) {
     html += `</div></div>`;
   });
 
-  services.forEach(sv => {
+  mapServices.forEach(sv => {
     const cls = (SVC_CLS[sv.status] || 'mc-unknown') + ' mc-svc';
     // Services are global — append as one trailing group for clarity.
     // If there are no job groups, this still renders.
@@ -92,7 +162,7 @@ function renderStatusMap(builds, services) {
       data-detail="${_escHtml(sv.detail || '')}"
       data-svc="${_escHtml(sv.name || '')}"></div>`;
   });
-  if (services.length) html += `</div></div>`;
+  if (mapServices.length) html += `</div></div>`;
 
   grid.innerHTML = html;
 
@@ -115,8 +185,8 @@ function renderStatusMap(builds, services) {
     else if (cell.dataset.svc) goToInTab('services', 'panel-svcs');
   };
 
-  const total = sortedJobs.length + services.length;
-  if (count) count.textContent = `${sortedJobs.length} jobs · ${services.length} svcs`;
+  const total = sortedJobs.length + mapServices.length;
+  if (count) count.textContent = `${sortedJobs.length} jobs · ${mapServices.length} svcs`;
   if (panel && total > 0) panel.style.display = '';
 }
 

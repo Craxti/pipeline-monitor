@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\notifications.py
+# hypothesis_version: 6.141.1
+
+['/?tab=incidents', 'Incident detected', 'build_fail', 'build_recovered', 'critical', 'degraded', 'detail', 'down', 'error', 'failed', 'failure', 'id', 'incident', 'job_name', 'kind', 'level', 'name', 'ok', 'status', 'status_normalized', 'success', 'svc_down', 'svc_recovered', 'title', 'ts', 'unstable', 'up', 'url', 'value', 'warn']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\event_feed.py
+# hypothesis_version: 6.141.1
+
+[300, 500, 'critical', 'data', 'detail', 'event_feed.json', 'id', 'kind', 'level', 'title', 'ts', 'url', 'utf-8']

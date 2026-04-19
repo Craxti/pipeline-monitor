@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\sources_endpoints.py
+# hypothesis_version: 6.141.1
+
+['enabled', 'gitlab', 'gitlab_instances', 'jenkins', 'jenkins_instances', 'url']

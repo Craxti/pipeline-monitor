@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\actions_endpoints.py
+# hypothesis_version: 6.141.1
+
+[400, 500, 'Docker %s failed: %s', 'action', 'container_name', 'instance_url', 'job_name', 'job_name is required', 'main', 'project_id', 'ref', 'restart', 'start', 'stop']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\synth_tests.py
+# hypothesis_version: 6.141.1
+
+['aborted', 'failed', 'failure', 'jenkins_build', 'passed', 'skipped', 'source_instance', 'success', 'unstable']

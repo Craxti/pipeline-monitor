@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\chat.py
+# hypothesis_version: 6.141.1
+
+['/api/chat', '/api/chat/status', '/api/proxy-check', 'chat']

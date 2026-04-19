@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\webhooks.py
+# hypothesis_version: 6.141.1
+
+['Build record added.', 'build_number', 'critical', 'job', 'message', 'ok', 'source', 'source_instance', 'status', 'trigger_collect', 'unknown', 'url', 'webhook']

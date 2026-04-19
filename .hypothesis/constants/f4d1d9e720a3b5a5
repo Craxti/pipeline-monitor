@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_tasks.py
+# hypothesis_version: 6.141.1
+
+['asyncio.Future[None]']

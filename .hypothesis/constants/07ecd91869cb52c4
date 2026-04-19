@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\app.py
+# hypothesis_version: 6.141.1
+
+['_collect_loop', '_do_collect', '_run_collect_sync', 'app', 'db_stats', 'init_db', 'maybe_save_partial', 'save_snapshot', 'templates']

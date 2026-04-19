@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\clients\base.py
+# hypothesis_version: 6.141.1
+
+[0.5, 240, 500, 502, 503, '/', 'GET %s failed: %s', 'content-type', 'http://', 'https://', 'verify']

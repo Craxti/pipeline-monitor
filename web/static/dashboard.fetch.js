@@ -1,5 +1,5 @@
 // fetchKeyed / FETCH_ABORTED / abortFetchKey — split from dashboard.js.
-// Load after dashboard.helpers.js, before dashboard.js (trends + dashboard panels depend on these).
+// Load after dashboard.helpers.*.js, before dashboard.js (trends + dashboard panels depend on these).
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fetch helpers (AbortController + simple dedupe)

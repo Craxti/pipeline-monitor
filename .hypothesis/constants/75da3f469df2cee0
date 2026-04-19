@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\settings.py
+# hypothesis_version: 6.141.1
+
+[300, '/api/settings', '/api/settings/public', '/api/settings/reveal', '/settings', 'interval_seconds', 'settings', 'task']

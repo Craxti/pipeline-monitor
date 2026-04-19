@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\trends.py
+# hypothesis_version: 6.141.1
+
+['%Y-%m-%d', 'builds_by_instance', 'builds_by_source', 'builds_failed', 'builds_total', 'data', 'date', 'docker', 'down', 'error', 'failed', 'failure', 'gitlab', 'http', 'jenkins', 'job_failures', 'job_totals', 'kind', 'other', 'service_health', 'services_down', 'source', 'status_normalized', 'test_name', 'tests_by_source', 'tests_failed', 'tests_total', 'top_test_failures', 'total', 'trends.json', 'ts', 'unknown', 'unstable', 'utf-8']

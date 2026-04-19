@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\settings_secrets.py
+# hypothesis_version: 6.141.1
+
+['api_key', 'bot_token', 'password', 'private_token', 'secret', 'token', 'username', '••••••••']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\clients\gitlab_client.py
+# hypothesis_version: 6.141.1
+
+[100, '+00:00', '/', 'PRIVATE-TOKEN', 'Z', 'canceled', 'created_at', 'critical', 'failed', 'gitlab', 'id', 'main', 'manual', 'name', 'ok', 'path_with_namespace', 'pending', 'pipeline_id', 'ref', 'running', 'sha', 'skipped', 'stage', 'status', 'success', 'updated_at', 'web_url']
