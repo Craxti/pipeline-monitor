@@ -371,6 +371,60 @@ function goToInTab(tab, elId) {
   requestAnimationFrame(() => document.getElementById(elId)?.scrollIntoView({ behavior: 'smooth' }));
 }
 
+function _openAiChatAndSendPrompt(prompt) {
+  const text = String(prompt || '').trim();
+  if (!text) return;
+
+  const panel = document.getElementById('ai-chat-panel');
+  const fab = document.getElementById('ai-chat-fab');
+  const icon = document.getElementById('fab-icon');
+  if (!panel) return;
+
+  const tryOnce = () => {
+    // Prefer official open/close logic if available.
+    try {
+      if (typeof window.toggleChat === 'function' && !panel.classList.contains('open')) {
+        window.toggleChat();
+      }
+    } catch { /* ignore */ }
+
+    // Ensure panel is open even if toggleChat is unavailable or FAB hidden.
+    try {
+      panel.classList.add('open');
+      panel.style.display = 'flex';
+      if (fab) {
+        fab.classList.add('has-panel');
+        // If chat is not configured, FAB stays hidden by initChat(). Still show it so user can close.
+        if (fab.style && fab.style.display === 'none') fab.style.display = 'flex';
+      }
+      if (icon) icon.innerHTML = '&times;';
+    } catch { /* ignore */ }
+
+    const input = document.getElementById('chat-input');
+    if (!input) return false;
+
+    try {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch { /* ignore */ }
+
+    const sendFn = (window && window.sendChat) ? window.sendChat : (typeof sendChat === 'function' ? sendChat : null);
+    if (typeof sendFn === 'function') {
+      try { sendFn(); } catch { /* ignore */ }
+      return true;
+    }
+
+    try { input.focus(); } catch { /* ignore */ }
+    return true;
+  };
+
+  // Retry a few times to avoid race with tab switch, deferred script load, or slow initChat().
+  if (tryOnce()) return;
+  setTimeout(tryOnce, 120);
+  setTimeout(tryOnce, 350);
+  setTimeout(tryOnce, 900);
+}
+
 function runbookFocusBuildFailures() {
   goToInTab('builds', 'panel-builds');
   const el = document.getElementById('f-bstatus');
@@ -386,15 +440,10 @@ function runbookFocusTestFailures() {
 
   // Open AI assistant and seed a troubleshooting prompt.
   try {
-    const panel = document.getElementById('ai-chat-panel');
-    if (panel && !panel.classList.contains('open') && typeof window.toggleChat === 'function') {
-      window.toggleChat();
-    }
-    const input = document.getElementById('chat-input');
-    if (input) {
-      input.value = 'Разобрать упавшие тесты: дай план диагностики, выдели топ причин и что проверить в первую очередь.';
-      if (typeof window.sendChat === 'function') window.sendChat();
-    }
+    // Give the tab switch a moment to settle.
+    setTimeout(() => {
+      _openAiChatAndSendPrompt('Разобрать упавшие тесты: дай план диагностики, выдели топ причин и что проверить в первую очередь.');
+    }, 60);
   } catch { /* ignore */ }
 }
 
