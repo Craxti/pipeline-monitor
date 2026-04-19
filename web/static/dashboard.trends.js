@@ -13,6 +13,48 @@ let _trendsSource = '';
 let _trendsTopTestSource = '';
 let _trendsInstSel = { builds: '', tests: '', top: '' };
 
+async function loadTrendsHistorySummary(days) {
+  const crashEl = document.getElementById('tr-kpi-crash');
+  const recEl = document.getElementById('tr-kpi-recovery');
+  const recSubEl = document.getElementById('tr-kpi-recovery-sub');
+  const jobsEl = document.getElementById('tr-kpi-jobs');
+  if (!crashEl || !recEl || !jobsEl) return;
+  try {
+    const res = await fetch(apiUrl(`api/trends/history-summary?days=${days}`)).catch(() => null);
+    if (!res || !res.ok) return;
+    const p = await res.json();
+    const crash = typeof p.crash_frequency_per_day === 'number' ? p.crash_frequency_per_day : null;
+    crashEl.textContent = crash == null ? '—' : `${crash.toFixed(2)}`;
+
+    const avgRec = typeof p.avg_recovery_minutes === 'number' ? p.avg_recovery_minutes : null;
+    recEl.textContent = avgRec == null ? '—' : `${avgRec.toFixed(1)}m`;
+    const samples = Number.isFinite(Number(p.recovery_samples)) ? Number(p.recovery_samples) : 0;
+    if (recSubEl) {
+      recSubEl.textContent = samples > 0
+        ? tf('dash.trend_kpi_recovery_samples', { n: samples })
+        : t('dash.trend_kpi_recovery_none');
+    }
+
+    const jobs = Array.isArray(p.most_problematic_jobs) ? p.most_problematic_jobs : [];
+    if (!jobs.length) {
+      jobsEl.innerHTML = `<div class="tr-kpi-sub">${esc(t('dash.trend_kpi_problem_jobs_none'))}</div>`;
+      return;
+    }
+    jobsEl.innerHTML = jobs
+      .slice(0, 5)
+      .map((j) => {
+        const name = esc(j.job_name || '—');
+        const failed = Number.isFinite(Number(j.failed)) ? Number(j.failed) : 0;
+        const total = Number.isFinite(Number(j.total)) ? Number(j.total) : 0;
+        const pct = Number.isFinite(Number(j.fail_rate_pct)) ? Number(j.fail_rate_pct).toFixed(1) : '0.0';
+        return `<div class="tr-kpi-job"><span>${name}</span><span class="muted">${failed}/${total} (${pct}%)</span></div>`;
+      })
+      .join('');
+  } catch {
+    // Keep existing placeholders on failure.
+  }
+}
+
 async function populateTrendsInstanceFilters() {
   const ids = {
     builds: 'trends-inst-builds',
@@ -957,5 +999,6 @@ async function loadTrends(days, btn) {
     errEl.innerHTML = '';
   }
   renderTrendsChartsFromData(getTrendsViewData());
+  loadTrendsHistorySummary(_trendsApiDaysFetch());
 }
 

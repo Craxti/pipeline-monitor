@@ -994,6 +994,44 @@ textarea:focus-visible,
   border: 1px solid var(--shell-line);
 }
 
+/* ── App watermark (bottom-left) ─────────────────────────────────────────── */
+.app-watermark {
+  position: fixed;
+  left: 0.9rem;
+  bottom: 0.85rem;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--shell-line);
+  background: rgba(12, 17, 28, 0.7);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-watermark img {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 0.2rem;
+}
+
+.app-watermark:hover {
+  color: var(--text);
+  border-color: var(--info);
+}
+
+html.light .app-watermark {
+  background: rgba(255, 255, 255, 0.78);
+}
+
 /* ── Reduced motion ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

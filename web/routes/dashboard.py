@@ -162,6 +162,41 @@ async def api_trends(days: int = 14):
     )
 
 
+@router.get("/api/trends/history-summary", response_class=JSONResponse)
+async def api_trends_history_summary(days: int = 30):
+    """Return aggregated history KPIs for trends dashboard."""
+
+    def _mem_get(key: str):
+        from web.services import mem_cache
+
+        return mem_cache.mem_cache_get(rt.mem_cache_rt.store, key)
+
+    def _mem_set(key: str, val):
+        from web.services import mem_cache
+
+        return mem_cache.mem_cache_set(
+            rt.mem_cache_rt.store,
+            key,
+            val,
+            ttl_seconds=rt.mem_cache_rt.ttl_seconds,
+        )
+
+    cache_key = f"trends:hist:{days}:{rt.revision_rt.revision}"
+    cached = _mem_get(cache_key)
+    if cached is not None:
+        return JSONResponse(content=cached)
+
+    from web.services import event_feed_api
+
+    payload = trends_uptime.trends_history_summary(
+        days,
+        trends_compute=lambda d: trends_uptime.trends_compute(d, history_path=None),
+        event_feed_load=lambda lim: event_feed_api.load(limit=lim),
+    )
+    _mem_set(cache_key, payload)
+    return JSONResponse(content=payload)
+
+
 @router.get("/api/uptime", response_class=JSONResponse)
 async def api_uptime(days: int = 30):
     """Return uptime payload."""
