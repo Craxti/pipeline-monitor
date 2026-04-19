@@ -47,6 +47,10 @@ coverage/
 .DS_Store
 .AppleDouble
 .LSOverride
+.pytest_cache
+.ruff_cache
+.hypothesis
+.coverage
 
 # Windows
 Thumbs.db
