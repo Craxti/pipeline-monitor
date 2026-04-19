@@ -382,7 +382,6 @@ Note: the webhook is protected by the shared token if `CICD_MON_API_TOKEN` / `we
 
 **Windows Task Scheduler** (or `.bat`):
 ```bat
-cd /d D:\prooftech\proj\pipeline-monitor
 py ci_monitor.py collect --format all --notify
 ```
 
