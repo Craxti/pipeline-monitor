@@ -27,7 +27,7 @@
 <script src="/static/dashboard.flaky.js?v=20260417i" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
 <script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
-<script src="/static/dashboard.collect-bar.js?v=20260417k" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260419a" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
 <script src="/static/dashboard.trends.js?v=20260417i" defer></script>
 <script src="/static/dashboard.actions.js?v=20260417i" defer></script>
@@ -374,6 +374,14 @@
       <button type="button" class="time-filter-btn" id="tf-f-3d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[3]" data-i18n-title="dash.tf_3d" title="">3d</button>
       <button type="button" class="time-filter-btn" id="tf-f-7d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[7]" data-i18n-title="dash.tf_7d" title="">7d</button>
       <button type="button" class="time-filter-btn" id="tf-f-30d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[30]" data-i18n-title="dash.tf_30d" title="">30d</button>
+      <select class="f-select" id="f-fsource" title="Test source">
+        <option value="real" selected>Real (Allure+Console)</option>
+        <option value="synthetic">Synthetic (Build→Test)</option>
+        <option value="">All</option>
+        <option value="jenkins_allure">jenkins_allure</option>
+        <option value="jenkins_console">jenkins_console</option>
+        <option value="jenkins_build">jenkins_build</option>
+      </select>
       <input class="f-input" id="f-fname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
       <input class="f-input" id="f-fsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
       <button class="f-clear" data-dash-action="clearFailureFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
@@ -658,6 +666,12 @@
         <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-top",3]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
         <h3 data-i18n="dash.chart_top">Top Failing Tests (last period)</h3>
         <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span class="trends-toolbar-label">Source</span>
+          <select class="f-select" id="trends-top-test-source" style="width:auto;min-width:140px">
+            <option value="">All</option>
+            <option value="jenkins">jenkins</option>
+            <option value="gitlab">gitlab</option>
+          </select>
           <span class="trends-toolbar-label">Instance</span>
           <select class="f-select" id="trends-inst-top" style="width:auto;min-width:220px"></select>
         </div>
@@ -822,39 +836,39 @@
 <section id="sec-logs" class="dash-section">
   <div class="panel" id="panel-collect-logs">
     <div class="panel-head">
-      <h2>&#128221; Collect logs</h2>
+      <h2>&#128221; <span data-i18n="dash.collect_logs_title">Collect logs</span></h2>
       <span class="panel-count" id="collectlog-count">0</span>
       <span class="panel-count" id="collectlog-warn" style="color:#eab308;border-color:#eab308">0 warn</span>
       <span class="panel-count" id="collectlog-err" style="color:#ef4444;border-color:#ef4444">0 err</span>
       <div class="filters">
-        <button type="button" class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .55rem" data-dash-action="collectLogsErrorsOnly">Errors</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .55rem" data-dash-action="collectLogsErrorsOnly" data-i18n="dash.collect_logs_errors_btn">Errors</button>
         <select class="f-select" id="f-cl-level">
-          <option value="">All levels</option>
+          <option value="" data-i18n="dash.collect_logs_all_levels">All levels</option>
           <option value="error">error</option>
           <option value="warn">warn</option>
           <option value="info">info</option>
         </select>
         <select class="f-select" id="f-cl-inst">
-          <option value="">All instances</option>
+          <option value="" data-i18n="dash.collect_logs_all_instances">All instances</option>
         </select>
         <select class="f-select" id="f-cl-phase">
-          <option value="">All phases</option>
+          <option value="" data-i18n="dash.collect_logs_all_phases">All phases</option>
           <option value="jenkins_builds">jenkins_builds</option>
           <option value="jenkins_console">jenkins_console</option>
           <option value="jenkins_allure">jenkins_allure</option>
           <option value="gitlab">gitlab</option>
           <option value="docker">docker</option>
         </select>
-        <input class="f-input" id="f-cl-job" placeholder="Job filter…" />
-        <input class="f-input" id="f-cl-q" placeholder="Filter…" />
+        <input class="f-input" id="f-cl-job" data-i18n-placeholder="dash.collect_logs_job_filter_ph" placeholder="Job filter…" />
+        <input class="f-input" id="f-cl-q" data-i18n-placeholder="dash.collect_logs_filter_ph" placeholder="Filter…" />
         <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;color:var(--muted);user-select:none">
           <input type="checkbox" id="cl-follow" checked />
-          follow
+          <span data-i18n="dash.collect_logs_follow">follow</span>
         </label>
-        <button class="f-clear" data-dash-action="clearCollectLogs">&#10005; clear</button>
+        <button class="f-clear" data-dash-action="clearCollectLogs">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
       </div>
       <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetCollectLogs" title="Refresh">&#8635;</button>
-      <button class="expand-btn" id="expand-collect-logs" data-dash-action="toggleExpand" data-dash-args='["collect-logs"]'>Expand</button>
+      <button class="expand-btn" id="expand-collect-logs" data-dash-action="toggleExpand" data-dash-args='["collect-logs"]' data-i18n="dash.expand_panel">Expand</button>
     </div>
     <div class="tbl-wrap" id="wrap-collect-logs" style="padding:0">
       <div id="collectlog-pre" style="margin:0;padding:.85rem 1rem;max-height:520px;overflow:auto;font-size:.74rem;line-height:1.45;border-top:1px solid var(--border);background:#0b1220;color:#cbd5e1;font-family:ui-monospace,SFMono-Regular,Consolas,monospace"></div>
@@ -862,12 +876,27 @@
   </div>
   <div class="panel" style="margin-top:.75rem" id="panel-collect-slow">
     <div class="panel-head">
-      <h2 style="font-size:.95rem">&#9201; Slow ops</h2>
+      <h2 style="font-size:.95rem">&#9201; <span data-i18n="dash.collect_slow_title">Slow ops</span></h2>
       <span class="panel-count" style="border-color:transparent"></span>
     </div>
     <div id="collectslow-box"></div>
   </div>
 </section>
+</div>
+
+<!-- Slow op details modal -->
+<div class="modal-overlay" id="slowop-modal" aria-hidden="true" data-dash-overlay-dismiss="closeSlowOpModal">
+  <div class="log-modal-card" style="max-width:min(980px,96vw)" role="dialog" aria-modal="true" aria-labelledby="slowop-modal-title">
+    <div class="log-modal-header">
+      <h3 id="slowop-modal-title" data-i18n="dash.collect_slow_details_title">Slow op details</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeSlowOpModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:space-between">
+      <div id="slowop-modal-sub" style="color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></div>
+      <button type="button" class="btn btn-ghost log-btn" data-dash-action="copySlowOpDetails" data-i18n="common.copy">Copy</button>
+    </div>
+    <pre class="log-modal-pre" id="slowop-modal-pre"></pre>
+  </div>
 </div>
 
 <!-- Confirm modal for Run / Restart actions -->

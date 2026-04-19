@@ -10,6 +10,7 @@ let _trendsRangeTo = '';
 let _trendsSmooth = 'none';
 let _trendsTopN = 10;
 let _trendsSource = '';
+let _trendsTopTestSource = '';
 let _trendsInstSel = { builds: '', tests: '', top: '' };
 
 async function populateTrendsInstanceFilters() {
@@ -699,6 +700,12 @@ function onTrendsSourceChange(el) {
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
+function onTrendsTopTestSourceChange(el) {
+  _trendsTopTestSource = el && typeof el.value === 'string' ? el.value.trim().toLowerCase() : '';
+  try { localStorage.setItem('cimon-trends-top-test-source', _trendsTopTestSource); } catch { /* ignore */ }
+  if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
+}
+
 function applyTrendsDateRange() {
   const _norm = (v) => {
     const s = String(v || '').trim();
@@ -752,6 +759,10 @@ function initTrendsFiltersFromStorage() {
   if (tsrc) _trendsSource = tsrc;
   const elSrc = document.getElementById('trends-source');
   if (elSrc) elSrc.value = _trendsSource;
+  const tts = (localStorage.getItem('cimon-trends-top-test-source') || '').trim().toLowerCase();
+  if (tts) _trendsTopTestSource = tts;
+  const elTts = document.getElementById('trends-top-test-source');
+  if (elTts) elTts.value = _trendsTopTestSource;
   const ttn = parseInt(localStorage.getItem('cimon-trends-topn'), 10);
   if (Number.isFinite(ttn) && ttn >= 3 && ttn <= 100) _trendsTopN = ttn;
   const elTn = document.getElementById('trends-topn');
@@ -848,10 +859,11 @@ function renderTrendsChartsFromData(data) {
   ]);
 
   const wantTopSrc = instToTestSrc(instTop);
+  const topSrc = (_trendsTopTestSource || '').trim().toLowerCase() || wantTopSrc;
   const testTotals = {};
   data.forEach((d) => {
-    const arr = wantTopSrc && d.top_test_failures_by_source && Array.isArray(d.top_test_failures_by_source[wantTopSrc])
-      ? d.top_test_failures_by_source[wantTopSrc]
+    const arr = topSrc && d.top_test_failures_by_source && Array.isArray(d.top_test_failures_by_source[topSrc])
+      ? d.top_test_failures_by_source[topSrc]
       : (d.top_test_failures || []);
     (arr || []).forEach(([n, c]) => { testTotals[n] = (testTotals[n] || 0) + c; });
   });

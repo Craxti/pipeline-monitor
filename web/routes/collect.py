@@ -91,11 +91,11 @@ async def collect_logs_route(limit: int = 400, offset: int = 0):
 
 
 @router.get("/api/collect/slow", response_class=JSONResponse)
-async def collect_slow_route(limit: int = 10):
-    """Return slow-step timings for last collect."""
+async def collect_slow_route(limit: int = 10, offset: int = 0):
+    """Return slow-step timings for last collect (paged)."""
     from web.core import runtime as rt
 
-    return rt.collect_rt_state.collect_slow(limit=limit)
+    return rt.collect_rt_state.collect_slow(limit=limit, offset=offset)
 
 
 @router.post(

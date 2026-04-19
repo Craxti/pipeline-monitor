@@ -96,12 +96,18 @@ class CollectState:
         items = items[-lim:]
         return {"items": items, "total": total}
 
-    def collect_slow(self, *, limit: int = 10) -> dict[str, Any]:
-        """Return slow-step timings (sorted by elapsed)."""
+    def collect_slow(self, *, limit: int = 10, offset: int = 0) -> dict[str, Any]:
+        """Return slow-step timings (sorted by elapsed) with paging."""
         try:
             lim = max(1, min(100, int(limit)))
         except Exception:
             lim = 10
         items = list(self.slow)
         items.sort(key=lambda x: int(x.get("elapsed_ms") or 0), reverse=True)
-        return {"items": items[:lim]}
+        try:
+            off = max(0, int(offset))
+        except Exception:
+            off = 0
+        total = len(items)
+        page = items[off : off + lim]
+        return {"items": page, "total": total, "offset": off, "limit": lim, "has_more": (off + lim) < total}

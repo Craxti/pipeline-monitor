@@ -39,7 +39,7 @@ function updateTestsExportLinks() {
 }
 
 function updateFailuresExportLinks() {
-  const src = document.getElementById('f-tsource')?.value || '';
+  const src = document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '';
   const d = _failuresDays > 0 ? `&days=${_failuresDays}` : '';
   const q = (extra) => `api/export/failures?fmt=${extra}&n=500${src ? '&source=' + encodeURIComponent(src) : ''}${d}`;
   const c = document.getElementById('exp-failures-csv');

@@ -22,9 +22,9 @@ class CollectRuntimeState:
         """Return logs from the underlying collect state."""
         return getattr(self.collect_rt, "collect_logs")(limit=limit, offset=offset)
 
-    def collect_slow(self, *, limit: int = 10):
+    def collect_slow(self, *, limit: int = 10, offset: int = 0):
         """Return slow-step timings from the underlying collect state."""
-        return getattr(self.collect_rt, "collect_slow")(limit=limit)
+        return getattr(self.collect_rt, "collect_slow")(limit=limit, offset=offset)
 
 
 def make_collect_runtime_state(collect_state_cls) -> CollectRuntimeState:

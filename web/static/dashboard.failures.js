@@ -13,6 +13,8 @@ function resetFailures(soft=false) {
   loadFailures();
 }
 function clearFailureFilters() {
+  const fs = document.getElementById('f-fsource');
+  if (fs) fs.value = 'real';
   document.getElementById('f-fname').value  = '';
   document.getElementById('f-fsuite').value = '';
   _failuresDays = 0;
@@ -37,7 +39,7 @@ async function loadFailures() {
 
   const name  = document.getElementById('f-fname').value;
   const suite = document.getElementById('f-fsuite').value;
-  const source = document.getElementById('f-tsource')?.value || '';
+  const source = document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '';
   const dayQ = _failuresDays > 0 ? `&days=${_failuresDays}` : '';
   const url = apiUrl(`api/tests/top-failures?page=${s.page}&per_page=${s.per_page}&n=500&source=${encodeURIComponent(source)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}${dayQ}`);
 

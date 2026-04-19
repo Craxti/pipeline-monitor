@@ -471,6 +471,13 @@ function initDashFormControlBindings() {
       updateFailuresExportLinks();
     });
   }
+  const fFsource = byId('f-fsource');
+  if (fFsource) {
+    fFsource.addEventListener('change', () => {
+      resetFailures();
+      updateFailuresExportLinks();
+    });
+  }
   const fTstatus = byId('f-tstatus');
   if (fTstatus) fTstatus.addEventListener('change', resetTests);
   const fTname = byId('f-tname');
@@ -490,6 +497,8 @@ function initDashFormControlBindings() {
 
   const trSrc = byId('trends-source');
   if (trSrc) trSrc.addEventListener('change', () => { onTrendsSourceChange(trSrc); });
+  const trTopSrc = byId('trends-top-test-source');
+  if (trTopSrc) trTopSrc.addEventListener('change', () => { onTrendsTopTestSourceChange(trTopSrc); });
   const trSm = byId('trends-smooth');
   if (trSm) trSm.addEventListener('change', () => { onTrendsSmoothChange(trSm); });
   const trTop = byId('trends-topn');
