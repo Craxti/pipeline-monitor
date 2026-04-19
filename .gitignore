@@ -69,3 +69,9 @@ yarn-error.log*
 
 # --- Личные настройки ---
 *.user
+
+# --- Runtime artifacts (local) ---
+data/*.db
+data/*.json
+data/*.csv
+data/*.html
