@@ -13,9 +13,7 @@ from models.models import TestRecord as ModelTestRecord
 
 
 class TestSnapshotCache:
-    def test_load_snapshot_returns_none_when_missing(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_load_snapshot_returns_none_when_missing(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from web.core import snapshot_cache as sc
         from web.core import config as cfg_mod
         from web.db import init_db

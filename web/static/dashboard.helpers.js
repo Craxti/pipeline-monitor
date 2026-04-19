@@ -383,6 +383,19 @@ function runbookFocusTestFailures() {
   const el = document.getElementById('f-tstatus');
   if (el) el.value = 'failed';
   resetTests();
+
+  // Open AI assistant and seed a troubleshooting prompt.
+  try {
+    const panel = document.getElementById('ai-chat-panel');
+    if (panel && !panel.classList.contains('open') && typeof window.toggleChat === 'function') {
+      window.toggleChat();
+    }
+    const input = document.getElementById('chat-input');
+    if (input) {
+      input.value = 'Разобрать упавшие тесты: дай план диагностики, выдели топ причин и что проверить в первую очередь.';
+      if (typeof window.sendChat === 'function') window.sendChat();
+    }
+  } catch { /* ignore */ }
 }
 
 function runbookFocusServicesProblems() {

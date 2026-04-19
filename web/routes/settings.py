@@ -31,6 +31,7 @@ async def api_settings_route():
     """Return full settings (requires shared token)."""
     return settings_api.get_settings(load_yaml_config())
 
+
 @router.get(
     "/api/settings/reveal",
     response_class=JSONResponse,
