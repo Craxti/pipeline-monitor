@@ -4,9 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix failed tests whith ai assist chat">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix ui">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.shell.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.shell.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,6 +43,63 @@
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\prooftech\proj\pipeline-monitor" />
     </key>
+  </component>
+  <component name="RunManager" selected="Python tests.pytest for test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api">
+    <configuration name="pytest for test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_e2e_mocked_ci_collect_and_app.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_property_parsers_and_webhook.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_property_parsers_and_webhook.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.pytest for test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api" />
+        <item itemvalue="Python tests.pytest in test_property_parsers_and_webhook.py" />
+        <item itemvalue="Python tests.pytest in test_e2e_mocked_ci_collect_and_app.py" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -365,7 +425,28 @@
       <option name="project" value="LOCAL" />
       <updated>1776614117134</updated>
     </task>
-    <option name="localTasksCounter" value="46" />
+    <task id="LOCAL-00046" summary="add test_connections&#10;add fast start ui">
+      <created>1776617497135</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1776617497135</updated>
+    </task>
+    <task id="LOCAL-00047" summary="add test_connections&#10;add fast start ui">
+      <created>1776619231928</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1776619231928</updated>
+    </task>
+    <task id="LOCAL-00048" summary="fix ui">
+      <created>1776619939021</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1776619939021</updated>
+    </task>
+    <option name="localTasksCounter" value="49" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -380,8 +461,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix visuals" />
-    <MESSAGE value="fix moduls" />
     <MESSAGE value="fix cursor" />
     <MESSAGE value="fix event, helpers" />
     <MESSAGE value="fix sse_hub, collect loop" />
@@ -405,6 +484,8 @@
     <MESSAGE value="fix filter for service" />
     <MESSAGE value="fix setting + safety" />
     <MESSAGE value="fix failed tests whith ai assist chat" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix failed tests whith ai assist chat" />
+    <MESSAGE value="add test_connections&#10;add fast start ui" />
+    <MESSAGE value="fix ui" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix ui" />
   </component>
 </project>

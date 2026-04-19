@@ -79,14 +79,43 @@ def append_trends(
     # Remove today's existing entry (will be replaced with fresh data)
     history = [e for e in history if e.get("date") != day_key]
 
-    # Build per-job failure map
+    cfg_for_inst: dict[str, Any] | None = None
+    if load_cfg is not None and inst_label_for_build is not None:
+        try:
+            cfg_for_inst = load_cfg()
+        except Exception:
+            cfg_for_inst = None
+
+    # Build per-job failure map (global + source/instance slices for Trends filters)
     job_failures: dict[str, int] = {}
     job_totals: dict[str, int] = {}
+    job_failures_by_source: dict[str, dict[str, int]] = {}
+    job_totals_by_source: dict[str, dict[str, int]] = {}
+    job_failures_by_instance: dict[str, dict[str, int]] = {}
+    job_totals_by_instance: dict[str, dict[str, int]] = {}
     for b in snapshot.builds:
+        src = str(getattr(b, "source", "") or "").strip().lower() or "unknown"
+        inst = None
+        if cfg_for_inst and inst_label_for_build:
+            try:
+                inst = inst_label_for_build(b, cfg_for_inst)
+            except Exception:
+                inst = None
+        inst_key = f"{src}|{inst}" if inst else None
         j = b.job_name
         job_totals[j] = job_totals.get(j, 0) + 1
+        sm = job_totals_by_source.setdefault(src, {})
+        sm[j] = sm.get(j, 0) + 1
+        if inst_key:
+            im = job_totals_by_instance.setdefault(inst_key, {})
+            im[j] = im.get(j, 0) + 1
         if b.status_normalized in ("failure", "unstable"):
             job_failures[j] = job_failures.get(j, 0) + 1
+            sf = job_failures_by_source.setdefault(src, {})
+            sf[j] = sf.get(j, 0) + 1
+            if inst_key:
+                inf = job_failures_by_instance.setdefault(inst_key, {})
+                inf[j] = inf.get(j, 0) + 1
 
     # Per-test failure counts
     test_failures: dict[str, int] = {}
@@ -97,13 +126,6 @@ def append_trends(
     # Per-source breakdowns (for UI filters in Trends)
     builds_by_source: dict[str, dict[str, int]] = {}
     builds_by_instance: dict[str, dict[str, int]] = {}
-
-    cfg_for_inst: dict[str, Any] | None = None
-    if load_cfg is not None and inst_label_for_build is not None:
-        try:
-            cfg_for_inst = load_cfg()
-        except Exception:
-            cfg_for_inst = None
 
     for b in snapshot.builds:
         src = str(getattr(b, "source", "") or "").strip().lower() or "unknown"
@@ -177,6 +199,10 @@ def append_trends(
             "tests_by_source": tests_by_source,
             "job_failures": job_failures,
             "job_totals": job_totals,
+            "job_failures_by_source": job_failures_by_source,
+            "job_totals_by_source": job_totals_by_source,
+            "job_failures_by_instance": job_failures_by_instance,
+            "job_totals_by_instance": job_totals_by_instance,
             "top_test_failures": sorted(test_failures.items(), key=lambda x: -x[1])[:20],
             "top_test_failures_by_source": {
                 src: sorted(m.items(), key=lambda x: -x[1])[:20] for src, m in test_failures_by_source.items()

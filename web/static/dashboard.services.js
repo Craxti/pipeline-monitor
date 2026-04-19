@@ -16,7 +16,7 @@ function clearSvcFilters() {
   const cb = document.getElementById('sv-problems-only');
   if (cb) cb.checked = false;
   try { localStorage.setItem('cimon-svc-problems', '0'); } catch {}
-  _syncURLAndFilterSummary();
+  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
   resetServices();
 }
 

@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260417m" />
+<link rel="stylesheet" href="/static/app.css?v=20260420i" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
@@ -21,9 +21,9 @@
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
 <script src="/static/dashboard.builds.js?v=20260417i" defer></script>
-<script src="/static/dashboard.failures.js?v=20260417i" defer></script>
-<script src="/static/dashboard.tests.js?v=20260417i" defer></script>
-<script src="/static/dashboard.services.js?v=20260417i" defer></script>
+<script src="/static/dashboard.failures.js?v=20260420d" defer></script>
+<script src="/static/dashboard.tests.js?v=20260420d" defer></script>
+<script src="/static/dashboard.services.js?v=20260420d" defer></script>
 <script src="/static/dashboard.collect-panel.js?v=20260417i" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
@@ -33,7 +33,7 @@
 <script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
 <script src="/static/dashboard.collect-bar.js?v=20260419a" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
-<script src="/static/dashboard.trends.js?v=20260417i" defer></script>
+<script src="/static/dashboard.trends.js?v=20260420d" defer></script>
 <script src="/static/dashboard.actions.js?v=20260417i" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
@@ -595,11 +595,19 @@
   </div>
   <div class="trends-filters-bar" id="trends-filters-bar">
     <div class="trends-filter-group">
-      <span class="trends-toolbar-label">Source</span>
+      <span class="trends-toolbar-label" data-i18n="dash.group_source">Source</span>
       <select id="trends-source" style="background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .5rem;font-size:.78rem;cursor:pointer;max-width:11rem">
-        <option value="">All</option>
+        <option value="" data-i18n="dash.opt_all_sources">All</option>
         <option value="jenkins">jenkins</option>
         <option value="gitlab">gitlab</option>
+        <option value="docker">docker</option>
+        <option value="http">http</option>
+      </select>
+    </div>
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+      <select id="trends-instance-all" class="f-select" style="width:auto;min-width:220px">
+        <option value="" data-i18n="dash.collect_logs_all_instances">All instances</option>
       </select>
     </div>
     <div class="trends-filter-group">
@@ -626,12 +634,28 @@
   </div>
   <div class="tbl-wrap" id="wrap-trends" data-size="m" style="padding:1rem;max-height:none">
     <div id="trends-error" class="panel-inline-error" style="display:none;margin:0 0 .75rem"></div>
+    <div class="trends-history-kpis" id="trends-history-kpis">
+      <div class="tr-kpi-card">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_crash_title">Crash frequency</div>
+        <div class="tr-kpi-value" id="tr-kpi-crash">—</div>
+        <div class="tr-kpi-sub" data-i18n="dash.trend_kpi_crash_sub">failed build records per day</div>
+      </div>
+      <div class="tr-kpi-card">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_recovery_title">Average recovery</div>
+        <div class="tr-kpi-value" id="tr-kpi-recovery">—</div>
+        <div class="tr-kpi-sub" id="tr-kpi-recovery-sub" data-i18n="dash.trend_kpi_recovery_sub">from fail to recovered</div>
+      </div>
+      <div class="tr-kpi-card tr-kpi-wide">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_problem_jobs_title">Most problematic jobs</div>
+        <div class="tr-kpi-jobs" id="tr-kpi-jobs">—</div>
+      </div>
+    </div>
     <div class="trends-grid" id="trends-default-grid">
       <div class="chart-card" id="chart-card-builds">
         <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-builds",0]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
         <h3 data-i18n="dash.chart_builds">Builds: Failed vs Total</h3>
         <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-          <span class="trends-toolbar-label">Instance</span>
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
           <select class="f-select" id="trends-inst-builds" style="width:auto;min-width:220px"></select>
         </div>
         <canvas id="chart-builds"></canvas>
@@ -640,7 +664,7 @@
         <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-tests",1]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
         <h3 data-i18n="dash.chart_tests">Tests: Failed vs Total</h3>
         <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-          <span class="trends-toolbar-label">Instance</span>
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
           <select class="f-select" id="trends-inst-tests" style="width:auto;min-width:220px"></select>
         </div>
         <canvas id="chart-tests"></canvas>
@@ -671,13 +695,13 @@
         <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-top",3]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
         <h3 data-i18n="dash.chart_top">Top Failing Tests (last period)</h3>
         <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
-          <span class="trends-toolbar-label">Source</span>
+          <span class="trends-toolbar-label" data-i18n="dash.group_source">Source</span>
           <select class="f-select" id="trends-top-test-source" style="width:auto;min-width:140px">
-            <option value="">All</option>
+            <option value="" data-i18n="dash.opt_all_sources">All</option>
             <option value="jenkins">jenkins</option>
             <option value="gitlab">gitlab</option>
           </select>
-          <span class="trends-toolbar-label">Instance</span>
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
           <select class="f-select" id="trends-inst-top" style="width:auto;min-width:220px"></select>
         </div>
         <canvas id="chart-top-tests"></canvas>
@@ -712,6 +736,10 @@
   </div>
 
 </main>
+<a href="/" class="app-watermark" aria-label="CI/CD Monitor">
+  <img src="/static/logo-mark.png?v=20260417i" alt="" width="16" height="16" />
+  <span data-i18n="dash.app_title">CI/CD Monitor</span>
+</a>
 <button type="button" id="btn-back-top" class="btn-back-top" data-i18n-title="common.back_top" title="">&uarr;</button>
 <div class="toast" id="toast"></div>
 

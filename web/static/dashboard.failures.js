@@ -20,7 +20,7 @@ function clearFailureFilters() {
   _failuresDays = 0;
   ['tf-f-1d','tf-f-3d','tf-f-7d','tf-f-30d'].forEach((id) => document.getElementById(id)?.classList.remove('active'));
   try { localStorage.setItem('cimon-failures-days', '0'); } catch { /* ignore */ }
-  _syncURLAndFilterSummary();
+  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
   updateFailuresExportLinks();
   resetFailures();
 }

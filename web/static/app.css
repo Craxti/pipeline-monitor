@@ -1,2 +1,3 @@
 /* CI/CD Monitor — UI stylesheet entry (dashboard bundle). */
 @import "dashboard.css";
+@import "dashboard.shell.css";
