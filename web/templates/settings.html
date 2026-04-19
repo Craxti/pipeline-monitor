@@ -197,6 +197,67 @@
   .breadcrumb-strip a{color:var(--info);text-decoration:none}
   .breadcrumb-strip a:hover{text-decoration:underline}
   .page-lede{max-width:1300px;margin:0 auto 1rem;padding:0 2rem;font-size:.9rem;color:var(--muted);line-height:1.55}
+
+  /* Anti-copy / anti-selection (best-effort; does not provide real security). */
+  body[data-page="settings"].lockdown{
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  body[data-page="settings"].lockdown input,
+  body[data-page="settings"].lockdown textarea,
+  body[data-page="settings"].lockdown select{
+    -webkit-user-select:text;
+    user-select:text;
+  }
+  body[data-page="settings"].lockdown ._ss-block{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.88);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1rem;
+    font-weight:700;
+    z-index:99999;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .12s ease;
+  }
+  body[data-page="settings"].lockdown ._ss-block.on{opacity:1}
+
+  /* Privacy mask for screen capture / recordings: blur and block pointer events */
+  body[data-page="settings"].privacy-on .sensitive{
+    filter: blur(8px);
+    pointer-events:none;
+  }
+  body[data-page="settings"].privacy-on .sensitive::selection{background:transparent}
+  body[data-page="settings"].privacy-on input.sensitive,
+  body[data-page="settings"].privacy-on textarea.sensitive{
+    color: transparent !important;
+    text-shadow: 0 0 10px rgba(226,232,240,.65);
+    caret-color: transparent;
+  }
+  body[data-page="settings"].privacy-on .privacy-banner{
+    display:flex;
+  }
+  .privacy-banner{
+    display:none;
+    position:fixed;
+    left:1rem;
+    bottom:1rem;
+    z-index:99998;
+    background:rgba(15,23,42,.92);
+    border:1px solid var(--border);
+    border-radius:.75rem;
+    padding:.6rem .8rem;
+    gap:.6rem;
+    align-items:center;
+    max-width:min(520px, calc(100vw - 2rem));
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  .privacy-banner .pmsg{font-size:.82rem;color:var(--text);line-height:1.35}
+  .privacy-banner .btn{padding:.35rem .7rem;font-size:.78rem}
 </style>
 </head>
 <body data-page="settings">
@@ -450,7 +511,7 @@
           <div class="field-row">
             <div class="field-label" data-i18n="st.ai_api_key">API Key</div>
             <div class="pw-wrap">
-              <input type="password" id="ai-api-key" class="field-input" placeholder="sk-..." data-secret-path="openai.api_key">
+              <input type="password" id="ai-api-key" class="field-input sensitive" placeholder="sk-..." data-secret-path="openai.api_key">
               <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)" data-i18n="st.show">Show</button>
             </div>
             <div class="field-hint" id="ai-key-hint"></div>
@@ -495,7 +556,7 @@
           </div>
           <div class="field-row">
             <div class="field-label" data-i18n="st.ai_base_url">API base URL</div>
-            <input type="text" id="ai-base-url" class="field-input" placeholder="auto-filled by provider">
+            <input type="text" id="ai-base-url" class="field-input sensitive" placeholder="auto-filled by provider">
             <div class="field-hint" data-i18n="st.ai_base_hint">Auto-set when you pick a provider.</div>
           </div>
           <div class="field-row" id="ai-cursor-autostart-row" style="display:none">
@@ -551,14 +612,14 @@
                 </div>
                 <div class="field-row">
                   <div class="field-label">Quick paste (optional)</div>
-                  <textarea id="ai-proxy-paste" class="field-input" rows="2" style="resize:vertical;font-family:monospace;font-size:.78rem"
+                  <textarea id="ai-proxy-paste" class="field-input sensitive" rows="2" style="resize:vertical;font-family:monospace;font-size:.78rem"
                     placeholder="socks5server=198.51.100.10&amp;port=1080&amp;user=vpn_user&amp;pass=vpn_pass"></textarea>
                   <button type="button" class="btn btn-sm" onclick="applyProxyPaste()" style="align-self:flex-start">Parse into fields</button>
                   <div class="field-hint">Keys: <code>server</code>, <code>socks5server</code>, <code>proxyserver</code>, <code>port</code>, <code>user</code>, <code>pass</code> / <code>password</code>, <code>secret</code>. A line containing <code>socks5server</code> sets type to SOCKS5.</div>
                 </div>
                 <div class="field-row">
                   <div class="field-label">Or full URL (overrides host/port below)</div>
-                  <input type="text" id="ai-proxy-url" class="field-input" placeholder="socks5://vpn_user:vpn_pass@198.51.100.10:1080">
+                  <input type="text" id="ai-proxy-url" class="field-input sensitive" placeholder="socks5://vpn_user:vpn_pass@198.51.100.10:1080">
                   <div class="field-hint">Leave empty to use Type / Host / Port below. Otherwise one line: <code>socks5://…</code>, <code>http://…</code>.</div>
                 </div>
                 <div class="two-col">
@@ -578,16 +639,16 @@
                 </div>
                 <div class="field-row">
                   <div class="field-label">Host</div>
-                  <input type="text" id="ai-proxy-host" class="field-input" placeholder="198.51.100.10 or proxy.example.com">
+                  <input type="text" id="ai-proxy-host" class="field-input sensitive" placeholder="198.51.100.10 or proxy.example.com">
                 </div>
                 <div class="field-row">
                   <div class="field-label">Username</div>
-                  <input type="text" id="ai-proxy-user" class="field-input" placeholder="if required by proxy">
+                  <input type="text" id="ai-proxy-user" class="field-input sensitive" placeholder="if required by proxy">
                 </div>
                 <div class="field-row">
                   <div class="field-label">Password</div>
                   <div class="pw-wrap">
-                    <input type="password" id="ai-proxy-password" class="field-input" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
+                    <input type="password" id="ai-proxy-password" class="field-input sensitive" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
                     <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">Show</button>
                   </div>
                 </div>
@@ -600,6 +661,10 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="privacy-banner" id="privacy-banner" role="status" aria-live="polite">
+  <div class="pmsg" id="privacy-msg">Sensitive fields hidden</div>
+  <button type="button" class="btn btn-ghost" id="privacy-unmask" onclick="_privacyUnmaskOnce()">Unmask</button>
+</div>
 
 {% include 'partials/chat_widget.html' %}
 <script src="/static/dashboard.chat.js?v=20260417j" defer></script>
@@ -912,7 +977,7 @@ function jInstHtml(ii) {
     <div class="inst-body">
       <div class="field-row">
         <div class="field-label">${esc(t('st.j_server_url'))}</div>
-        <input type="url" class="field-input" value="${esc(inst.url||'')}" placeholder="https://jenkins.example.com"
+        <input type="url" class="field-input sensitive" value="${esc(inst.url||'')}" placeholder="https://jenkins.example.com"
                oninput="_ji[${ii}].url=this.value">
       </div>
       <div class="two-col">
@@ -924,7 +989,7 @@ function jInstHtml(ii) {
         <div class="field-row">
           <div class="field-label">${esc(t('st.j_token'))}</div>
           <div class="pw-wrap">
-            <input type="password" class="field-input" value="${esc(inst.token||'')}" data-secret-path="jenkins_instances[${ii}].token"
+            <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="jenkins_instances[${ii}].token"
                    autocomplete="new-password" oninput="_ji[${ii}].token=this.value">
             <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
@@ -1098,14 +1163,14 @@ function gInstHtml(gi) {
     <div class="inst-body">
       <div class="field-row">
         <div class="field-label">${esc(t('st.g_url'))}</div>
-        <input type="url" class="field-input" value="${esc(inst.url||'')}" placeholder="https://gitlab.com"
+        <input type="url" class="field-input sensitive" value="${esc(inst.url||'')}" placeholder="https://gitlab.com"
                oninput="_gi[${gi}].url=this.value">
       </div>
       <div class="two-col">
         <div class="field-row">
           <div class="field-label">${esc(t('st.g_token'))}</div>
           <div class="pw-wrap">
-            <input type="password" class="field-input" value="${esc(inst.token||'')}" data-secret-path="gitlab_instances[${gi}].token"
+            <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="gitlab_instances[${gi}].token"
                    autocomplete="new-password" oninput="_gi[${gi}].token=this.value">
             <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
@@ -1507,7 +1572,113 @@ async function saveSettings() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+function _lockDownSettingsPage() {
+  try { document.body.classList.add('lockdown'); } catch { /* ignore */ }
+
+  // Block selection/drag/context menu.
+  const prevent = (e) => { try { e.preventDefault(); } catch { /* ignore */ } };
+  document.addEventListener('contextmenu', prevent, { capture: true });
+  document.addEventListener('dragstart', prevent, { capture: true });
+  document.addEventListener('selectstart', prevent, { capture: true });
+
+  // Block copy/cut (allow paste so settings can still be entered).
+  document.addEventListener('copy', prevent, { capture: true });
+  document.addEventListener('cut', prevent, { capture: true });
+
+  // Best-effort: block common DevTools shortcuts (not reliable).
+  document.addEventListener('keydown', (e) => {
+    const k = String(e.key || '').toLowerCase();
+    const ctrl = !!e.ctrlKey || !!e.metaKey;
+    const shift = !!e.shiftKey;
+    if (k === 'f12') return prevent(e);
+    if (ctrl && shift && (k === 'i' || k === 'j' || k === 'c')) return prevent(e);
+    if (ctrl && (k === 'u' || k === 's')) return prevent(e);
+  }, { capture: true });
+
+  // Best-effort: react to PrintScreen. Browsers generally do NOT allow preventing screenshots.
+  const ov = document.createElement('div');
+  ov.className = '_ss-block';
+  ov.textContent = 'Screenshots disabled on this page';
+  document.body.appendChild(ov);
+  let t = null;
+  const flash = () => {
+    try {
+      ov.classList.add('on');
+      clearTimeout(t);
+      t = setTimeout(() => ov.classList.remove('on'), 600);
+    } catch { /* ignore */ }
+  };
+  document.addEventListener('keyup', async (e) => {
+    if (String(e.key || '').toLowerCase() !== 'printscreen') return;
+    _privacyMask('PrintScreen');
+    flash();
+    try {
+      // Some browsers allow writing empty clipboard after PrintScreen.
+      if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText('');
+    } catch { /* ignore */ }
+  }, { capture: true });
+
+  // Best-effort: detect DevTools (even if opened from another tab) and block this page.
+  // NOTE: A page cannot force-close DevTools; we can only react by blocking content.
+  const hardBlock = (reason) => {
+    try {
+      ov.textContent = reason || 'DevTools detected — Settings locked';
+      ov.classList.add('on');
+    } catch { /* ignore */ }
+    _privacyMask('DevTools');
+  };
+  const devtoolsLikelyOpen = () => {
+    try {
+      // Heuristic 1: big viewport deltas (docked devtools).
+      const dw = Math.abs((window.outerWidth || 0) - (window.innerWidth || 0));
+      const dh = Math.abs((window.outerHeight || 0) - (window.innerHeight || 0));
+      if (dw > 180 || dh > 180) return true;
+
+      // Heuristic 2: debugger timing (often spikes when DevTools open).
+      const t0 = performance.now();
+      // eslint-disable-next-line no-debugger
+      debugger;
+      const dt = performance.now() - t0;
+      if (dt > 120) return true;
+    } catch { /* ignore */ }
+    return false;
+  };
+
+  // Check on load, then periodically, plus on focus/resize.
+  const check = () => {
+    if (devtoolsLikelyOpen()) hardBlock('DevTools detected — Settings locked');
+  };
+  check();
+  window.addEventListener('focus', check, { passive: true });
+  window.addEventListener('resize', check, { passive: true });
+  setInterval(check, 900);
+}
+
+let _privacyTimer = null;
+function _privacyMask(reason) {
+  try {
+    document.body.classList.add('privacy-on');
+    const msg = document.getElementById('privacy-msg');
+    if (msg) msg.textContent = reason ? `Sensitive fields hidden (${reason})` : 'Sensitive fields hidden';
+  } catch { /* ignore */ }
+  // Auto re-mask even if user unmasked once.
+  try {
+    clearTimeout(_privacyTimer);
+    _privacyTimer = setTimeout(() => { try { document.body.classList.add('privacy-on'); } catch { /* ignore */ } }, 1500);
+  } catch { /* ignore */ }
+}
+function _privacyUnmaskOnce() {
+  try { document.body.classList.remove('privacy-on'); } catch { /* ignore */ }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  _lockDownSettingsPage();
+  // Mask on blur / tab switch (common when using Snipping Tool / recording overlays).
+  window.addEventListener('blur', () => _privacyMask('blur'), { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) _privacyMask('hidden');
+  }, { passive: true });
+
   applyUITexts();
   _applyTheme(localStorage.getItem('cimon-theme') || 'dark');
   loadSettings();
