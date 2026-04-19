@@ -1,7 +1,7 @@
 """
 E2E smoke tests — start the FastAPI app with TestClient and hit real endpoints.
 No real Jenkins/GitLab/Docker connections are made; the app may return 404 if
-there is no data/snapshot.json, which is still a valid response (server is up).
+there may be no collected snapshot in `monitor.db` yet, which is still a valid response (server is up).
 """
 
 from __future__ import annotations

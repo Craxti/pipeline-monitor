@@ -10,7 +10,6 @@ import logging
 from models.models import CISnapshot, TestRecord
 
 from web.core import runtime as rt
-from web.core import snapshot_cache as snapshot_cache_mod
 from web.core import trends as trends_mod
 from web.core.config import load_yaml_config
 
@@ -34,27 +33,24 @@ get_collector_state_int = _db_opt.get_collector_state_int
 set_collector_state_int = _db_opt.set_collector_state_int
 
 
-DATA_FILE = snapshot_cache_mod.SNAPSHOT_PATH
-
-
 def _append_trends(snapshot: CISnapshot) -> None:
     """Append trends bucket to history."""
     return snapshot_api.append_trends(
         snapshot,
         trends_mod=trends_mod,
-        history_path=rt.HISTORY_FILE,
+        history_path=None,
         history_max_days=rt.HISTORY_MAX_DAYS,
         load_cfg=load_yaml_config,
         inst_label_for_build=_config_instance_label,
     )
 
 
-def save_snapshot(snapshot: CISnapshot) -> None:
-    """Persist a full snapshot to disk (+ SQLite if available)."""
+def save_snapshot(snapshot: CISnapshot, *, data_dir: str | None = None) -> None:
+    """Persist a full snapshot to SQLite ``meta`` (+ historical rows if available)."""
     return snapshot_api.save_snapshot(
         snapshot,
         snapshot_write_lock=rt.snapshot_write_lock,
-        data_file=str(DATA_FILE),
+        data_dir=data_dir,
         prime_snapshot_cache=rt.prime_snapshot_cache,
         append_trends_fn=_append_trends,
         detect_state_changes=detect_state_changes,
@@ -65,12 +61,12 @@ def save_snapshot(snapshot: CISnapshot) -> None:
     )
 
 
-def save_snapshot_partial(snapshot: CISnapshot) -> None:
+def save_snapshot_partial(snapshot: CISnapshot, *, data_dir: str | None = None) -> None:
     """Persist partial snapshot used during long collect cycles."""
     return snapshot_api.save_snapshot_partial(
         snapshot,
         snapshot_write_lock=rt.snapshot_write_lock,
-        data_file=str(DATA_FILE),
+        data_dir=data_dir,
         prime_snapshot_cache=rt.prime_snapshot_cache,
         bump_revision=rt.bump_revision,
         collect_state=rt.collect_state,
@@ -104,7 +100,7 @@ def detect_state_changes(snapshot: CISnapshot) -> None:
 
         return event_feed_api.append(
             entries,
-            path=rt.EVENT_FEED_FILE,
+            path=None,
             max_entries=rt.EVENT_FEED_MAX,
         )
 

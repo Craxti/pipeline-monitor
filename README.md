@@ -54,7 +54,7 @@ MIT License (2026). See `LICENSE`.
 ├── config.example.yaml # Example configuration
 ├── pyproject.toml      # Tooling config (ruff/pytest/etc.)
 ├── requirements.txt    # Runtime dependencies
-└── data/               # Runtime/generated (snapshot.json, monitor.db, trends.json, ...)
+└── data/               # Runtime/generated (monitor.db, reports, ...)
 ```
 
 ---
@@ -409,7 +409,7 @@ pipeline-monitor/
 │   ├── static/            # JS/CSS/assets
 │   └── templates/         # Jinja2 pages/partials
 │
-└── data/                  # Runtime/generated (snapshot.json, monitor.db, trends.json, ...)
+└── data/                  # Runtime/generated (monitor.db, reports, ...)
 ```
 
 ---
@@ -453,7 +453,7 @@ pipeline-monitor/
 ## Demo (no CI connection needed)
 
 ```bash
-# Re-generate reports from the bundled snapshot (data/snapshot.json)
+# Re-generate reports from the last collected snapshot (stored in data/monitor.db)
 py ci_monitor.py report --format html
 py ci_monitor.py report --format csv
 

@@ -1,4 +1,4 @@
-"""Trends/uptime history stored as JSON."""
+"""Trends/uptime history stored in SQLite ``meta`` (optional file for tests)."""
 
 from __future__ import annotations
 
@@ -12,28 +12,67 @@ from models.models import CISnapshot, normalize_service_status
 
 logger = logging.getLogger(__name__)
 
-HISTORY_PATH = Path("data") / "trends.json"
+# Legacy on-disk location (no longer read/written by the app; history lives in ``monitor.db``).
+# Kept ONLY as a reference for migration/troubleshooting.
+TRENDS_JSON_LEGACY_PATH = Path("data") / "trends.json"
 HISTORY_MAX_DAYS = 30
 
 InstLabeler = Callable[[object, dict[str, Any]], Optional[str]]
 
 
+def _load_history_list(history_path: Path | None) -> list[dict[str, Any]]:
+    if history_path is not None:
+        try:
+            if not history_path.exists():
+                return []
+            data = json.loads(history_path.read_text(encoding="utf-8"))
+            return data if isinstance(data, list) else []
+        except Exception:
+            return []
+
+    try:
+        from web.db import ensure_database_initialized, trends_history_load_list
+
+        if not ensure_database_initialized():
+            return []
+        return trends_history_load_list()
+    except Exception:
+        return []
+
+
+def _save_history_list(history: list[dict[str, Any]], history_path: Path | None) -> None:
+    if history_path is not None:
+        try:
+            history_path.parent.mkdir(parents=True, exist_ok=True)
+            history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as exc:
+            logger.warning("trends save failed: %s", exc)
+        return
+
+    try:
+        from web.db import ensure_database_initialized, trends_history_save_list
+
+        if not ensure_database_initialized():
+            return
+        trends_history_save_list(history)
+    except Exception as exc:
+        logger.warning("trends save failed: %s", exc)
+
+
 def append_trends(
     snapshot: CISnapshot,
     *,
-    history_path: Path = HISTORY_PATH,
+    history_path: Path | None = None,
     history_max_days: int = HISTORY_MAX_DAYS,
     load_cfg: Optional[Callable[[], dict[str, Any]]] = None,
     inst_label_for_build: Optional[InstLabeler] = None,
 ) -> None:
-    """Append a daily summary bucket to trends.json (one entry per day)."""
+    """Append a daily summary bucket (one entry per day)."""
     now = datetime.now(tz=timezone.utc)
     day_key = now.strftime("%Y-%m-%d")
 
     try:
-        history: list[dict[str, Any]] = (
-            json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else []
-        )
+        history: list[dict[str, Any]] = _load_history_list(history_path)
     except Exception:
         history = []
 
@@ -150,16 +189,13 @@ def append_trends(
     history = [e for e in history if str(e.get("date", "")) >= cutoff]
     history.sort(key=lambda e: str(e.get("date", "")))
 
-    history_path.parent.mkdir(parents=True, exist_ok=True)
-    history_path.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8")
+    _save_history_list(history, history_path)
 
 
-def compute_trends(days: int, *, history_path: Path = HISTORY_PATH) -> list[dict[str, Any]]:
+def compute_trends(days: int, *, history_path: Path | None = None) -> list[dict[str, Any]]:
     """Return last `days` daily trend buckets."""
-    if not history_path.exists():
-        return []
     try:
-        history = json.loads(history_path.read_text(encoding="utf-8"))
+        history = _load_history_list(history_path)
     except Exception as exc:
         logger.error("Failed to load trends: %s", exc)
         return []

@@ -637,6 +637,21 @@ html.light .trends-filters-bar{background:rgba(0,0,0,.03)}
 #log-follow-wrap{display:none;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
 #log-follow-wrap.visible{display:flex}
 #log-follow-wrap input{accent-color:var(--info);cursor:pointer}
+
+/* Collect logs: slow ops */
+#collectslow-box{
+  max-height:340px;
+  overflow:auto;
+  border-top:1px solid var(--border);
+}
+.collectslow-row.expanded{align-items:flex-start}
+.collectslow-row.expanded .collectslow-inst,
+.collectslow-row.expanded .collectslow-job{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  word-break:break-word;
+}
 /* Sparklines */
 .spark-wrap{display:inline-block;vertical-align:middle}
 /* Flaky badge */

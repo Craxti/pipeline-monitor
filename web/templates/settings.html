@@ -450,7 +450,7 @@
           <div class="field-row">
             <div class="field-label" data-i18n="st.ai_api_key">API Key</div>
             <div class="pw-wrap">
-              <input type="password" id="ai-api-key" class="field-input" placeholder="sk-...">
+              <input type="password" id="ai-api-key" class="field-input" placeholder="sk-..." data-secret-path="openai.api_key">
               <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)" data-i18n="st.show">Show</button>
             </div>
             <div class="field-hint" id="ai-key-hint"></div>
@@ -587,7 +587,7 @@
                 <div class="field-row">
                   <div class="field-label">Password</div>
                   <div class="pw-wrap">
-                    <input type="password" id="ai-proxy-password" class="field-input" placeholder="if required by proxy">
+                    <input type="password" id="ai-proxy-password" class="field-input" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
                     <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">Show</button>
                   </div>
                 </div>
@@ -636,8 +636,71 @@ function apiUrl(path) {
   return new URL(p, base).href;
 }
 
-function togglePwdEl(btn) {
+let _revealCfg = null;
+let _revealCfgPromise = null;
+const _MASK = '••••••••';
+
+function _pathGet(obj, path) {
+  if (!obj || !path) return undefined;
+  // Supports dotted segments + [index], e.g. jenkins_instances[0].token
+  const segs = String(path).split('.');
+  let cur = obj;
+  for (const seg0 of segs) {
+    if (cur == null) return undefined;
+    const seg = String(seg0);
+    const m = seg.match(/^([^\[]+)\[(\d+)\]$/);
+    if (m) {
+      const key = m[1], idx = parseInt(m[2], 10);
+      cur = (cur && cur[key]) ? cur[key] : undefined;
+      cur = Array.isArray(cur) ? cur[idx] : undefined;
+    } else {
+      cur = cur[seg];
+    }
+  }
+  return cur;
+}
+
+async function _loadRevealCfg() {
+  if (_revealCfg) return _revealCfg;
+  if (_revealCfgPromise) return _revealCfgPromise;
+  _revealCfgPromise = fetch(apiUrl('api/settings/reveal'))
+    .then((r) => (r && r.ok) ? r.json() : null)
+    .catch(() => null)
+    .then((j) => {
+      _revealCfg = j;
+      return j;
+    })
+    .finally(() => { _revealCfgPromise = null; });
+  return _revealCfgPromise;
+}
+
+async function togglePwdEl(btn) {
   const inp = btn.previousElementSibling || btn.parentElement.querySelector('input');
+  if (!inp) return;
+
+  // If the value is masked, fetch unmasked settings and fill the field.
+  if ((inp.value || '').trim() === _MASK) {
+    const path = inp.dataset && inp.dataset.secretPath;
+    const cfg = await _loadRevealCfg();
+    const v = _pathGet(cfg, path);
+    if (typeof v === 'string' && v.trim()) {
+      inp.value = v;
+      // Also sync in-memory structures so Save sends the revealed value (optional, but keeps UI consistent).
+      if (path && path.startsWith('jenkins_instances[')) {
+        const m = path.match(/^jenkins_instances\[(\d+)\]\.token$/);
+        if (m) _ji[parseInt(m[1], 10)].token = v;
+      }
+      if (path && path.startsWith('gitlab_instances[')) {
+        const m = path.match(/^gitlab_instances\[(\d+)\]\.token$/);
+        if (m) _gi[parseInt(m[1], 10)].token = v;
+      }
+      if (path && path.startsWith('notifications.telegram.bots[')) {
+        const m = path.match(/^notifications\.telegram\.bots\[(\d+)\]\.bot_token$/);
+        if (m) _tgBots[parseInt(m[1], 10)].bot_token = v;
+      }
+    }
+  }
+
   inp.type  = inp.type === 'password' ? 'text' : 'password';
   btn.textContent = inp.type === 'password' ? t('st.show') : t('st.hide');
 }
@@ -861,7 +924,7 @@ function jInstHtml(ii) {
         <div class="field-row">
           <div class="field-label">${esc(t('st.j_token'))}</div>
           <div class="pw-wrap">
-            <input type="password" class="field-input" value="${esc(inst.token||'')}"
+            <input type="password" class="field-input" value="${esc(inst.token||'')}" data-secret-path="jenkins_instances[${ii}].token"
                    autocomplete="new-password" oninput="_ji[${ii}].token=this.value">
             <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
@@ -1042,7 +1105,7 @@ function gInstHtml(gi) {
         <div class="field-row">
           <div class="field-label">${esc(t('st.g_token'))}</div>
           <div class="pw-wrap">
-            <input type="password" class="field-input" value="${esc(inst.token||'')}"
+            <input type="password" class="field-input" value="${esc(inst.token||'')}" data-secret-path="gitlab_instances[${gi}].token"
                    autocomplete="new-password" oninput="_gi[${gi}].token=this.value">
             <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
@@ -1160,7 +1223,7 @@ function tgBotHtml(i) {
       <div class="field-row">
         <div class="field-label">${esc(t('st.bot_token'))}</div>
         <div class="pw-wrap">
-          <input type="password" class="field-input" value="${esc(b.bot_token||'')}"
+          <input type="password" class="field-input" value="${esc(b.bot_token||'')}" data-secret-path="notifications.telegram.bots[${i}].bot_token"
                  autocomplete="new-password" oninput="_tgBots[${i}].bot_token=this.value">
           <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
         </div>

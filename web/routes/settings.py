@@ -31,6 +31,15 @@ async def api_settings_route():
     """Return full settings (requires shared token)."""
     return settings_api.get_settings(load_yaml_config())
 
+@router.get(
+    "/api/settings/reveal",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def api_settings_reveal_route():
+    """Return unmasked settings for UI reveal (requires shared token)."""
+    return load_yaml_config()
+
 
 @router.get("/api/settings/public", response_class=JSONResponse)
 async def api_settings_public_route():

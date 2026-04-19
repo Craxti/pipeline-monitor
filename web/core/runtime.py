@@ -29,12 +29,9 @@ from web.services import sse_runtime as _sse_runtime
 from web.services import auto_collect_runtime as _auto_collect_runtime
 
 
-# ---- Paths / constants from core modules
-EVENT_FEED_FILE = _event_feed_mod.EVENT_FEED_PATH
+# ---- Constants from core modules
 EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
-HISTORY_FILE = _trends_mod.HISTORY_PATH
 HISTORY_MAX_DAYS = _trends_mod.HISTORY_MAX_DAYS
-DATA_FILE = _snapshot_cache_mod.SNAPSHOT_PATH
 
 
 # ---- Snapshot store locks / partial snapshot throttle
@@ -87,7 +84,7 @@ rate_limit_rt = _rate_limit_runtime.RateLimitRuntime()
 # ---- Notifications / event feed
 notify_state = _notify_runtime.make_notify_state(_NotificationState, notify_max=200)
 event_feed_rt = _event_feed_runtime.EventFeedRuntime(
-    path=EVENT_FEED_FILE,
+    path=None,
     max_entries=EVENT_FEED_MAX,
 )
 

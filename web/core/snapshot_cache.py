@@ -1,4 +1,4 @@
-"""Snapshot JSON read path + short-lived in-memory cache (tied to data revision + file mtime)."""
+"""Snapshot read path + short-lived in-memory cache (tied to data revision + DB store_seq)."""
 
 from __future__ import annotations
 
@@ -12,12 +12,14 @@ from models.models import CISnapshot
 
 logger = logging.getLogger(__name__)
 
-SNAPSHOT_PATH = Path("data") / "snapshot.json"
+# Legacy on-disk location (no longer read/written by the app; data lives in ``monitor.db``).
+# Kept ONLY as a reference for migration/troubleshooting.
+SNAPSHOT_JSON_LEGACY_PATH = Path("data") / "snapshot.json"
 
 _SNAPSHOT_CACHE_TTL_SEC = 2.0
 _snapshot_cache_snap: CISnapshot | None = None
 _snapshot_cache_rev: int = -1
-_snapshot_cache_mtime: float | None = None
+_snapshot_cache_store_seq: int | None = None
 _snapshot_cache_expires_mono: float = 0.0
 
 _revision_accessor: Optional[Callable[[], int]] = None
@@ -42,56 +44,74 @@ def _current_revision() -> int:
 def invalidate_snapshot_cache() -> None:
     """Clear in-memory snapshot cache."""
     global _snapshot_cache_snap, _snapshot_cache_rev
-    global _snapshot_cache_mtime, _snapshot_cache_expires_mono
+    global _snapshot_cache_store_seq, _snapshot_cache_expires_mono
     _snapshot_cache_snap = None
     _snapshot_cache_rev = -1
-    _snapshot_cache_mtime = None
+    _snapshot_cache_store_seq = None
     _snapshot_cache_expires_mono = 0.0
 
 
-def prime_snapshot_cache(snapshot: CISnapshot, mtime: float | None = None) -> None:
-    """Seed cache with a known snapshot + file mtime."""
+def prime_snapshot_cache(snapshot: CISnapshot, store_seq: int | None = None) -> None:
+    """Seed cache with a known snapshot + DB ``store_seq`` (from ``set_latest_snapshot_json``)."""
     global _snapshot_cache_snap, _snapshot_cache_rev
-    global _snapshot_cache_mtime, _snapshot_cache_expires_mono
+    global _snapshot_cache_store_seq, _snapshot_cache_expires_mono
     _snapshot_cache_snap = snapshot
     _snapshot_cache_rev = _current_revision()
-    if mtime is None:
-        try:
-            _snapshot_cache_mtime = SNAPSHOT_PATH.stat().st_mtime
-        except OSError:
-            _snapshot_cache_mtime = None
-    else:
-        _snapshot_cache_mtime = mtime
+    _snapshot_cache_store_seq = store_seq
     _snapshot_cache_expires_mono = time.monotonic() + _SNAPSHOT_CACHE_TTL_SEC
 
 
 def load_snapshot() -> CISnapshot | None:
-    """Load snapshot JSON, using short-lived in-memory cache when possible."""
-    if not SNAPSHOT_PATH.exists():
-        invalidate_snapshot_cache()
-        return None
+    """Load latest snapshot from SQLite ``meta``, using short-lived in-memory cache."""
     try:
-        st = SNAPSHOT_PATH.stat()
-    except OSError:
+        from web.db import (
+            ensure_database_initialized,
+            get_latest_snapshot_raw,
+            get_latest_snapshot_store_seq,
+        )
+    except ImportError:
         invalidate_snapshot_cache()
         return None
-    mtime = st.st_mtime
+
+    if not ensure_database_initialized():
+        invalidate_snapshot_cache()
+        return None
+
     mon = time.monotonic()
     rev = _current_revision()
-    if (
-        _snapshot_cache_snap is not None
-        and _snapshot_cache_rev == rev
-        and _snapshot_cache_mtime == mtime
-        and mon < _snapshot_cache_expires_mono
-    ):
-        return _snapshot_cache_snap
     try:
-        snap = CISnapshot.model_validate_json(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        seq_probe = get_latest_snapshot_store_seq()
     except Exception as exc:
         logger.error("Failed to load snapshot: %s", exc)
         invalidate_snapshot_cache()
         return None
-    prime_snapshot_cache(snap, mtime)
+
+    if (
+        _snapshot_cache_snap is not None
+        and _snapshot_cache_rev == rev
+        and _snapshot_cache_store_seq == seq_probe
+        and mon < _snapshot_cache_expires_mono
+    ):
+        return _snapshot_cache_snap
+
+    try:
+        raw, seq = get_latest_snapshot_raw()
+    except Exception as exc:
+        logger.error("Failed to load snapshot: %s", exc)
+        invalidate_snapshot_cache()
+        return None
+
+    if not raw:
+        invalidate_snapshot_cache()
+        return None
+
+    try:
+        snap = CISnapshot.model_validate_json(raw)
+    except Exception as exc:
+        logger.error("Failed to load snapshot: %s", exc)
+        invalidate_snapshot_cache()
+        return None
+    prime_snapshot_cache(snap, seq)
     return snap
 
 

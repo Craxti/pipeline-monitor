@@ -7,7 +7,7 @@ def append_trends(
     snapshot,
     *,
     append_trends_fn,
-    history_path: str,
+    history_path,
     history_max_days: int,
     load_cfg,
     inst_label_for_build,

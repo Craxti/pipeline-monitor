@@ -7,7 +7,7 @@ def save_snapshot(
     snapshot,
     *,
     snapshot_write_lock,
-    data_file: str,
+    data_dir,
     prime_snapshot_cache,
     append_trends,
     detect_state_changes,
@@ -23,7 +23,7 @@ def save_snapshot(
     return _snapshot_store.save_snapshot(
         snapshot,
         snapshot_write_lock=snapshot_write_lock,
-        data_file=data_file,
+        data_dir=data_dir,
         prime_snapshot_cache=prime_snapshot_cache,
         append_trends=append_trends,
         detect_state_changes=detect_state_changes,

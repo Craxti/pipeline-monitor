@@ -128,26 +128,21 @@ def _parse_since(from_arg: str) -> datetime | None:
 # ── Snapshot persistence ──────────────────────────────────────────────────────
 
 
-def _snapshot_path(cfg: dict) -> Path:
+def _load_snapshot(cfg: dict) -> CISnapshot:
+    """Latest snapshot from SQLite under ``general.data_dir`` (same DB as the web app)."""
+    from web.db import get_latest_snapshot_model, init_db
+
     data_dir = Path(cfg.get("general", {}).get("data_dir", "data"))
     data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "snapshot.json"
-
-
-def _load_snapshot(cfg: dict) -> CISnapshot:
-    p = _snapshot_path(cfg)
-    if p.exists():
-        try:
-            return CISnapshot.model_validate_json(p.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    return CISnapshot()
+    init_db(data_dir)
+    snap = get_latest_snapshot_model()
+    return snap or CISnapshot()
 
 
 def _save_snapshot(snapshot: CISnapshot, cfg: dict) -> None:
-    p = _snapshot_path(cfg)
-    p.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
-    save_snapshot(snapshot)  # also write to web/data location
+    data_dir = Path(cfg.get("general", {}).get("data_dir", "data"))
+    data_dir.mkdir(parents=True, exist_ok=True)
+    save_snapshot(snapshot, data_dir=str(data_dir))
 
 
 # ── CLI root ──────────────────────────────────────────────────────────────────

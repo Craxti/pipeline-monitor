@@ -27,7 +27,7 @@ Use GitHub Issues to track:
 - expected vs actual behavior
 - environment (OS, Python version, run mode)
 - relevant logs (redacted)
-- optional: sanitized `data/snapshot.json`
+- optional: sanitized export of the latest snapshot (from `monitor.db` / API) or legacy `data/snapshot.json` if migrating
 
 ## Pull requests (merge requests)
 

@@ -5,7 +5,6 @@ Extracted from ``web.app`` to reduce its size while preserving behavior.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
@@ -13,7 +12,7 @@ from typing import Callable
 from web.core import trends as trends_core
 
 
-def trends_compute(days: int, *, history_path: Path) -> list:
+def trends_compute(days: int, *, history_path: Path | None = None) -> list:
     """Compute trend aggregates for the given lookback window."""
     return trends_core.compute_trends(days, history_path=history_path)
 
@@ -21,11 +20,11 @@ def trends_compute(days: int, *, history_path: Path) -> list:
 def uptime_compute(
     days: int,
     *,
-    history_path: Path,
+    history_path: Path | None = None,
     sqlite_available: bool,
     db_svc_uptime: Callable[[int], dict] | None,
 ) -> dict:
-    """Compute per-service uptime history (SQLite when available, else JSON history)."""
+    """Compute per-service uptime history (SQLite when available, else trends history)."""
     if sqlite_available and db_svc_uptime is not None:
         try:
             result = db_svc_uptime(days)
@@ -33,11 +32,8 @@ def uptime_compute(
                 return result
         except Exception:
             pass
-    if not history_path.exists():
-        return {}
-    try:
-        history = json.loads(history_path.read_text(encoding="utf-8"))
-    except Exception:
+    history = trends_core.compute_trends(days, history_path=history_path)
+    if not history:
         return {}
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     recent = [e for e in history if e.get("date", "") >= cutoff]

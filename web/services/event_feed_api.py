@@ -10,11 +10,11 @@ def slim(entry: dict) -> dict:
     return _event_feed_mod.slim_event(entry)
 
 
-def append(entries: list[dict], *, path, max_entries: int) -> None:
-    """Append entries to persisted event feed."""
+def append(entries: list[dict], *, path=None, max_entries: int) -> None:
+    """Append entries to persisted event feed (SQLite by default)."""
     _event_feed_mod.append_events(entries, path=path, max_entries=max_entries)
 
 
-def load(*, limit: int, path) -> list[dict]:
+def load(*, limit: int, path=None) -> list[dict]:
     """Load last N entries from persisted event feed."""
     return _event_feed_mod.load_events(limit, path=path)

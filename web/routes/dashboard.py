@@ -99,7 +99,7 @@ async def api_meta():
     def _load_events(limit: int = 300):
         from web.services import event_feed_api
 
-        return event_feed_api.load(limit=limit, path=rt.EVENT_FEED_FILE)
+        return event_feed_api.load(limit=limit)
 
     def _correlation_last_hour():
         return correlation.correlation_last_hour(
@@ -151,7 +151,7 @@ async def api_trends(days: int = 14):
         )
 
     def _trends_compute(d: int):
-        return trends_uptime.trends_compute(d, history_path=rt.HISTORY_FILE)
+        return trends_uptime.trends_compute(d, history_path=None)
 
     return trends_uptime_endpoints.api_trends(
         days=days,
@@ -184,7 +184,7 @@ async def api_uptime(days: int = 30):
     def _uptime_compute(d: int):
         return trends_uptime.uptime_compute(
             d,
-            history_path=rt.HISTORY_FILE,
+            history_path=None,
             sqlite_available=_SQLITE_AVAILABLE,
             db_svc_uptime=_db_svc_uptime if _SQLITE_AVAILABLE else None,
         )
@@ -231,7 +231,7 @@ async def api_events_persisted(limit: int = 250):
     def _event_feed_load(lim: int = 300):
         from web.services import event_feed_api
 
-        return event_feed_api.load(limit=lim, path=rt.EVENT_FEED_FILE)
+        return event_feed_api.load(limit=lim)
 
     return events_endpoints.api_events_persisted(
         event_feed_load=_event_feed_load,

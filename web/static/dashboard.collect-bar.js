@@ -129,6 +129,63 @@ function updateCollectBar(state) {
 }
 
 let _prevCollecting = false;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slow ops (paged + details modal)
+// ─────────────────────────────────────────────────────────────────────────────
+let _collectSlowOffset = 0;
+let _collectSlowTotal = 0;
+let _collectSlowHasMore = false;
+let _collectSlowLoading = false;
+let _collectSlowItems = [];
+let _collectSlowLastRenderTs = 0;
+let _collectSlowActive = null;
+
+function _slowFmtTitle(it) {
+  const ms = Number(it.elapsed_ms || 0);
+  const kind = String(it.kind || '');
+  const inst = String(it.instance || '');
+  const job = String(it.job || '');
+  const b = it.build != null ? `#${it.build}` : '';
+  return `${ms}ms · ${kind} · ${inst} · ${job} ${b}`.trim();
+}
+
+function closeSlowOpModal() {
+  const ov = document.getElementById('slowop-modal');
+  if (!ov) return;
+  ov.classList.remove('open');
+  ov.setAttribute('aria-hidden', 'true');
+  _collectSlowActive = null;
+}
+
+function openSlowOpModal(it) {
+  const ov = document.getElementById('slowop-modal');
+  const pre = document.getElementById('slowop-modal-pre');
+  const sub = document.getElementById('slowop-modal-sub');
+  if (!ov || !pre) return;
+  _collectSlowActive = it || null;
+  if (sub) sub.textContent = it ? _slowFmtTitle(it) : '';
+  try {
+    pre.textContent = it ? JSON.stringify(it, null, 2) : '';
+  } catch {
+    pre.textContent = String(it || '');
+  }
+  ov.classList.add('open');
+  ov.setAttribute('aria-hidden', 'false');
+}
+
+async function copySlowOpDetails() {
+  if (!_collectSlowActive) return;
+  const txt = (() => {
+    try { return JSON.stringify(_collectSlowActive, null, 2); } catch { return String(_collectSlowActive); }
+  })();
+  try {
+    await navigator.clipboard.writeText(txt);
+    showToast(t('dash.copy_log_toast'), 'ok');
+  } catch {
+    showToast(t('dash.copy_log_fail'), 'warn');
+  }
+}
 async function pollCollect() {
   const res = await fetch(apiUrl('api/collect/status')).catch(()=>null);
   if (!res || !res.ok) return;
@@ -169,25 +226,75 @@ async function loadCollectSlowTop() {
   _collectLogsSlowPollTs = now;
   const box = document.getElementById('collectslow-box');
   if (!box) return;
-  const res = await fetch(apiUrl('api/collect/slow?limit=10')).catch(()=>null);
+  if (_collectSlowLoading) return;
+
+  // First paint resets list; subsequent calls can append pages via scroll.
+  if (now - _collectSlowLastRenderTs > 10000) {
+    _collectSlowOffset = 0;
+    _collectSlowItems = [];
+    _collectSlowTotal = 0;
+    _collectSlowHasMore = false;
+    box.scrollTop = 0;
+    box.innerHTML = '';
+  }
+
+  const limit = 30;
+  _collectSlowLoading = true;
+  const res = await fetch(apiUrl(`api/collect/slow?limit=${limit}&offset=${_collectSlowOffset}`)).catch(()=>null);
+  _collectSlowLoading = false;
   if (!res || !res.ok) return;
   const data = await res.json().catch(()=>null);
   const items = (data && data.items) || [];
-  if (!items.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div style="font-size:.75rem;color:var(--muted);font-weight:700;padding:.35rem 1rem .1rem">Top slow jobs</div>` +
-    items.map(it => {
-      const ms = Number(it.elapsed_ms || 0);
-      const kind = String(it.kind || '');
-      const inst = String(it.instance || '');
-      const job  = String(it.job || '');
-      const b = it.build != null ? `#${it.build}` : '';
-      return `<div style="padding:.25rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center">
-        <span style="min-width:5.5rem;font-weight:800;color:${ms>=15000?'#ef4444':ms>=8000?'#f59e0b':'#93c5fd'}">${ms}ms</span>
-        <span style="min-width:4.2rem;color:var(--muted)">${_escHtml(kind)}</span>
-        <span style="min-width:10rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(inst)}</span>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(job)} <span style="color:var(--muted)">${_escHtml(b)}</span></span>
-      </div>`;
-    }).join('');
+  _collectSlowTotal = Number((data && data.total) || 0) || 0;
+  _collectSlowHasMore = !!(data && data.has_more);
+
+  if (!_collectSlowItems.length) {
+    box.innerHTML = `<div style="font-size:.75rem;color:var(--muted);font-weight:700;padding:.35rem 1rem .1rem">${_escHtml(t('dash.collect_slow_title'))}</div>`;
+    box.addEventListener('scroll', () => {
+      const nearBottom = (box.scrollTop + box.clientHeight) >= (box.scrollHeight - 40);
+      if (nearBottom && _collectSlowHasMore && !_collectSlowLoading) {
+        loadCollectSlowTop();
+      }
+    }, { passive: true });
+  }
+
+  if (!items.length) {
+    _collectSlowLastRenderTs = now;
+    return;
+  }
+
+  const startIdx = _collectSlowItems.length;
+  _collectSlowItems.push(...items);
+  _collectSlowOffset = _collectSlowItems.length;
+
+  const rowsHtml = items.map((it, i) => {
+    const idx = startIdx + i;
+    const ms = Number(it.elapsed_ms || 0);
+    const kind = String(it.kind || '');
+    const inst = String(it.instance || '');
+    const job  = String(it.job || '');
+    const b = it.build != null ? `#${it.build}` : '';
+    return `<div class="collectslow-row" data-idx="${idx}" style="padding:.25rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center;cursor:pointer" title="${_escHtml(_slowFmtTitle(it))}">
+      <span style="min-width:5.5rem;font-weight:800;color:${ms>=15000?'#ef4444':ms>=8000?'#f59e0b':'#93c5fd'}">${ms}ms</span>
+      <span style="min-width:4.2rem;color:var(--muted)">${_escHtml(kind)}</span>
+      <span class="collectslow-inst" style="min-width:10rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_escHtml(inst)}">${_escHtml(inst)}</span>
+      <span class="collectslow-job" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_escHtml(job)} ${_escHtml(b)}">${_escHtml(job)} <span style="color:var(--muted)">${_escHtml(b)}</span></span>
+    </div>`;
+  }).join('');
+
+  box.insertAdjacentHTML('beforeend', rowsHtml);
+  // Attach click handler once (event delegation)
+  if (!box.dataset.boundClicks) {
+    box.dataset.boundClicks = '1';
+    box.addEventListener('click', (ev) => {
+      const row = ev.target && ev.target.closest ? ev.target.closest('.collectslow-row') : null;
+      if (!row) return;
+      const idx = parseInt(row.getAttribute('data-idx') || '-1', 10);
+      const it = (idx >= 0 && idx < _collectSlowItems.length) ? _collectSlowItems[idx] : null;
+      if (it) openSlowOpModal(it);
+    });
+  }
+  _collectSlowLastRenderTs = now;
 }
 
 async function stopCollect() {

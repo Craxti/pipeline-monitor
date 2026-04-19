@@ -1,11 +1,13 @@
 """
 SQLite persistence layer for CI/CD Monitor.
 
-Dual-write design: JSON files remain the primary storage.
-SQLite accumulates historical data across multiple collect cycles,
-enabling queries that require more than the latest snapshot.
+The latest dashboard snapshot, persisted UI event feed, and daily trends buckets
+live in the ``meta`` table (replacing former ``data/*.json`` files). SQLite also
+accumulates historical builds/tests/services across collect cycles.
 
 Features provided:
+- `set_latest_snapshot_json` / `get_latest_snapshot_raw` — current snapshot document
+- Event feed and trends history blobs in ``meta``
 - `append_snapshot(snapshot)` — write builds/services into DB (called from save_snapshot)
 - `query_builds(...)` — paginated historical builds with rich filtering
 - `build_duration_history(job_name, limit)` — for sparklines
@@ -15,6 +17,7 @@ Features provided:
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from contextlib import contextmanager
@@ -27,7 +30,13 @@ from models.models import normalize_build_status
 logger = logging.getLogger(__name__)
 
 _DB_PATH: Optional[Path] = None
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+
+# ``meta`` keys for dashboard document storage (formerly data/*.json).
+META_LATEST_SNAPSHOT = "latest_snapshot_json"
+META_LATEST_SNAPSHOT_SEQ = "latest_snapshot_seq"
+META_EVENT_FEED = "event_feed_json"
+META_TRENDS_HISTORY = "trends_history_json"
 
 
 def init_db(data_dir: str | Path) -> Path:
@@ -39,6 +48,7 @@ def init_db(data_dir: str | Path) -> Path:
     try:
         with _conn() as conn:
             _apply_schema(conn)
+            _migrate_legacy_json_files(conn, Path(data_dir))
         logger.info("SQLite DB ready: %s", path)
     except Exception as exc:
         logger.error("Failed to init SQLite DB at %s: %s", path, exc)
@@ -136,11 +146,218 @@ def _apply_schema(conn: sqlite3.Connection) -> None:
         );
     """
     )
-    # Record schema version
     conn.execute(
-        "INSERT OR IGNORE INTO meta VALUES ('schema_version', ?)",
+        "INSERT INTO meta (key, value) VALUES ('schema_version', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         (str(_SCHEMA_VERSION),),
     )
+
+
+def _meta_get(conn: sqlite3.Connection, key: str) -> Optional[str]:
+    row = conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+    if not row:
+        return None
+    v = row[0]
+    return None if v is None else str(v)
+
+
+def _meta_set(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value),
+    )
+
+
+def _snapshot_seq_get(conn: sqlite3.Connection) -> int:
+    raw = _meta_get(conn, META_LATEST_SNAPSHOT_SEQ)
+    if not raw:
+        return 0
+    try:
+        return int(raw)
+    except ValueError:
+        return 0
+
+
+def _migrate_legacy_json_files(conn: sqlite3.Connection, data_dir: Path) -> None:
+    """One-time import from legacy ``snapshot.json`` / ``event_feed.json`` / ``trends.json``."""
+    snap = (_meta_get(conn, META_LATEST_SNAPSHOT) or "").strip()
+    if not snap:
+        legacy = data_dir / "snapshot.json"
+        if legacy.is_file():
+            try:
+                body = legacy.read_text(encoding="utf-8")
+                _meta_set(conn, META_LATEST_SNAPSHOT, body)
+                _meta_set(conn, META_LATEST_SNAPSHOT_SEQ, str(_snapshot_seq_get(conn) + 1))
+            except OSError:
+                pass
+
+    ev = (_meta_get(conn, META_EVENT_FEED) or "").strip()
+    if not ev:
+        legacy = data_dir / "event_feed.json"
+        if legacy.is_file():
+            try:
+                body = legacy.read_text(encoding="utf-8").strip()
+                if body:
+                    _meta_set(conn, META_EVENT_FEED, body)
+                else:
+                    _meta_set(conn, META_EVENT_FEED, "[]")
+            except OSError:
+                pass
+
+    tr = (_meta_get(conn, META_TRENDS_HISTORY) or "").strip()
+    if not tr:
+        legacy = data_dir / "trends.json"
+        if legacy.is_file():
+            try:
+                body = legacy.read_text(encoding="utf-8").strip()
+                if body:
+                    _meta_set(conn, META_TRENDS_HISTORY, body)
+                else:
+                    _meta_set(conn, META_TRENDS_HISTORY, "[]")
+            except OSError:
+                pass
+
+
+def ensure_database_initialized(*, data_dir: str | Path | None = None) -> bool:
+    """Open SQLite under ``general.data_dir`` (or explicit ``data_dir``). Returns False on failure."""
+    if data_dir is not None:
+        try:
+            init_db(data_dir)
+        except Exception:
+            logger.debug("init_db(%s) failed", data_dir, exc_info=True)
+        return _DB_PATH is not None
+    if _DB_PATH is not None:
+        return True
+    try:
+        from web.core.config import load_yaml_config
+
+        cfg = load_yaml_config()
+        init_db(cfg.get("general", {}).get("data_dir", "data"))
+    except Exception:
+        logger.debug("ensure_database_initialized (yaml) failed", exc_info=True)
+    return _DB_PATH is not None
+
+
+def is_db_ready() -> bool:
+    return _DB_PATH is not None
+
+
+def get_latest_snapshot_store_seq() -> int:
+    """Return ``latest_snapshot_seq`` (0 if DB unavailable). Cheap cache invalidation probe."""
+    if _DB_PATH is None:
+        return 0
+    try:
+        with _conn() as conn:
+            return _snapshot_seq_get(conn)
+    except Exception as exc:
+        logger.debug("get_latest_snapshot_store_seq failed: %s", exc)
+        return 0
+
+
+def get_latest_snapshot_raw() -> tuple[Optional[str], int]:
+    """Return ``(json_text, store_seq)`` for the latest dashboard snapshot."""
+    if _DB_PATH is None:
+        return None, 0
+    try:
+        with _conn() as conn:
+            body = _meta_get(conn, META_LATEST_SNAPSHOT)
+            seq = _snapshot_seq_get(conn)
+            return (body if (body or "").strip() else None), seq
+    except Exception as exc:
+        logger.debug("get_latest_snapshot_raw failed: %s", exc)
+        return None, 0
+
+
+def get_latest_snapshot_model() -> Any:
+    """Parse latest snapshot JSON into ``CISnapshot``, or ``None``."""
+    raw, _seq = get_latest_snapshot_raw()
+    if not raw:
+        return None
+    try:
+        from models.models import CISnapshot
+
+        return CISnapshot.model_validate_json(raw)
+    except Exception as exc:
+        logger.warning("get_latest_snapshot_model parse failed: %s", exc)
+        return None
+
+
+def set_latest_snapshot_json(body: str) -> int:
+    """Persist full snapshot JSON; returns monotonic ``store_seq`` for cache invalidation."""
+    if _DB_PATH is None:
+        return 0
+    try:
+        with _conn() as conn:
+            _meta_set(conn, META_LATEST_SNAPSHOT, body)
+            seq = _snapshot_seq_get(conn) + 1
+            _meta_set(conn, META_LATEST_SNAPSHOT_SEQ, str(seq))
+        return seq
+    except Exception as exc:
+        logger.warning("set_latest_snapshot_json failed: %s", exc)
+        return 0
+
+
+def _event_feed_list(conn: sqlite3.Connection) -> list[Any]:
+    raw = (_meta_get(conn, META_EVENT_FEED) or "").strip()
+    if not raw:
+        return []
+    try:
+        cur = json.loads(raw)
+        return cur if isinstance(cur, list) else []
+    except json.JSONDecodeError:
+        return []
+
+
+def event_feed_load_list(limit: int = 300) -> list[dict[str, Any]]:
+    if _DB_PATH is None:
+        return []
+    try:
+        with _conn() as conn:
+            cur = _event_feed_list(conn)
+        return cur[-limit:] if limit > 0 else cur  # type: ignore[return-value]
+    except Exception as exc:
+        logger.debug("event_feed_load_list failed: %s", exc)
+        return []
+
+
+def event_feed_append_slimmed(entries: list[dict[str, Any]], *, max_entries: int) -> None:
+    if _DB_PATH is None or not entries:
+        return
+    try:
+        with _conn() as conn:
+            cur = _event_feed_list(conn)
+            for e in entries:
+                cur.append(e)
+            if max_entries > 0 and len(cur) > max_entries:
+                cur = cur[-max_entries:]
+            _meta_set(conn, META_EVENT_FEED, json.dumps(cur, ensure_ascii=False))
+    except Exception as exc:
+        logger.warning("event_feed_append_slimmed failed: %s", exc)
+
+
+def trends_history_load_list() -> list[dict[str, Any]]:
+    if _DB_PATH is None:
+        return []
+    try:
+        with _conn() as conn:
+            raw = (_meta_get(conn, META_TRENDS_HISTORY) or "").strip()
+        if not raw:
+            return []
+        data = json.loads(raw)
+        return data if isinstance(data, list) else []
+    except Exception as exc:
+        logger.debug("trends_history_load_list failed: %s", exc)
+        return []
+
+
+def trends_history_save_list(history: list[dict[str, Any]]) -> None:
+    if _DB_PATH is None:
+        return
+    try:
+        with _conn() as conn:
+            _meta_set(conn, META_TRENDS_HISTORY, json.dumps(history, ensure_ascii=False, indent=2))
+    except Exception as exc:
+        logger.warning("trends_history_save_list failed: %s", exc)
 
 
 def append_snapshot(snapshot: Any) -> None:

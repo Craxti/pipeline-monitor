@@ -17,12 +17,14 @@ This guide is for developers contributing to the codebase. It is written to matc
 
 ### Runtime data files
 
-By default, most runtime artifacts are written under `general.data_dir` (default: `data/`), for example:
+By default, runtime artifacts are written under `general.data_dir` (default: `data/`):
 
-- `data/snapshot.json` — latest snapshot (primary storage)
-- `data/event_feed.json` — persisted UI event feed
-- `data/trends.json` and related history — trends/uptime history
-- `data/monitor.db` — optional SQLite history store
+- `data/monitor.db` — SQLite database holding:
+  - latest dashboard snapshot JSON (`meta.latest_snapshot_json`)
+  - persisted UI event feed (`meta.event_feed_json`)
+  - daily trends buckets (`meta.trends_history_json`)
+  - historical builds/tests/services rows for analytics
+- On first startup after an upgrade, if those `meta` keys are empty but legacy `snapshot.json` / `event_feed.json` / `trends.json` exist in the same directory, they are imported once (you may delete the old JSON files afterward).
 
 ### Why “services” exist
 

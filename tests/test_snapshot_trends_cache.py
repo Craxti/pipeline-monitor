@@ -13,62 +13,78 @@ from models.models import TestRecord as ModelTestRecord
 
 
 class TestSnapshotCache:
-    def test_load_snapshot_returns_none_when_missing(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_load_snapshot_returns_none_when_missing(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db
 
-        p = tmp_path / "snapshot.json"
-        monkeypatch.setattr(sc, "SNAPSHOT_PATH", p)
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
         sc.invalidate_snapshot_cache()
         assert sc.load_snapshot() is None
 
-    def test_load_snapshot_caches_by_ttl_and_mtime(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_load_snapshot_caches_by_ttl_and_seq(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        import web.db as db
+        from web.db import init_db, set_latest_snapshot_json
 
-        class _FakePath:
-            def __init__(self, *, mtime: float, text: str):
-                self._mtime = mtime
-                self._text = text
-
-            def exists(self) -> bool:
-                return True
-
-            def stat(self):
-                class _ST:
-                    st_mtime = 0.0
-
-                _ST.st_mtime = self._mtime
-                return _ST
-
-            def read_text(self, encoding: str = "utf-8") -> str:
-                return self._text
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        good = CISnapshot(builds=[], tests=[], services=[])
+        set_latest_snapshot_json(good.model_dump_json())
 
         sc.invalidate_snapshot_cache()
+        raw_calls = {"n": 0}
+        orig_raw = db.get_latest_snapshot_raw
 
-        good = CISnapshot(builds=[], tests=[], services=[])
-        fake = _FakePath(mtime=123.0, text=good.model_dump_json())
-        monkeypatch.setattr(sc, "SNAPSHOT_PATH", fake)
+        def seq_fn() -> int:
+            return 1
 
-        # First read primes cache
+        def raw_fn():
+            raw_calls["n"] += 1
+            if raw_calls["n"] == 1:
+                return orig_raw()
+            return "not json", 1
+
+        monkeypatch.setattr(db, "get_latest_snapshot_store_seq", seq_fn)
+        monkeypatch.setattr(db, "get_latest_snapshot_raw", raw_fn)
+
         s1 = sc.load_snapshot()
         assert isinstance(s1, CISnapshot)
 
-        # Keep same mtime and same revision, do not expire TTL: should return cached snapshot even if file is "corrupted"
-        fake._text = "not json"
         monkeypatch.setattr(time, "monotonic", lambda: sc._snapshot_cache_expires_mono - 0.1)
         s2 = sc.load_snapshot()
         assert isinstance(s2, CISnapshot)
+        assert raw_calls["n"] == 1
 
-        # After TTL expires, it should attempt to parse and fail -> None
         monkeypatch.setattr(time, "monotonic", lambda: sc._snapshot_cache_expires_mono + 0.1)
         assert sc.load_snapshot() is None
+        assert raw_calls["n"] == 2
 
     def test_load_snapshot_async_uses_thread(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
 
-        p = tmp_path / "snapshot.json"
-        monkeypatch.setattr(sc, "SNAPSHOT_PATH", p)
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        set_latest_snapshot_json(CISnapshot().model_dump_json())
         sc.invalidate_snapshot_cache()
-        p.write_text(CISnapshot().model_dump_json(), encoding="utf-8")
 
         out = asyncio.run(sc.load_snapshot_async())
         assert isinstance(out, CISnapshot)

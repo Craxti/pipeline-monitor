@@ -1,4 +1,4 @@
-"""Low-level snapshot persistence helpers (JSON file + optional SQLite)."""
+"""Low-level snapshot persistence (SQLite ``meta`` + optional historical SQLite rows)."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ def save_snapshot(
     snapshot: Any,
     *,
     snapshot_write_lock,
-    data_file,
-    prime_snapshot_cache: Callable[[Any, float | None], None],
+    data_dir: str | Path | None,
+    prime_snapshot_cache: Callable[[Any, int | None], None],
     append_trends: Callable[[Any], None],
     detect_state_changes: Callable[[Any], None],
     sqlite_available: bool,
@@ -21,16 +21,15 @@ def save_snapshot(
     logger_debug: Callable[[str, object], None],
 ) -> None:
     """Persist a full snapshot, bump revision, and run hooks."""
-    data_path = Path(data_file)
+    from web.db import ensure_database_initialized, set_latest_snapshot_json
+
     with snapshot_write_lock:
-        data_path.parent.mkdir(parents=True, exist_ok=True)
-        data_path.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
+        if not ensure_database_initialized(data_dir=data_dir):
+            logger_warning("Snapshot not persisted: SQLite unavailable or init failed")
+            return
+        seq = set_latest_snapshot_json(snapshot.model_dump_json(indent=2))
         bump_revision()
-        try:
-            mtime = data_path.stat().st_mtime
-        except OSError:
-            mtime = None
-        prime_snapshot_cache(snapshot, mtime)
+        prime_snapshot_cache(snapshot, seq)
     try:
         append_trends(snapshot)
     except Exception as exc:
@@ -51,15 +50,15 @@ def save_snapshot_partial(
     snapshot: Any,
     *,
     snapshot_write_lock,
-    data_file,
-    prime_snapshot_cache: Callable[[Any, float | None], None],
+    data_dir: str | Path | None,
+    prime_snapshot_cache: Callable[[Any, int | None], None],
     bump_revision: Callable[[], int],
     collect_state: dict,
     load_snapshot: Callable[[], Any],
 ) -> None:
     """
     Persist an in-progress snapshot for live dashboard updates during Collect.
-    Intentionally skips trends/notifications/DB to keep it cheap.
+    Intentionally skips trends/notifications/DB history append to keep it cheap.
     """
     try:
         if collect_state.get("is_collecting"):
@@ -71,13 +70,11 @@ def save_snapshot_partial(
     except Exception:
         pass
 
-    data_path = Path(data_file)
+    from web.db import ensure_database_initialized, set_latest_snapshot_json
+
     with snapshot_write_lock:
-        data_path.parent.mkdir(parents=True, exist_ok=True)
-        data_path.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
+        if not ensure_database_initialized(data_dir=data_dir):
+            return
+        seq = set_latest_snapshot_json(snapshot.model_dump_json(indent=2))
         bump_revision()
-        try:
-            mtime = data_path.stat().st_mtime
-        except OSError:
-            mtime = None
-        prime_snapshot_cache(snapshot, mtime)
+        prime_snapshot_cache(snapshot, seq)

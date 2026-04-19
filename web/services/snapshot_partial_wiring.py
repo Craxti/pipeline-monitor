@@ -7,7 +7,7 @@ def save_snapshot_partial(
     snapshot,
     *,
     snapshot_write_lock,
-    data_file: str,
+    data_dir,
     prime_snapshot_cache,
     bump_revision,
     collect_state: dict,
@@ -19,7 +19,7 @@ def save_snapshot_partial(
     return _snapshot_store.save_snapshot_partial(
         snapshot,
         snapshot_write_lock=snapshot_write_lock,
-        data_file=data_file,
+        data_dir=data_dir,
         prime_snapshot_cache=prime_snapshot_cache,
         bump_revision=bump_revision,
         collect_state=collect_state,

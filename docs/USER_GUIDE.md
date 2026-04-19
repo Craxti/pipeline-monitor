@@ -258,16 +258,13 @@ Uvicorn reload restarts workers frequently; rapid file changes from IDE tooling 
 
 ## Files written to `data/`
 
-The project uses **JSON files as the primary storage** and can optionally also write to SQLite for historical analytics.
+The dashboard snapshot, persisted event feed, and trends history are stored **inside** `monitor.db` (SQLite `meta` table). Historical build rows for analytics are stored in the same database.
 
 Common outputs under `general.data_dir` (default `data/`):
 
-- `snapshot.json`: latest collected snapshot used by the dashboard
-- `snapshot.partial.json` / partial snapshot files (if enabled by runtime logic)
-- `event_feed.json`: persisted event feed for the UI
-- `trends.json` / history data used by trends/uptime
+- `monitor.db`: SQLite — latest snapshot, event feed, trends history, plus historical tables for `/api/builds/history`, sparklines, flaky analysis, etc.
 - `ci_report.csv`, `ci_report.html`: reports (if generated)
-- `monitor.db`: SQLite history DB (if enabled/available in your environment)
+- If you previously used JSON files (`snapshot.json`, `event_feed.json`, `trends.json`), they are migrated into `monitor.db` automatically on first open when the corresponding `meta` keys are still empty.
 
 ## Webhook integration
 
@@ -297,8 +294,8 @@ Fix: add the header, or temporarily remove the token configuration.
 
 ### Dashboard loads, but shows no data
 
-- Run `py ci_monitor.py collect` at least once (produces `data/snapshot.json`)
-- Ensure your `general.data_dir` matches where you expect `snapshot.json` to live
+- Run `py ci_monitor.py collect` at least once (writes the latest snapshot into `monitor.db` under `general.data_dir`)
+- Ensure `general.data_dir` in `config.yaml` is the directory where `monitor.db` is created/updated
 - Check CI connectivity (Jenkins/GitLab URL, tokens, SSL verification)
 
 ### Jenkins SSL errors

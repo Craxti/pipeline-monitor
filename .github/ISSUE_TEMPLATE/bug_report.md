@@ -39,7 +39,7 @@ Paste relevant output (remove secrets).
 
 If safe, attach:
 
-- `data/snapshot.json` (or a sanitized subset)
+- Relevant rows from `data/monitor.db` / API export (or a sanitized JSON subset of the latest snapshot)
 - request/response examples if this is an API issue
 
 ## Additional context

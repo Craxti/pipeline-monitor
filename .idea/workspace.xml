@@ -5,9 +5,41 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix settings UI">
+      <change beforePath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/bug_report.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/ISSUE_TEMPLATE/bug_report.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ci_monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/ci_monitor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/snapshot.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/snapshot.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/ci_report.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/ci_report.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/cimon.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/cursor_proxy.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/snapshot.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/USER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/USER_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/WORKFLOW.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/WORKFLOW.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_smoke.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_smoke.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_snapshot_trends_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_snapshot_trends_cache.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/event_feed.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/event_feed.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/runtime.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/snapshot_cache.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/snapshot_cache.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/core/trends.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/trends.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/routes/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/routes/ops.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/ops.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_entrypoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_entrypoints.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/event_feed_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/event_feed_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/event_feed_runtime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/event_feed_runtime.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_partial_wiring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_save_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_save_wiring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_store.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_store.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/snapshot_trends_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_trends_wiring.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/trends_uptime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/trends_uptime.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -304,7 +336,21 @@
       <option name="project" value="LOCAL" />
       <updated>1776456618792</updated>
     </task>
-    <option name="localTasksCounter" value="37" />
+    <task id="LOCAL-00037" summary="fix settings UI">
+      <created>1776457213367</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1776457213367</updated>
+    </task>
+    <task id="LOCAL-00038" summary="fix settings UI">
+      <created>1776591796563</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1776591796563</updated>
+    </task>
+    <option name="localTasksCounter" value="39" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
