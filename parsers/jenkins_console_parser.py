@@ -337,7 +337,37 @@ class JenkinsConsoleParser:
                     except Exception:
                         pass
                 return []
-            return [b["number"] for b in (r.json().get("builds", []) or []) if "number" in b]
+            try:
+                payload = r.json()
+            except Exception as exc:
+                # Usually means Jenkins returned HTML (login/403) or an empty body.
+                ct = ""
+                try:
+                    ct = str((r.headers or {}).get("Content-Type", "")).strip()
+                except Exception:
+                    ct = ""
+                snippet = ""
+                try:
+                    snippet = (r.text or "").strip().replace("\n", " ")[:220]
+                except Exception:
+                    snippet = ""
+                logger.warning(
+                    "ConsoleParser: build list not JSON for '%s' (HTTP %s, ct=%s): %s",
+                    job_name,
+                    getattr(r, "status_code", "?"),
+                    ct or "—",
+                    snippet or str(exc),
+                )
+                if self.progress_cb:
+                    try:
+                        self.progress_cb(
+                            f"Console: {job_name} build list error: non-JSON (HTTP {getattr(r,'status_code','?')})"
+                        )
+                    except Exception:
+                        pass
+                return []
+            builds = payload.get("builds", []) if isinstance(payload, dict) else []
+            return [b["number"] for b in (builds or []) if isinstance(b, dict) and "number" in b]
         except Exception as exc:
             logger.warning("ConsoleParser: cannot list builds for '%s': %s", job_name, exc)
             if self.progress_cb:

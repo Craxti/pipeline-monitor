@@ -176,6 +176,15 @@
   .panel-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
   .panel-header h2{font-size:.95rem;font-weight:600}
   .form-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+  .wizard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem}
+  .wizard-step{background:var(--surface2);border:1px solid var(--border);border-radius:.6rem;padding:.85rem}
+  .wizard-step h3{font-size:.82rem;margin-bottom:.35rem}
+  .wizard-step p{font-size:.8rem;color:var(--muted);line-height:1.45}
+  .wizard-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
+  .inst-test-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .test-status{font-size:.78rem;color:var(--muted)}
+  .test-status.ok{color:var(--ok)}
+  .test-status.err{color:var(--fail)}
 
   /* ── Empty instance placeholder ── */
   .empty-card{border:2px dashed var(--border);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:1rem}
@@ -258,6 +267,9 @@
   }
   .privacy-banner .pmsg{font-size:.82rem;color:var(--text);line-height:1.35}
   .privacy-banner .btn{padding:.35rem .7rem;font-size:.78rem}
+  @media (max-width: 1100px){
+    .wizard-grid{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body data-page="settings">
@@ -314,6 +326,31 @@
   </nav>
 
   <main>
+    <div class="panel">
+      <div class="panel-header">
+        <h2>&#9889; <span data-i18n="st.wz_title">Quick Start Wizard</span></h2>
+      </div>
+      <div class="form-body">
+        <div class="wizard-grid">
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step1_title">1) Choose source</h3>
+            <p data-i18n="st.wz_step1_desc">Pick Jenkins or GitLab. The wizard adds one instance and opens the corresponding section.</p>
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-sm" onclick="startQuickSetup('jenkins')">Jenkins</button>
+              <button type="button" class="btn btn-sm" onclick="startQuickSetup('gitlab')">GitLab</button>
+            </div>
+          </div>
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step2_title">2) Fill credentials</h3>
+            <p data-i18n-html="st.wz_step2_desc">Enter URL and token fields, then run <b>Test connection</b> inside the instance card.</p>
+          </div>
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step3_title">3) Save settings</h3>
+            <p data-i18n-html="st.wz_step3_desc">After a successful check, click <b>Save Settings</b>. Collect loop restarts automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ═══ JENKINS ════════════════════════════════════════════ -->
     <div id="sec-jenkins" class="section active">
@@ -995,6 +1032,10 @@ function jInstHtml(ii) {
           </div>
         </div>
       </div>
+      <div class="inst-test-row">
+        <button type="button" class="btn btn-sm btn-ghost" id="ji-test-btn-${ii}" onclick="testInstanceConnection('jenkins', ${ii})">${esc(t('st.test_connection_btn'))}</button>
+        <span class="test-status" id="ji-test-status-${ii}"></span>
+      </div>
       <div class="three-col">
         <div class="field-row">
           <div class="field-label">${esc(t('st.j_max_builds'))}</div>
@@ -1181,6 +1222,10 @@ function gInstHtml(gi) {
                  oninput="_gi[${gi}].max_pipelines=parseInt(this.value)">
         </div>
       </div>
+      <div class="inst-test-row">
+        <button type="button" class="btn btn-sm btn-ghost" id="gi-test-btn-${gi}" onclick="testInstanceConnection('gitlab', ${gi})">${esc(t('st.test_connection_btn'))}</button>
+        <span class="test-status" id="gi-test-status-${gi}"></span>
+      </div>
       <div class="field-row">
         <label class="toggle">
           <input type="checkbox" ${inst.verify_ssl !== false ? 'checked' : ''}
@@ -1250,6 +1295,67 @@ function addGitlabInst() {
              projects: [], max_pipelines: 10, verify_ssl: true });
   renderGInsts();
   $(`gi-card-${_gi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function startQuickSetup(kind) {
+  if (kind === 'jenkins') {
+    if (!_ji.length) addJenkinsInst();
+    showSec('jenkins');
+    const idx = Math.max(0, _ji.length - 1);
+    $(`ji-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_jenkins'), 'ok');
+    return;
+  }
+  if (kind === 'gitlab') {
+    if (!_gi.length) addGitlabInst();
+    showSec('gitlab');
+    const idx = Math.max(0, _gi.length - 1);
+    $(`gi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_gitlab'), 'ok');
+  }
+}
+
+async function testInstanceConnection(kind, idx) {
+  const isJenkins = kind === 'jenkins';
+  const inst = isJenkins ? (_ji[idx] || {}) : (_gi[idx] || {});
+  const btn = $(isJenkins ? `ji-test-btn-${idx}` : `gi-test-btn-${idx}`);
+  const status = $(isJenkins ? `ji-test-status-${idx}` : `gi-test-status-${idx}`);
+  if (btn) btn.disabled = true;
+  if (status) {
+    status.className = 'test-status';
+    status.textContent = t('st.test_connection_running');
+  }
+
+  const payload = isJenkins
+    ? {
+        kind: 'jenkins',
+        url: (inst.url || '').trim(),
+        username: inst.username || '',
+        token: inst.token || '',
+        verify_ssl: inst.verify_ssl !== false,
+      }
+    : {
+        kind: 'gitlab',
+        url: (inst.url || '').trim(),
+        token: inst.token || '',
+        verify_ssl: inst.verify_ssl !== false,
+      };
+
+  const res = await fetch(apiUrl('api/settings/test-connection'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch(() => null);
+
+  if (btn) btn.disabled = false;
+  const data = (res && await res.json().catch(() => ({}))) || {};
+  const msg = (data && data.message) ? String(data.message) : t('st.test_connection_failed');
+  const ok = !!(res && res.ok && data.ok);
+  if (status) {
+    status.className = ok ? 'test-status ok' : 'test-status err';
+    status.textContent = msg;
+  }
+  showToast(msg, ok ? 'ok' : 'err');
 }
 
 function removeGInst(gi) {

@@ -13,6 +13,7 @@ from web.core import runtime as rt
 from web.core.templates import create_templates
 from web.services import (
     pages,
+    settings_connection_test,
     settings_api,
     settings_public,
     settings_save_endpoint,
@@ -49,6 +50,21 @@ async def api_settings_public_route():
         settings_public.public_settings_payload,
         load_yaml_config(),
     )
+
+
+@router.post(
+    "/api/settings/test-connection",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def api_settings_test_connection_route(request: Request):
+    """Test Jenkins/GitLab credentials without saving settings."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    result = settings_connection_test.check_connection(payload if isinstance(payload, dict) else {})
+    return result
 
 
 @router.post(

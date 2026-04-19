@@ -22,6 +22,7 @@ from web.services import sqlite_imports as _db_opt
 from web.services import sse_hub
 from web.services import sse_runtime
 from web.services.build_filters import config_instance_label as _config_instance_label
+from web.services.build_filters import inst_label_for_build_with_cfg as _inst_label_for_build_with_cfg
 from web.services.collect_sync import run_collect_sync as _collect_sync_run_mod
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ def _append_trends(snapshot: CISnapshot) -> None:
         history_path=None,
         history_max_days=rt.HISTORY_MAX_DAYS,
         load_cfg=load_yaml_config,
-        inst_label_for_build=_config_instance_label,
+        inst_label_for_build=_inst_label_for_build_with_cfg,
     )
 
 

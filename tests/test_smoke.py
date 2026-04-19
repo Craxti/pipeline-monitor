@@ -145,6 +145,16 @@ class TestSmoke:
         assert "web" in j
         assert "port" in j["web"]
 
+    def test_api_settings_test_connection_rejects_unknown_kind(self) -> None:
+        resp = client.post(
+            "/api/settings/test-connection",
+            json={"kind": "unknown"},
+        )
+        assert resp.status_code == 200
+        j = resp.json()
+        assert j.get("ok") is False
+        assert "Unsupported kind" in str(j.get("message") or "")
+
     def test_api_dashboard_summary(self) -> None:
         resp = client.get("/api/dashboard/summary")
         assert resp.status_code == 200
