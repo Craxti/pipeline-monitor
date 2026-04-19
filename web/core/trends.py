@@ -79,6 +79,13 @@ def append_trends(
     # Remove today's existing entry (will be replaced with fresh data)
     history = [e for e in history if e.get("date") != day_key]
 
+    cfg_for_inst: dict[str, Any] | None = None
+    if load_cfg is not None and inst_label_for_build is not None:
+        try:
+            cfg_for_inst = load_cfg()
+        except Exception:
+            cfg_for_inst = None
+
     # Build per-job failure map (global + source/instance slices for Trends filters)
     job_failures: dict[str, int] = {}
     job_totals: dict[str, int] = {}
@@ -119,13 +126,6 @@ def append_trends(
     # Per-source breakdowns (for UI filters in Trends)
     builds_by_source: dict[str, dict[str, int]] = {}
     builds_by_instance: dict[str, dict[str, int]] = {}
-
-    cfg_for_inst: dict[str, Any] | None = None
-    if load_cfg is not None and inst_label_for_build is not None:
-        try:
-            cfg_for_inst = load_cfg()
-        except Exception:
-            cfg_for_inst = None
 
     for b in snapshot.builds:
         src = str(getattr(b, "source", "") or "").strip().lower() or "unknown"
