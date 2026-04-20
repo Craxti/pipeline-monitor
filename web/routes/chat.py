@@ -61,6 +61,18 @@ async def api_chat_status_route():
 
 
 @router.get(
+    "/api/chat/prompts",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def api_chat_prompts_route():
+    """Return centralized frontend prompt templates."""
+    from web.services.chat_prompts import get_frontend_prompts_bundle
+
+    return {"prompts": dict(get_frontend_prompts_bundle())}
+
+
+@router.get(
     "/api/chat/proxy-check",
     response_class=JSONResponse,
     dependencies=[Depends(require_shared_token)],

@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260420i" />
+<link rel="stylesheet" href="/static/app.css?v=20260420k" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
@@ -33,12 +33,14 @@
 <script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
 <script src="/static/dashboard.collect-bar.js?v=20260419a" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
-<script src="/static/dashboard.trends.js?v=20260420d" defer></script>
+<script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
+<script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
+<script src="/static/dashboard.trends.js?v=20260420h" defer></script>
 <script src="/static/dashboard.actions.js?v=20260417i" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
-<script src="/static/dashboard.chat.js?v=20260417j" defer></script>
+<script src="/static/dashboard.chat.js?v=20260420a" defer></script>
 <script src="/static/dashboard.live.js?v=20260417i" defer></script>
 <script src="/static/dashboard.init.js?v=20260417i" defer></script>
 
@@ -631,9 +633,20 @@
       <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="applyTrendsDateRange" data-i18n="dash.trends_range_apply">Apply</button>
       <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="clearTrendsDateRange" data-i18n="dash.trends_range_clear">Clear</button>
     </div>
+    <div class="trends-filter-group">
+      <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="resetTrendsFilters" data-i18n="dash.trends_filters_reset">Reset filters</button>
+    </div>
+    <label class="trends-filter-group" style="display:inline-flex;align-items:center;gap:.35rem">
+      <input type="checkbox" id="trends-scope-global" />
+      <span class="trends-toolbar-label" data-i18n="dash.trends_scope_global">Apply Source/Instance to all tabs</span>
+    </label>
   </div>
   <div class="tbl-wrap" id="wrap-trends" data-size="m" style="padding:1rem;max-height:none">
     <div id="trends-error" class="panel-inline-error" style="display:none;margin:0 0 .75rem"></div>
+    <div class="tr-kpi-health" id="tr-kpi-health">
+      <span id="tr-kpi-scope" class="tr-kpi-sub" data-i18n="dash.trend_kpi_scope_default">Scope: all sources</span>
+      <span id="tr-kpi-coverage" class="tr-kpi-sub" data-i18n="dash.trend_kpi_coverage_default">Coverage: —</span>
+    </div>
     <div class="trends-history-kpis" id="trends-history-kpis">
       <div class="tr-kpi-card">
         <div class="tr-kpi-title" data-i18n="dash.trend_kpi_crash_title">Crash frequency</div>

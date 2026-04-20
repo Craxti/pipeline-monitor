@@ -32,6 +32,8 @@ def test_trends_history_summary_core_metrics() -> None:
     )
 
     assert out["days_with_data"] == 2
+    assert out["days_matched"] == 2
+    assert out["data_coverage_pct"] == 100.0
     assert out["crash_frequency_per_day"] == 1.5
     assert out["recovery_samples"] == 2
     assert out["avg_recovery_minutes"] == 37.5
@@ -50,6 +52,8 @@ def test_trends_history_summary_handles_missing_recoveries() -> None:
     )
     assert out["avg_recovery_minutes"] is None
     assert out["recovery_samples"] == 0
+    assert out["scope_source"] == ""
+    assert out["scope_instance"] == ""
 
 
 def test_trends_history_summary_applies_source_and_instance_filters() -> None:
@@ -99,6 +103,7 @@ def test_trends_history_summary_applies_source_and_instance_filters() -> None:
         source_filter="jenkins",
     )
     assert out_src["crash_frequency_per_day"] == 2.0
+    assert out_src["scope_source"] == "jenkins"
     assert out_src["most_problematic_jobs"][0]["job_name"] == "job-a"
     assert out_src["recovery_samples"] == 1
 
@@ -111,6 +116,7 @@ def test_trends_history_summary_applies_source_and_instance_filters() -> None:
     )
     assert out_inst["crash_frequency_per_day"] == 2.0
     assert out_inst["avg_recovery_minutes"] == 30.0
+    assert out_inst["scope_instance"] == "jenkins|main"
 
 
 def test_trends_history_summary_fallback_for_legacy_rows_without_job_slices() -> None:

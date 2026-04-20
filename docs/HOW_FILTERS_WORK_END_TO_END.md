@@ -47,6 +47,14 @@ Trends charts and KPI cards must use the same effective filter scope.
 - active instance: `_activeTrendsInstance()`
 - KPI API call: `loadTrendsHistorySummary(days)` -> `/api/trends/history-summary`
 
+Single source of truth for Trends scope is centralized in:
+
+- `web/static/dashboard.trends.scope.js`
+
+and consumed in:
+
+- `web/static/dashboard.trends.js`
+
 Instance/source synchronization rules:
 
 - selecting an instance infers source (`jenkins|...`, `gitlab|...`)

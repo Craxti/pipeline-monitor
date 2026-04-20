@@ -56,6 +56,18 @@ const CHAT_MAX_MESSAGES = 100;
 const _chatHistory = [];
 let _chatStreaming = false;
 let _chatModel = '';
+let _chatPrompts = {};
+
+function chatPrompt(key, fallback = '') {
+  const k = String(key || '');
+  const lang = (typeof currentLang === 'function') ? currentLang() : 'en';
+  let v = '';
+  if (_chatPrompts && typeof _chatPrompts[k] === 'string') v = _chatPrompts[k];
+  if (!v && _chatPrompts && _chatPrompts[lang] && typeof _chatPrompts[lang][k] === 'string') v = _chatPrompts[lang][k];
+  if (!v && _chatPrompts && _chatPrompts.en && typeof _chatPrompts.en[k] === 'string') v = _chatPrompts.en[k];
+  return v || fallback || '';
+}
+window.chatPrompt = chatPrompt;
 
 function _persistChatHistory() {
   try {
@@ -122,6 +134,15 @@ function _refreshChatHelloI18n() {
 
 (async function initChat() {
   try {
+    try {
+      const pr = await fetch(apiUrl('api/chat/prompts'));
+      if (pr.ok) {
+        const pj = await pr.json();
+        _chatPrompts = (pj && typeof pj === 'object' && pj.prompts && typeof pj.prompts === 'object')
+          ? pj.prompts
+          : {};
+      }
+    } catch { /* ignore */ }
     const r = await fetch(apiUrl('api/chat/status'));
     if (!r.ok) return;
     const d = await r.json();
@@ -281,7 +302,7 @@ async function sendChat() {
   box.appendChild(typing);
   box.scrollTop = box.scrollHeight;
 
-  const body = { messages: _chatHistory, ui_location: _gatherUiLocationContext() };
+  const body = { messages: _chatHistory, ui_location: _gatherUiLocationContext(), lang: (typeof currentLang === 'function' ? currentLang() : 'en') };
   if (document.getElementById('chat-ctx-toggle').checked) {
     body.context = _gatherContext();
   }
@@ -347,7 +368,8 @@ async function sendChat() {
       if (aborted) break;
     }
     if (!fullResponse && !streamError && assistantDiv) {
-      assistantDiv.innerHTML = '<span style="color:var(--muted)">Нет текста в ответе. Провайдер Cursor: в папке IDE обычно нет `agent` — нужен отдельный Cursor Agent CLI или путь в Настройках → AI. См. документацию CLI.</span>';
+      const msg = chatPrompt('frontend_empty_cursor', 'No text in response. Check AI provider configuration in Settings.');
+      assistantDiv.innerHTML = `<span style="color:var(--muted)">${_miniMarkdown(msg)}</span>`;
     }
   } catch (e) {
     typing.remove();

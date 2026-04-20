@@ -239,6 +239,12 @@ py -m pytest -q
 
 If a test is a “contract” test for backward-compatible exports from `web/app.py`, keep the re-exports intact (see `web/app.py`).
 
+### Quality gates in CI
+
+- Coverage gate for critical modules is set to **90%** in `.github/workflows/black.yml`.
+- Strict static analysis (Ruff strict profile) runs for critical parser/filter modules.
+- Mutation testing for critical parser/filter modules runs in `.github/workflows/mutation-tests.yml` (scheduled + manual).
+
 ## Docs maintenance policy
 
 When changing behavior, update documentation in the same PR:

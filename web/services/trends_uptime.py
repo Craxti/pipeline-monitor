@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 from web.core import trends as trends_core
+from web.schemas import TrendsHistorySummaryPayload
 
 
 def trends_compute(days: int, *, history_path: Path | None = None) -> list:
@@ -83,14 +84,20 @@ def trends_history_summary(
     data = trends_compute(days) or []
     days_count = max(1, len(data))
     failed_builds = 0
+    matched_days = 0
     for d in data:
         if inst_filter:
             rec = (d.get("builds_by_instance") or {}).get(inst_filter) or {}
+            if rec:
+                matched_days += 1
             failed_builds += int(rec.get("failed", 0) or 0)
         elif src_filter:
             rec = (d.get("builds_by_source") or {}).get(src_filter) or {}
+            if rec:
+                matched_days += 1
             failed_builds += int(rec.get("failed", 0) or 0)
         else:
+            matched_days += 1
             failed_builds += int(d.get("builds_failed", 0) or 0)
     crash_freq = failed_builds / float(days_count)
 
@@ -182,11 +189,16 @@ def trends_history_summary(
                 del opened_fail_ts[job]
 
     avg_recovery = (sum(rec_minutes) / len(rec_minutes)) if rec_minutes else None
-    return {
-        "days": int(days),
-        "days_with_data": int(days_count),
-        "crash_frequency_per_day": round(crash_freq, 2),
-        "most_problematic_jobs": top_jobs,
-        "avg_recovery_minutes": round(avg_recovery, 1) if avg_recovery is not None else None,
-        "recovery_samples": len(rec_minutes),
-    }
+    payload = TrendsHistorySummaryPayload(
+        days=int(days),
+        days_with_data=int(days_count),
+        scope_source=src_filter,
+        scope_instance=inst_filter,
+        days_matched=int(matched_days),
+        data_coverage_pct=round((100.0 * matched_days / float(days_count)) if days_count > 0 else 0.0, 1),
+        crash_frequency_per_day=round(crash_freq, 2),
+        most_problematic_jobs=top_jobs,
+        avg_recovery_minutes=round(avg_recovery, 1) if avg_recovery is not None else None,
+        recovery_samples=len(rec_minutes),
+    )
+    return payload.model_dump()

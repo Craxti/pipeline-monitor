@@ -296,7 +296,11 @@ function runbookFocusTestFailures() {
   try {
     // Give the tab switch a moment to settle.
     setTimeout(() => {
-      _openAiChatAndSendPrompt('Разобрать упавшие тесты: дай план диагностики, выдели топ причин и что проверить в первую очередь.');
+      const fallback = 'Разобрать упавшие тесты: дай план диагностики, выдели топ причин и что проверить в первую очередь.';
+      const p = (typeof window.chatPrompt === 'function')
+        ? window.chatPrompt('runbook_focus_tests', fallback)
+        : fallback;
+      _openAiChatAndSendPrompt(p);
     }, 60);
   } catch { /* ignore */ }
 }

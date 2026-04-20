@@ -140,6 +140,56 @@ def test_webhook_endpoint_invalid_json_raises_400() -> None:
     assert ei.value.status_code == 400
 
 
+def test_webhook_endpoint_valid_json_calls_handler() -> None:
+    import asyncio
+    import json
+
+    from fastapi import Request
+
+    payload = {"job": "a", "status": "success"}
+    body = json.dumps(payload).encode("utf-8")
+
+    async def receive():
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0", "spec_version": "2.3"},
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/webhook/build-complete",
+        "raw_path": b"/webhook/build-complete",
+        "root_path": "",
+        "query_string": b"",
+        "headers": [],
+        "client": ("127.0.0.1", 12345),
+        "server": ("127.0.0.1", 80),
+    }
+    req = Request(scope, receive)
+
+    called = {}
+
+    def _handler(p, **_kw):
+        called["payload"] = p
+        return {"ok": True, "message": "ok"}
+
+    async def run():
+        return await webhook_endpoints.webhook_build_complete(
+            req,
+            load_snapshot=lambda: None,
+            save_snapshot=lambda _s: None,
+            is_collecting=lambda: False,
+            load_cfg=dict,
+            do_collect_task_factory=lambda _c: None,
+            handle_build_complete=_handler,
+        )
+
+    out = asyncio.run(run())
+    assert out.get("ok") is True
+    assert called["payload"] == payload
+
+
 @settings(max_examples=120, deadline=None)
 @given(st.text(min_size=0, max_size=8000))
 def test_extract_pytest_failure_messages_never_raises(blob):

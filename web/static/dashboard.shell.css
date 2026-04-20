@@ -1016,6 +1016,23 @@ textarea:focus-visible,
   -webkit-backdrop-filter: blur(10px);
 }
 
+.tr-kpi-health {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.55rem;
+}
+
+.tr-kpi-card.tr-kpi-updated {
+  animation: trKpiPulse 0.28s ease;
+}
+
+@keyframes trKpiPulse {
+  from { transform: translateY(0); box-shadow: var(--shadow-soft); }
+  50% { transform: translateY(-1px); box-shadow: var(--shadow-strong); }
+  to { transform: translateY(0); box-shadow: var(--shadow-soft); }
+}
+
 .app-watermark img {
   display: block;
   width: 14px;

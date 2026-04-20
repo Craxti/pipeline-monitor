@@ -98,3 +98,29 @@ class IncidentBundlePayload(BaseModel):
     top_failed_tests: list[IncidentTopFailedTestRow]
     services_down: list[IncidentServiceDownRow]
     note: Optional[str] = None
+
+
+class TrendsProblemJobRow(BaseModel):
+    """Top problematic job row for Trends history KPI."""
+
+    job_name: str
+    failed: int
+    total: int
+    fail_rate_pct: float
+
+
+class TrendsHistorySummaryPayload(BaseModel):
+    """Stable JSON shape for `/api/trends/history-summary`."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    days: int
+    days_with_data: int
+    scope_source: str = ""
+    scope_instance: str = ""
+    days_matched: int = 0
+    data_coverage_pct: float = 0.0
+    crash_frequency_per_day: float
+    most_problematic_jobs: list[TrendsProblemJobRow]
+    avg_recovery_minutes: Optional[float] = None
+    recovery_samples: int = 0

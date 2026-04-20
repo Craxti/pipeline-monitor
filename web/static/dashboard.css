@@ -486,6 +486,13 @@ body.compact .b{text-shadow:none}
 .tr-kpi-jobs{display:flex;flex-direction:column;gap:.18rem;margin-top:.35rem;max-height:5.6rem;overflow:auto}
 .tr-kpi-job{font-size:.78rem;color:var(--text);display:flex;justify-content:space-between;gap:.45rem}
 .tr-kpi-job .muted{color:var(--muted)}
+.tr-kpi-health{display:flex;gap:.8rem;flex-wrap:wrap;margin:0 0 .55rem}
+.tr-kpi-card.tr-kpi-updated{animation:trKpiPulse .28s ease}
+@keyframes trKpiPulse{
+  from{transform:translateY(0)}
+  50%{transform:translateY(-1px)}
+  to{transform:translateY(0)}
+}
 .chart-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;position:relative}
 .chart-card h3{font-size:.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;padding-right:2rem}
 .chart-card h3.chart-title-link{cursor:pointer;color:var(--info);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:.18em;text-transform:none;letter-spacing:normal}

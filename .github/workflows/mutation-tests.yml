@@ -1,0 +1,39 @@
+name: Mutation Tests (critical)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "40 2 * * *"
+
+jobs:
+  mutmut-critical:
+    name: Mutmut (parsers + filters)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest mutmut pytest-httpserver
+
+      - name: Run mutation tests on critical modules
+        run: |
+          mutmut run \
+            --paths-to-mutate=parsers/pytest_parser.py \
+            --paths-to-mutate=parsers/jenkins_console_parser.py \
+            --paths-to-mutate=web/services/build_filters.py \
+            --runner "python -m pytest -q tests/test_parsers.py tests/test_property_parsers_and_webhook.py tests/test_web_services_utils.py tests/test_filters_frontend_contracts.py"
+
+      - name: Mutation summary
+        if: always()
+        run: |
+          mutmut results || true

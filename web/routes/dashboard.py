@@ -188,13 +188,13 @@ async def api_trends_history_summary(days: int = 30, source: str = "", instance:
 
     from web.services import event_feed_api
 
-    payload = trends_uptime.trends_history_summary(
-        days,
+    # Route-level service boundary for KPI logic.
+    from web.services.trends_kpi_service import TrendsKPIService
+
+    payload = TrendsKPIService(
         trends_compute=lambda d: trends_uptime.trends_compute(d, history_path=None),
         event_feed_load=lambda lim: event_feed_api.load(limit=lim),
-        source_filter=source,
-        instance_filter=instance,
-    )
+    ).history_summary(days=days, source_filter=source, instance_filter=instance)
     _mem_set(cache_key, payload)
     return JSONResponse(content=payload)
 

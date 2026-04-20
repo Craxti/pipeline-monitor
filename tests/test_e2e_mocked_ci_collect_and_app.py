@@ -75,3 +75,42 @@ def test_fastapi_dashboard_html_and_public_api(client: TestClient) -> None:
     body = pub.json()
     assert "web" in body
     assert "port" in body["web"]
+
+
+def test_e2e_tabs_happy_endpoints_respond(client: TestClient) -> None:
+    # All main tabs have a backend endpoint that should be stable.
+    assert client.get("/api/builds").status_code in (200, 404)
+    assert client.get("/api/tests").status_code in (200, 404)
+    assert client.get("/api/services").status_code in (200, 404)
+
+    trends = client.get("/api/trends?days=14")
+    assert trends.status_code == 200
+    assert isinstance(trends.json(), list)
+
+    kpi = client.get("/api/trends/history-summary?days=14&source=jenkins&instance=jenkins%7Cmain")
+    assert kpi.status_code == 200
+    payload = kpi.json()
+    assert "most_problematic_jobs" in payload
+    assert "data_coverage_pct" in payload
+    assert "recovery_samples" in payload
+
+
+def test_e2e_tabs_sad_filters_do_not_crash(client: TestClient) -> None:
+    # Unknown filters should return empty/valid payloads, not 500.
+    r1 = client.get("/api/trends/history-summary?days=999&source=unknown&instance=unknown%7Cnone")
+    assert r1.status_code == 200
+    p1 = r1.json()
+    assert isinstance(p1.get("most_problematic_jobs"), list)
+    assert "data_coverage_pct" in p1
+
+    r2 = client.get("/api/services?status=definitely-invalid")
+    assert r2.status_code in (200, 404)
+
+
+def test_chat_prompts_endpoint_returns_multilang_bundle(client: TestClient) -> None:
+    r = client.get("/api/chat/prompts")
+    assert r.status_code == 200
+    p = r.json().get("prompts") or {}
+    assert "en" in p and "ru" in p
+    assert "runbook_focus_tests" in p["en"]
+    assert "runbook_focus_tests" in p["ru"]

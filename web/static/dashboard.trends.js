@@ -14,11 +14,38 @@ let _trendsTopTestSource = '';
 let _trendsInstSel = { builds: '', tests: '', top: '' };
 let _trendsInstanceAll = '';
 
+function _scopeStore() {
+  return (window.TrendsScope && typeof window.TrendsScope === 'object') ? window.TrendsScope : null;
+}
+
+function _filtersAdapter() {
+  return (window.TrendsFiltersAdapter && typeof window.TrendsFiltersAdapter === 'object')
+    ? window.TrendsFiltersAdapter
+    : null;
+}
+
+function _isTrendsScopeGlobalEnabled() {
+  const cb = document.getElementById('trends-scope-global');
+  return !!(cb && cb.checked);
+}
+
+function _syncTrendsScopeToGlobalIfEnabled() {
+  if (!_isTrendsScopeGlobalEnabled()) return;
+  const ad = _filtersAdapter();
+  if (!ad || typeof ad.applyScopeToGlobalFilters !== 'function') return;
+  const s = _effectiveTrendScope();
+  ad.applyScopeToGlobalFilters(s.source, s.instance);
+}
+
 function _activeTrendsSource() {
+  const st = _scopeStore();
+  if (st && typeof st.effectiveScope === 'function') return String(st.effectiveScope().source || '');
   return (_trendsSource || '').trim().toLowerCase();
 }
 
 function _activeTrendsInstance() {
+  const st = _scopeStore();
+  if (st && typeof st.effectiveScope === 'function') return String(st.effectiveScope().instance || '');
   const globalInst = (_trendsInstanceAll || '').trim();
   if (globalInst) return globalInst;
   const pick = (id) => (document.getElementById(id)?.value || '').trim();
@@ -32,6 +59,44 @@ function _sourceFromInstanceKey(v) {
   return s.split('|', 1)[0].trim().toLowerCase();
 }
 
+function _effectiveTrendScope() {
+  const instance = _activeTrendsInstance();
+  const srcFromInst = _sourceFromInstanceKey(instance);
+  const source = (_activeTrendsSource() || srcFromInst || '').trim().toLowerCase();
+  return { source, instance };
+}
+
+function _renderTrendsKpiHealth(meta) {
+  const scopeEl = document.getElementById('tr-kpi-scope');
+  const covEl = document.getElementById('tr-kpi-coverage');
+  if (!scopeEl || !covEl) return;
+  const src = String(meta?.scope_source || '').trim();
+  const inst = String(meta?.scope_instance || '').trim();
+  const cov = Number(meta?.data_coverage_pct || 0);
+  const matched = Number(meta?.days_matched || 0);
+  const total = Number(meta?.days_with_data || 0);
+  if (inst) {
+    scopeEl.textContent = tf('dash.trend_kpi_scope_instance', { value: inst });
+  } else if (src) {
+    scopeEl.textContent = tf('dash.trend_kpi_scope_source', { value: src });
+  } else {
+    scopeEl.textContent = t('dash.trend_kpi_scope_default');
+  }
+  covEl.textContent = tf('dash.trend_kpi_coverage_fmt', {
+    pct: Number.isFinite(cov) ? cov.toFixed(1) : '0.0',
+    matched: Number.isFinite(matched) ? matched : 0,
+    total: Number.isFinite(total) ? total : 0,
+  });
+}
+
+function _pulseKpiCards() {
+  document.querySelectorAll('#trends-history-kpis .tr-kpi-card').forEach((el) => {
+    el.classList.remove('tr-kpi-updated');
+    void el.offsetWidth;
+    el.classList.add('tr-kpi-updated');
+  });
+}
+
 async function loadTrendsHistorySummary(days) {
   const crashEl = document.getElementById('tr-kpi-crash');
   const recEl = document.getElementById('tr-kpi-recovery');
@@ -39,10 +104,9 @@ async function loadTrendsHistorySummary(days) {
   const jobsEl = document.getElementById('tr-kpi-jobs');
   if (!crashEl || !recEl || !jobsEl) return;
   try {
-    const activeInst = _activeTrendsInstance();
-    const srcFromInst = _sourceFromInstanceKey(activeInst);
-    const src = encodeURIComponent((_activeTrendsSource() || srcFromInst || '').trim().toLowerCase());
-    const inst = encodeURIComponent(activeInst);
+    const scope = _effectiveTrendScope();
+    const src = encodeURIComponent(scope.source);
+    const inst = encodeURIComponent(scope.instance);
     const res = await fetch(apiUrl(`api/trends/history-summary?days=${days}&source=${src}&instance=${inst}`)).catch(() => null);
     if (!res || !res.ok) return;
     const p = await res.json();
@@ -60,7 +124,9 @@ async function loadTrendsHistorySummary(days) {
 
     const jobs = Array.isArray(p.most_problematic_jobs) ? p.most_problematic_jobs : [];
     if (!jobs.length) {
-      jobsEl.innerHTML = `<div class="tr-kpi-sub">${esc(t('dash.trend_kpi_problem_jobs_none'))}</div>`;
+      jobsEl.innerHTML = `<div class="tr-kpi-sub">${esc(t('dash.trend_kpi_problem_jobs_none'))}</div><div class="tr-kpi-sub">${esc(t('dash.trend_kpi_problem_jobs_why_empty'))}</div>`;
+      _renderTrendsKpiHealth(p);
+      _pulseKpiCards();
       return;
     }
     jobsEl.innerHTML = jobs
@@ -73,6 +139,8 @@ async function loadTrendsHistorySummary(days) {
         return `<div class="tr-kpi-job"><span>${name}</span><span class="muted">${failed}/${total} (${pct}%)</span></div>`;
       })
       .join('');
+    _renderTrendsKpiHealth(p);
+    _pulseKpiCards();
   } catch {
     // Keep existing placeholders on failure.
   }
@@ -110,9 +178,12 @@ async function populateTrendsInstanceFilters() {
       try { localStorage.setItem('cimon-trends-inst-' + k, sel.value || ''); } catch { /* ignore */ }
       if (k === 'all') {
         _trendsInstanceAll = (sel.value || '').trim();
+        const st = _scopeStore();
+        if (st && typeof st.setInstanceAll === 'function') st.setInstanceAll(_trendsInstanceAll);
         const srcFromInst = _sourceFromInstanceKey(_trendsInstanceAll);
         if (srcFromInst) {
           _trendsSource = srcFromInst;
+          if (st && typeof st.setSource === 'function') st.setSource(srcFromInst);
           const srcEl = document.getElementById('trends-source');
           if (srcEl) srcEl.value = srcFromInst;
           try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
@@ -125,15 +196,19 @@ async function populateTrendsInstanceFilters() {
         });
       } else if (!_trendsInstanceAll) {
         _trendsInstSel[k] = (sel.value || '').trim();
+        const st = _scopeStore();
+        if (st && typeof st.setInstanceLocal === 'function') st.setInstanceLocal(k, _trendsInstSel[k]);
         const srcFromLocal = _sourceFromInstanceKey(_trendsInstSel[k]);
         if (srcFromLocal) {
           _trendsSource = srcFromLocal;
+          if (st && typeof st.setSource === 'function') st.setSource(srcFromLocal);
           const srcEl = document.getElementById('trends-source');
           if (srcEl) srcEl.value = srcFromLocal;
           try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
         }
       }
       if (_trendsRawCache && _trendsRawCache.length) {
+        _syncTrendsScopeToGlobalIfEnabled();
         renderTrendsFromCache();
         void loadTrendsHistorySummary(_trendsViewDays);
       }
@@ -776,7 +851,9 @@ function renderTrendsFromCache() {
 
 function onTrendsSmoothChange(el) {
   _trendsSmooth = el && el.value ? el.value : 'none';
-  localStorage.setItem('cimon-trends-smooth', _trendsSmooth);
+  const ad = _filtersAdapter();
+  if (ad && typeof ad.persistState === 'function') ad.persistState({ smooth: _trendsSmooth });
+  else localStorage.setItem('cimon-trends-smooth', _trendsSmooth);
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
@@ -786,12 +863,18 @@ function onTrendsTopNChange(el) {
   n = Math.min(100, Math.max(3, n));
   _trendsTopN = n;
   if (el && 'value' in el) el.value = String(n);
-  try { localStorage.setItem('cimon-trends-topn', String(_trendsTopN)); } catch { /* ignore */ }
+  const ad = _filtersAdapter();
+  if (ad && typeof ad.persistState === 'function') ad.persistState({ topn: String(_trendsTopN) });
+  else {
+    try { localStorage.setItem('cimon-trends-topn', String(_trendsTopN)); } catch { /* ignore */ }
+  }
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
 function onTrendsSourceChange(el) {
   _trendsSource = el && typeof el.value === 'string' ? el.value.trim().toLowerCase() : '';
+  const st = _scopeStore();
+  if (st && typeof st.setSource === 'function') st.setSource(_trendsSource);
   if (_trendsInstanceAll) {
     const instSrc = _sourceFromInstanceKey(_trendsInstanceAll);
     if (_trendsSource && instSrc && _trendsSource !== instSrc) {
@@ -802,6 +885,7 @@ function onTrendsSourceChange(el) {
     }
   }
   try { localStorage.setItem('cimon-trends-source', _trendsSource); } catch { /* ignore */ }
+  _syncTrendsScopeToGlobalIfEnabled();
   if (_trendsRawCache && _trendsRawCache.length) {
     renderTrendsFromCache();
     void loadTrendsHistorySummary(_trendsViewDays);
@@ -832,8 +916,12 @@ function applyTrendsDateRange() {
   _trendsRangeFrom = df;
   _trendsRangeTo = dt;
   _trendsRangeActive = true;
-  localStorage.setItem('cimon-trends-rfrom', df);
-  localStorage.setItem('cimon-trends-rto', dt);
+  const ad = _filtersAdapter();
+  if (ad && typeof ad.persistState === 'function') ad.persistState({ rfrom: df, rto: dt });
+  else {
+    localStorage.setItem('cimon-trends-rfrom', df);
+    localStorage.setItem('cimon-trends-rto', dt);
+  }
   document.querySelectorAll('.trend-period-btn').forEach((b) => b.classList.remove('active'));
   void loadTrends(_trendsViewDays, null);
 }
@@ -842,8 +930,12 @@ function clearTrendsDateRange() {
   _trendsRangeActive = false;
   _trendsRangeFrom = '';
   _trendsRangeTo = '';
-  localStorage.removeItem('cimon-trends-rfrom');
-  localStorage.removeItem('cimon-trends-rto');
+  const ad = _filtersAdapter();
+  if (ad && typeof ad.persistState === 'function') ad.persistState({ rfrom: '', rto: '' });
+  else {
+    localStorage.removeItem('cimon-trends-rfrom');
+    localStorage.removeItem('cimon-trends-rto');
+  }
   const df = document.getElementById('trends-d-from');
   const dt = document.getElementById('trends-d-to');
   if (df) df.value = '';
@@ -855,11 +947,37 @@ function clearTrendsDateRange() {
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
 }
 
+function resetTrendsFilters() {
+  _trendsSource = '';
+  _trendsTopTestSource = '';
+  _trendsInstanceAll = '';
+  _trendsInstSel = { builds: '', tests: '', top: '' };
+  _trendsSmooth = 'none';
+  _trendsTopN = 10;
+  _trendsRangeActive = false;
+  _trendsRangeFrom = '';
+  _trendsRangeTo = '';
+  const st = _scopeStore();
+  if (st && typeof st.reset === 'function') st.reset();
+  const ad = window.TrendsFiltersAdapter;
+  if (ad && typeof ad.clearStorage === 'function') ad.clearStorage();
+  if (ad && typeof ad.clearUI === 'function') ad.clearUI();
+  if (ad && typeof ad.clearPeriodButtons === 'function') ad.clearPeriodButtons();
+  else document.querySelectorAll('.trend-period-btn').forEach((b) => b.classList.remove('active'));
+  _syncTrendsScopeToGlobalIfEnabled();
+  void loadTrends(_trendsViewDays, null);
+}
+
 window.applyTrendsDateRange = applyTrendsDateRange;
 window.clearTrendsDateRange = clearTrendsDateRange;
+window.resetTrendsFilters = resetTrendsFilters;
 
 function initTrendsFiltersFromStorage() {
-  const tsm = localStorage.getItem('cimon-trends-smooth');
+  const st = _scopeStore();
+  if (st && typeof st.load === 'function') st.load();
+  const ad = _filtersAdapter();
+  const adState = (ad && typeof ad.loadState === 'function') ? ad.loadState() : null;
+  const tsm = adState ? adState.smooth : localStorage.getItem('cimon-trends-smooth');
   if (['none', 'ma3', 'ma7'].includes(tsm)) _trendsSmooth = tsm;
   const elSm = document.getElementById('trends-smooth');
   if (elSm) elSm.value = _trendsSmooth;
@@ -871,7 +989,7 @@ function initTrendsFiltersFromStorage() {
   if (tts) _trendsTopTestSource = tts;
   const elTts = document.getElementById('trends-top-test-source');
   if (elTts) elTts.value = _trendsTopTestSource;
-  const ttn = parseInt(localStorage.getItem('cimon-trends-topn'), 10);
+  const ttn = parseInt(adState ? adState.topn : localStorage.getItem('cimon-trends-topn'), 10);
   if (Number.isFinite(ttn) && ttn >= 3 && ttn <= 100) _trendsTopN = ttn;
   const elTn = document.getElementById('trends-topn');
   if (elTn && 'value' in elTn) elTn.value = String(_trendsTopN);
@@ -882,8 +1000,8 @@ function initTrendsFiltersFromStorage() {
   if (elSvKind && ['', 'docker', 'http', 'other'].includes(tsk)) elSvKind.value = tsk;
   const tp = parseInt(localStorage.getItem('cimon-trends-period'), 10);
   if ([3, 7, 14, 21, 30].includes(tp)) _trendsViewDays = tp;
-  const rf = localStorage.getItem('cimon-trends-rfrom');
-  const rt = localStorage.getItem('cimon-trends-rto');
+  const rf = adState ? adState.rfrom : localStorage.getItem('cimon-trends-rfrom');
+  const rt = adState ? adState.rto : localStorage.getItem('cimon-trends-rto');
   if (rf && rt && rf <= rt) {
     _trendsRangeFrom = rf;
     _trendsRangeTo = rt;
@@ -897,6 +1015,16 @@ function initTrendsFiltersFromStorage() {
     const d = parseInt(b.textContent.trim(), 10);
     b.classList.toggle('active', d === _trendsViewDays && !_trendsRangeActive);
   });
+  const cb = document.getElementById('trends-scope-global');
+  if (cb) {
+    cb.checked = !!(adState && adState.scopeGlobal);
+    cb.addEventListener('change', () => {
+      const ena = !!cb.checked;
+      const adp = _filtersAdapter();
+      if (adp && typeof adp.persistState === 'function') adp.persistState({ scopeGlobal: ena });
+      if (ena) _syncTrendsScopeToGlobalIfEnabled();
+    }, { passive: true });
+  }
 }
 
 function renderTrendsChartsFromData(data) {

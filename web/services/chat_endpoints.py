@@ -10,6 +10,8 @@ import httpx
 from fastapi import HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from web.services.chat_prompts import get_text, resolve_lang
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,26 +50,10 @@ async def api_chat(
 
     context_text = body.get("context", "")
     ui_location = str(body.get("ui_location") or "").strip()
+    lang = resolve_lang(body.get("lang"), user_messages)
     model = (ai_cfg.get("model") or "").strip() or ai_default_model(provider)
 
-    system_prompt = (
-        "You are an AI assistant embedded in a CI/CD monitoring dashboard. "
-        "You help engineers understand build failures, test results, service statuses, "
-        "Docker container issues, and CI/CD logs.\n"
-        "Rules:\n"
-        "- Be concise and actionable.\n"
-        "- When analyzing logs, highlight errors, root causes, and suggest fixes.\n"
-        "- Use markdown formatting (bold, code blocks, lists) for readability.\n"
-        "- Answer in the same language the user writes in.\n"
-        "- When a Docker container is down or misbehaving, mention its name clearly so "
-        "the dashboard can offer a restart button.\n"
-        "- When a CI job needs re-running, mention the job name clearly so the dashboard "
-        "can offer a re-run button.\n"
-        "- If the user asks to collect/refresh data, say 'collect' or 'refresh data'.\n"
-        "- The client sends the exact browser page and tab in «Current UI location». "
-        "Treat that as where the user is now: on Settings, focus on config.yaml fields and "
-        "CI monitor settings; on a dashboard tab, focus on that tab (builds, tests, services, …).\n"
-    )
+    system_prompt = get_text("system_base", lang=lang)
     if ui_location:
         system_prompt += "\n\n=== Current UI location ===\n" + ui_location[:2000]
     if context_text:
@@ -129,36 +115,18 @@ async def api_chat(
                     yield f"data: {json.dumps({'t': delta.content})}\n\n"
             if not yielded_text:
                 empty_msg = (
-                    "Cursor: пустой ответ от прокси (см. data/cursor_proxy.log). "
-                    "Проверьте CURSOR_API_KEY, "
-                    "работу Cursor Agent и лог прокси."
+                    get_text("empty_response_cursor", lang=lang)
                     if provider == "cursor"
-                    else "Модель вернула пустой ответ. Попробуйте ещё раз или смените модель."
+                    else get_text("empty_response_generic", lang=lang)
                 )
                 yield f"data: {json.dumps({'error': empty_msg})}\n\n"
             yield "data: [DONE]\n\n"
         except Exception as exc:
             msg = str(exc)
             if provider == "cursor" and looks_like_upstream_unreachable(msg):
-                msg = (
-                    "Cursor: не удалось подключиться к LLM "
-                    "(часто это 127.0.0.1:8765 без запущенного прокси). "
-                    "У Cursor нет публичного «прямого» HTTP chat API для токена crsr "
-                    "в сторонних приложениях — "
-                    "чат в IDE идёт через инфраструктуру Cursor, "
-                    "а ключ из дашборда — для Cloud Agents / CLI. "
-                    "Варианты: (1) установить Cursor Agent CLI, выполнить `npx cursor-api-proxy`, "
-                    "в окружении процесса прокси задать CURSOR_API_KEY с вашим crsr_ токеном, "
-                    "base URL оставить http://127.0.0.1:8765/v1; "
-                    "(2) переключить провайдера на Gemini или OpenRouter — "
-                    "там один ключ в настройках."
-                )
+                msg = get_text("cursor_upstream_unreachable", lang=lang)
             elif "unsupported_country" in msg or "unsupported_country_region_territory" in msg:
-                msg += (
-                    " — Geo-block: OpenAI still sees a blocked client region. "
-                    "Try switching provider to Gemini or OpenRouter (free, no geo-restrictions) "
-                    "in Settings → AI Assistant."
-                )
+                msg += " — " + get_text("geo_block_suffix", lang=lang)
             yield f"data: {json.dumps({'error': msg})}\n\n"
         finally:
             if http_client is not None:
