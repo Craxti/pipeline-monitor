@@ -13,6 +13,8 @@ services:
     volumes:
       - pipeline-monitor-runtime:/app/runtime
       - pipeline-monitor-data:/app/data
+      # Allow in-container docker_monitor to query host Docker daemon.
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health').read()"]
       interval: 10s
