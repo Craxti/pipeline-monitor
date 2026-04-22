@@ -265,9 +265,7 @@ def merge_jenkins_unified_tests(snapshot: Any, *, TestRecord: type, logger: Any 
                     str(getattr(match_c, "status", "") or "") if match_c else "",
                 )
                 out_bn = bn if bn >= 0 else getattr(ar, "build_number", None)
-                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(
-                    ar, "timestamp", None
-                )
+                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(ar, "timestamp", None)
                 row_dur = dur if dur is not None else getattr(ar, "duration_seconds", None)
                 unified_out.append(
                     TestRecord(
@@ -292,9 +290,7 @@ def merge_jenkins_unified_tests(snapshot: Any, *, TestRecord: type, logger: Any 
                 msg = _combine_messages(None, getattr(cr, "failure_message", None))
                 st = str(getattr(cr, "status", "") or "unknown")
                 out_bn = bn if bn >= 0 else getattr(cr, "build_number", None)
-                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(
-                    cr, "timestamp", None
-                )
+                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(cr, "timestamp", None)
                 row_dur = dur if dur is not None else getattr(cr, "duration_seconds", None)
                 au: Any | None = None
                 ad: Any | None = None
@@ -302,9 +298,7 @@ def merge_jenkins_unified_tests(snapshot: Any, *, TestRecord: type, logger: Any 
                 cr_n = _norm_scenario_key(str(getattr(cr, "test_name", "") or ""))
                 if cr_n:
                     mates = [
-                        ar
-                        for ar in allures
-                        if cr_n == _norm_scenario_key(str(getattr(ar, "test_name", "") or ""))
+                        ar for ar in allures if cr_n == _norm_scenario_key(str(getattr(ar, "test_name", "") or ""))
                     ]
                     # Fallback: same fuzzy matching logic as pairing step.
                     # If this console row remained unmatched but has exactly one
@@ -345,9 +339,7 @@ def merge_jenkins_unified_tests(snapshot: Any, *, TestRecord: type, logger: Any 
                 msg = _combine_messages(None, getattr(cr, "failure_message", None))
                 st = str(getattr(cr, "status", "") or "unknown")
                 out_bn = bn if bn >= 0 else getattr(cr, "build_number", None)
-                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(
-                    cr, "timestamp", None
-                )
+                row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(cr, "timestamp", None)
                 row_dur = dur if dur is not None else getattr(cr, "duration_seconds", None)
                 unified_out.append(
                     TestRecord(
@@ -364,9 +356,7 @@ def merge_jenkins_unified_tests(snapshot: Any, *, TestRecord: type, logger: Any 
                 )
         elif synth_job is not None:
             out_bn = bn if bn >= 0 else getattr(synth_job, "build_number", None)
-            row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(
-                synth_job, "timestamp", None
-            )
+            row_started = (getattr(brec, "started_at", None) if brec else None) or getattr(synth_job, "timestamp", None)
             row_dur = dur if dur is not None else getattr(synth_job, "duration_seconds", None)
             unified_out.append(
                 TestRecord(

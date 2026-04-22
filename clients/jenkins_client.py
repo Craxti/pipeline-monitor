@@ -317,7 +317,9 @@ class JenkinsClient(BaseCIClient):
         path = f"{jp}/{int(build_number)}/allure/data/test-cases/{u}.json"
         return self._get_json_maybe(path)
 
-    def fetch_allure_data_bytes(self, job_name: str, build_number: int, relative_under_data: str) -> tuple[bytes, str | None] | None:
+    def fetch_allure_data_bytes(
+        self, job_name: str, build_number: int, relative_under_data: str
+    ) -> tuple[bytes, str | None] | None:
         """GET raw bytes under ``.../allure/data/<relative_under_data>`` (e.g. ``attachments/....png``)."""
         jp = self.job_path(job_name)
         rel = (relative_under_data or "").strip().lstrip("/")

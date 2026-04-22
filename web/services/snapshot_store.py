@@ -75,9 +75,9 @@ def save_snapshot_partial(
                 prev_tests = list(getattr(prev, "tests", None) or [])
                 prev_services = list(getattr(prev, "services", None) or [])
 
-                patch_builds = (len(cur_builds) == 0 and len(prev_builds) > 0)
-                patch_tests = (len(cur_tests) == 0 and len(prev_tests) > 0)
-                patch_services = (len(cur_services) == 0 and len(prev_services) > 0)
+                patch_builds = len(cur_builds) == 0 and len(prev_builds) > 0
+                patch_tests = len(cur_tests) == 0 and len(prev_tests) > 0
+                patch_services = len(cur_services) == 0 and len(prev_services) > 0
 
                 if patch_builds or patch_tests or patch_services:
                     snapshot_to_save = snapshot.model_copy(deep=True)

@@ -21,10 +21,7 @@ def build_key(b: object) -> str:
                 pass
         if bn is not None:
             return f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|{bn}"
-        return (
-            f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|none|"
-            f"{getattr(b,'url','') or ''}"
-        )
+        return f"{getattr(b,'source','')}|{inst_l}|{getattr(b,'job_name','')}|none|" f"{getattr(b,'url','') or ''}"
     except Exception:
         return str(id(b))
 
