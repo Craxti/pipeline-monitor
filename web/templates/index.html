@@ -15,8 +15,8 @@
 <script src="/static/dashboard.helpers.formatters.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
-<script src="/static/dashboard.helpers.state.js?v=20260422g" defer></script>
-<script src="/static/dashboard.helpers.ui.js?v=20260422a" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260422h" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260422b" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
@@ -24,13 +24,14 @@
 <script src="/static/dashboard.failures.js?v=20260420d" defer></script>
 <script src="/static/dashboard.tests.js?v=20260420d" defer></script>
 <script src="/static/dashboard.services.js?v=20260422c" defer></script>
+<script src="/static/dashboard.system.js?v=20260422b" defer></script>
 <script src="/static/dashboard.collect-panel.js?v=20260417i" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
 <script src="/static/dashboard.timeline.js?v=20260417i" defer></script>
-<script src="/static/dashboard.flaky.js?v=20260422z" defer></script>
+<script src="/static/dashboard.incidents.js?v=20260422b" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
-<script src="/static/dashboard.load-summary.js?v=20260422a" defer></script>
+<script src="/static/dashboard.load-summary.js?v=20260422b" defer></script>
 <script src="/static/dashboard.collect-bar.js?v=20260422h" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
 <script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
@@ -42,7 +43,7 @@
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
 <script src="/static/dashboard.live.js?v=20260422h" defer></script>
-<script src="/static/dashboard.init.js?v=20260422h" defer></script>
+<script src="/static/dashboard.init.js?v=20260422i" defer></script>
 
 <!-- ── Header ── -->
 <header>
@@ -150,6 +151,10 @@
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-services" aria-selected="false" aria-controls="tab-panel-services" data-tab="services" data-i18n="tabNav.services">Services</button>
     <span class="dash-tab-sub" data-i18n="tabNav.services_sub">Containers & timeline</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-system" aria-selected="false" aria-controls="tab-panel-system" data-tab="system" data-i18n="tabNav.system">System</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.system_sub">Host CPU, memory & processes</span>
   </div>
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-trends" aria-selected="false" aria-controls="tab-panel-trends" data-tab="trends" data-i18n="tabNav.trends">Trends</button>
@@ -526,15 +531,13 @@
     <div class="sentinel" id="sentinel-svcs"></div>
   </div>
 </div>
-<div class="panel" id="panel-flaky" style="display:none">
+<div class="panel" id="panel-services-incidents" style="display:none">
   <div class="panel-head">
     <h2>&#9888; <span data-i18n="incident.correlated_title">Incidents</span></h2>
-    <span class="panel-count" id="flaky-count">0</span>
+    <span class="panel-count" id="services-incidents-count">0</span>
   </div>
-  <div id="flaky-body">
-    <div id="flaky-fetch-error" class="panel-inline-error" style="display:none"></div>
-    <div id="flaky-list" style="display:none"></div>
-    <div id="incident-list" style="padding:0 0 .5rem"></div>
+  <div id="services-incidents-body">
+    <div id="services-incidents-list" style="padding:0 0 .5rem"></div>
   </div>
 </div>
 <!-- ── Timeline Panel ── -->
@@ -548,6 +551,39 @@
   <div id="wrap-tl" class="tl-list"></div>
 </div>
 
+</section>
+</div>
+
+<div id="tab-panel-system" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-system" hidden>
+<section id="sec-system" class="dash-section">
+<div class="panel" id="panel-system" style="margin-bottom:1rem">
+  <div class="panel-head">
+    <h2>&#128421; <span data-i18n="dash.system_title">System monitor</span></h2>
+    <span class="panel-count" id="system-updated-at">—</span>
+    <button class="expand-btn" id="expand-system" data-dash-action="loadSystemStats" style="margin-left:auto" data-i18n="dash.panel_refresh">Refresh this table</button>
+  </div>
+  <div class="stats" id="system-stats" style="margin:0 1rem 1rem">
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-cpu">—</div></div><div class="l" data-i18n="dash.system_cpu">CPU load</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-mem">—</div></div><div class="l" data-i18n="dash.system_memory">Memory used</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-disk">—</div></div><div class="l" data-i18n="dash.system_disk">Disk used</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-proc">—</div></div><div class="l" data-i18n="dash.system_processes">Processes</div></div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-grouped">
+      <thead>
+      <tr class="th-cols">
+        <th data-i18n="dash.th_name">Name</th>
+        <th>PID</th>
+        <th data-i18n="dash.system_cpu">CPU</th>
+        <th data-i18n="dash.system_memory">Memory</th>
+      </tr>
+      </thead>
+      <tbody id="tbody-system-procs">
+        <tr class="empty-row"><td colspan="4" data-i18n="dash.table_loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 </section>
 </div>
 

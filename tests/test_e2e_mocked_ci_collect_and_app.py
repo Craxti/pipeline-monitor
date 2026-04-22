@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
 from fastapi.testclient import TestClient
 
 from models import models as models_mod
-from models.models import CISnapshot
+from models.models import BuildRecord, BuildStatus, CISnapshot, ServiceStatus, TestRecord as CiTestRecord
 from web.app import app
 from web.core import auth as auth_mod
 from web.services.build_filters import config_instance_label
@@ -114,3 +114,85 @@ def test_chat_prompts_endpoint_returns_multilang_bundle(client: TestClient) -> N
     assert "en" in p and "ru" in p
     assert "runbook_focus_tests" in p["en"]
     assert "runbook_focus_tests" in p["ru"]
+
+
+def test_system_metrics_endpoint_contract(client: TestClient) -> None:
+    r = client.get("/api/system/metrics")
+    assert r.status_code == 200
+    p = r.json()
+    assert "updated_at" in p
+    assert "cpu_percent" in p
+    assert "memory" in p
+    assert "disk" in p
+    assert "top_processes" in p
+
+
+def test_deep_links_services_filters_keep_panels_visible_and_data_non_empty(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from web.core import runtime as rt
+
+    snap = CISnapshot(
+        builds=[
+            BuildRecord(
+                source="jenkins",
+                source_instance="jenkins|main",
+                job_name="deploy/service-a",
+                build_number=101,
+                status=BuildStatus.FAILURE,
+                started_at=datetime.now(tz=timezone.utc) - timedelta(minutes=5),
+                url="http://jenkins/job/deploy-service-a/101",
+                critical=True,
+            )
+        ],
+        tests=[
+            CiTestRecord(
+                source="jenkins-console",
+                source_instance="jenkins|main",
+                suite="deploy/service-a",
+                test_name="test_healthcheck",
+                status="failed",
+                timestamp=datetime.now(tz=timezone.utc) - timedelta(minutes=4),
+                failure_message="connection refused",
+            )
+        ],
+        services=[
+            ServiceStatus(
+                name="svc-a",
+                kind="docker",
+                status="down",
+                detail="container unhealthy",
+                checked_at=datetime.now(tz=timezone.utc) - timedelta(minutes=3),
+            )
+        ],
+    )
+
+    async def _load_snapshot_async():
+        return snap
+
+    monkeypatch.setattr(rt, "load_snapshot_async", _load_snapshot_async)
+    monkeypatch.setattr(rt, "load_snapshot", lambda: snap)
+
+    page = client.get("/?tab=services&tstatus=failed&hours=24&instance=Jenkins+ARTIMATE")
+    assert page.status_code == 200
+    assert 'id="tab-panel-services"' in page.text
+    assert 'id="panel-svcs"' in page.text
+    assert 'id="panel-timeline"' in page.text
+    assert 'id="incident-center"' in page.text
+
+    svc = client.get("/api/services?status=down")
+    assert svc.status_code == 200
+    svc_items = svc.json().get("items") or []
+    assert svc_items
+
+    bld = client.get("/api/builds?status=failure&hours=24")
+    assert bld.status_code == 200
+    b_payload = bld.json()
+    assert "items" in b_payload
+    assert "group_counts" in b_payload
+
+    summ = client.get("/api/dashboard/summary")
+    assert summ.status_code == 200
+    collect = (summ.json() or {}).get("collect") or {}
+    assert "phase_timings_ms" in collect
+    assert "incremental_stats" in collect

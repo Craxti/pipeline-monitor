@@ -27,6 +27,9 @@ class CollectState:
             "progress_sub": None,
             "progress_counts": {},
             "cancel_requested": False,
+            "stop_reason": None,
+            "phase_timings_ms": {},
+            "incremental_stats": {},
         }
     )
     logs: Deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=2500))

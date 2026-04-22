@@ -27,9 +27,11 @@ def collect_jenkins(
     TestRecord,
     append_synth_tests_from_builds,
     check_cancelled,
+    incremental_stats: dict | None = None,
 ) -> None:
     """Collect Jenkins builds and (optionally) console/Allure tests."""
     from clients.jenkins_client import JenkinsClient
+    from web.services.collect_sync.exceptions import CollectCancelled
 
     for inst in cfg.get("jenkins_instances", []):
         check_cancelled()
@@ -209,6 +211,10 @@ def collect_jenkins(
                 if incremental_collect and sqlite_available and explicit_jobs:
                     for job_cfg in explicit_jobs:
                         check_cancelled()
+                        if incremental_stats is not None:
+                            incremental_stats["jenkins_checked"] = int(
+                                incremental_stats.get("jenkins_checked", 0) or 0
+                            ) + 1
                         job_name = (job_cfg.get("name") or "").strip()
                         if not job_name:
                             continue
@@ -225,6 +231,10 @@ def collect_jenkins(
                         except Exception:
                             lb_n = 0
                         if prev_bn > 0 and lb_n > 0 and lb_n <= prev_bn:
+                            if incremental_stats is not None:
+                                incremental_stats["jenkins_skipped"] = int(
+                                    incremental_stats.get("jenkins_skipped", 0) or 0
+                                ) + 1
                             continue
                         critical = bool(job_cfg.get("critical", False))
                         recs = client.fetch_builds_for_job(
@@ -232,6 +242,7 @@ def collect_jenkins(
                             since=since,
                             max_builds=effective_max_builds,
                             critical=critical,
+                            should_cancel=check_cancelled,
                         )
                         if recs:
                             merge_build_records(recs)
@@ -246,6 +257,7 @@ def collect_jenkins(
                     recs = client.fetch_builds(
                         since=since,
                         max_builds=effective_max_builds,
+                        should_cancel=check_cancelled,
                     )
                     merge_build_records(recs)
                     check_cancelled()
@@ -284,6 +296,8 @@ def collect_jenkins(
                 bool(inst.get("show_all_jobs", False)),
                 int((time.monotonic() - t0) * 1000),
             )
+        except CollectCancelled:
+            raise
         except Exception as exc:
             logger.error("Jenkins [%s] builds failed: %s", label, exc)
             push_collect_log(
@@ -306,6 +320,7 @@ def collect_jenkins(
             check_cancelled()
             try:
                 from parsers.jenkins_console_parser import JenkinsConsoleParser
+                from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_console = inst.get("jobs", []) or []
                 if inst.get("show_all_jobs", False):
@@ -370,6 +385,13 @@ def collect_jenkins(
                     snapshot.tests.extend(recs)
                     maybe_save_partial(snapshot)
 
+                def _should_cancel() -> bool:
+                    try:
+                        check_cancelled()
+                        return False
+                    except Exception:
+                        return True
+
                 console_parser = JenkinsConsoleParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
@@ -397,10 +419,13 @@ def collect_jenkins(
                             "elapsed_ms": d.get("elapsed_ms"),
                         }
                     ),
+                    should_cancel=_should_cancel,
                 )
                 _ = console_parser.fetch_tests()
                 check_cancelled()
             except Exception as exc:
+                if "collect cancelled" in str(exc).lower():
+                    raise CollectCancelled("Stopped by user")
                 logger.error("Jenkins [%s] console parse failed: %s", label, exc)
                 push_collect_log(
                     "jenkins_console",
@@ -413,6 +438,7 @@ def collect_jenkins(
             check_cancelled()
             try:
                 from parsers.jenkins_allure_parser import JenkinsAllureParser
+                from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_allure = inst.get("jobs", []) or []
                 if inst.get("show_all_jobs", False):
@@ -478,6 +504,13 @@ def collect_jenkins(
                     snapshot.tests.extend(recs)
                     maybe_save_partial(snapshot)
 
+                def _should_cancel() -> bool:
+                    try:
+                        check_cancelled()
+                        return False
+                    except Exception:
+                        return True
+
                 try:
                     _ab_raw = inst.get("allure_builds")
                     if _ab_raw is None:
@@ -512,10 +545,13 @@ def collect_jenkins(
                             "elapsed_ms": d.get("elapsed_ms"),
                         }
                     ),
+                    should_cancel=_should_cancel,
                 )
                 _ = allure_parser.fetch_tests()
                 check_cancelled()
             except Exception as exc:
+                if "collect cancelled" in str(exc).lower():
+                    raise CollectCancelled("Stopped by user")
                 logger.error("Jenkins [%s] allure parse failed: %s", label, exc)
                 push_collect_log(
                     "jenkins_allure",

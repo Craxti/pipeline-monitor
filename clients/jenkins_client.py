@@ -183,6 +183,7 @@ class JenkinsClient(BaseCIClient):
         self,
         since: datetime | None = None,
         max_builds: int = 10,
+        should_cancel: callable | None = None,
     ) -> list[BuildRecord]:
         if self.show_all:
             discovered = self.fetch_job_list()
@@ -199,6 +200,8 @@ class JenkinsClient(BaseCIClient):
         records: list[BuildRecord] = []
         total = len(job_list) if job_list else 0
         for idx, job_cfg in enumerate(job_list, start=1):
+            if should_cancel:
+                should_cancel()
             job_name = job_cfg.get("name", "")
             critical = job_cfg.get("critical", False)
             if self.progress_cb:
@@ -218,6 +221,8 @@ class JenkinsClient(BaseCIClient):
                 continue
             builds_raw = data.get("builds", [])
             for i, raw_build in enumerate(builds_raw):
+                if should_cancel:
+                    should_cancel()
                 record = self._parse_build(raw_build, job_name, critical)
                 # Always include the most recent build (i==0) even if older than since
                 if i > 0 and since and record.started_at and record.started_at < since:
@@ -233,6 +238,7 @@ class JenkinsClient(BaseCIClient):
         since: datetime | None = None,
         max_builds: int = 10,
         critical: bool = False,
+        should_cancel: callable | None = None,
     ) -> list[BuildRecord]:
         """Fetch up to ``max_builds`` recent builds for a single job (by full folder path)."""
         if not job_name or not str(job_name).strip():
@@ -248,6 +254,8 @@ class JenkinsClient(BaseCIClient):
         builds_raw = data.get("builds") or []
         records: list[BuildRecord] = []
         for i, raw_build in enumerate(builds_raw):
+            if should_cancel:
+                should_cancel()
             if not isinstance(raw_build, dict):
                 continue
             record = self._parse_build(raw_build, job_name, critical)

@@ -21,8 +21,11 @@ def collect_gitlab_builds(
     set_collector_state_int,
     sqlite_available: bool,
     check_cancelled,
+    incremental_stats: dict | None = None,
 ) -> None:
     """Collect build records from configured GitLab instances."""
+    from web.services.collect_sync.exceptions import CollectCancelled
+
     for inst in cfg.get("gitlab_instances", []):
         check_cancelled()
         if not inst.get("enabled", True):
@@ -64,6 +67,8 @@ def collect_gitlab_builds(
 
             for proj_cfg in project_list:
                 check_cancelled()
+                if incremental_stats is not None and incremental:
+                    incremental_stats["gitlab_checked"] = int(incremental_stats.get("gitlab_checked", 0) or 0) + 1
                 proj_id = str(proj_cfg.get("id", ""))
                 critical = bool(proj_cfg.get("critical", False))
                 resolved_id = client._resolve_project(proj_id)
@@ -85,6 +90,10 @@ def collect_gitlab_builds(
                             except (TypeError, ValueError):
                                 top_id = 0
                             if top_id and top_id <= prev:
+                                if incremental_stats is not None:
+                                    incremental_stats["gitlab_skipped"] = int(
+                                        incremental_stats.get("gitlab_skipped", 0) or 0
+                                    ) + 1
                                 continue
 
                 recs = client.fetch_pipelines_for_project(
@@ -93,6 +102,7 @@ def collect_gitlab_builds(
                     since=since,
                     per_page=max_pipes,
                     critical=critical,
+                    should_cancel=check_cancelled,
                 )
                 if recs:
                     merge_build_records(recs)
@@ -129,6 +139,8 @@ def collect_gitlab_builds(
                 incremental,
                 int((time.monotonic() - t0) * 1000),
             )
+        except CollectCancelled:
+            raise
         except Exception as exc:
             logger.error("GitLab [%s] failed: %s", label, exc)
             health.append(

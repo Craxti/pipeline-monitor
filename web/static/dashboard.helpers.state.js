@@ -32,7 +32,7 @@ function liveDashboardPollMs() {
   return Math.round(_clampLiveDashboardPollSec(_liveDashboardPollSec) * 1000);
 }
 
-const DASH_TABS = ['overview', 'builds', 'tests', 'services', 'trends', 'incidents', 'logs'];
+const DASH_TABS = ['overview', 'builds', 'tests', 'services', 'system', 'trends', 'incidents', 'logs'];
 let _dashTab = 'overview';
 let _backTopInit = false;
 

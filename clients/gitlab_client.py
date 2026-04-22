@@ -145,6 +145,7 @@ class GitLabClient(BaseCIClient):
         since: datetime | None = None,
         per_page: int,
         critical: bool,
+        should_cancel: callable | None = None,
     ) -> list[BuildRecord]:
         """List recent pipelines for one project (``per_page`` capped server-side)."""
         path = (
@@ -165,6 +166,8 @@ class GitLabClient(BaseCIClient):
 
         project_records: list[BuildRecord] = []
         for i, raw_pipe in enumerate(data):
+            if should_cancel:
+                should_cancel()
             record = self._parse_pipeline(raw_pipe, proj_id, critical)
             if i > 0 and since and record.started_at and record.started_at < since:
                 break
@@ -177,6 +180,7 @@ class GitLabClient(BaseCIClient):
         self,
         since: datetime | None = None,
         max_builds: int = 10,
+        should_cancel: callable | None = None,
     ) -> list[BuildRecord]:
         if self.show_all:
             discovered = self.fetch_project_list()
@@ -188,6 +192,8 @@ class GitLabClient(BaseCIClient):
 
         records: list[BuildRecord] = []
         for proj_cfg in project_list:
+            if should_cancel:
+                should_cancel()
             proj_id = str(proj_cfg.get("id", ""))
             critical = proj_cfg.get("critical", False)
 
@@ -204,6 +210,7 @@ class GitLabClient(BaseCIClient):
                     since=since,
                     per_page=max_builds,
                     critical=critical,
+                    should_cancel=should_cancel,
                 )
             )
 

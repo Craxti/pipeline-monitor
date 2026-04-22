@@ -24,7 +24,7 @@ function _mapFilterConfig() {
 }
 
 function _mapBuildStatusBucket(status) {
-  const s = String(status || '').toLowerCase();
+  const s = normalizeBuildStatus(status);
   if (s === 'failure') return 'failure';
   if (s === 'running') return 'running';
   if (s === 'unstable') return 'unstable';
@@ -33,7 +33,7 @@ function _mapBuildStatusBucket(status) {
 }
 
 function _mapServiceStatusBucket(status) {
-  const s = String(status || '').toLowerCase();
+  const s = normalizeServiceStatus(status);
   if (s === 'down') return 'failure';
   if (s === 'degraded') return 'unstable';
   if (s === 'up') return 'success';
@@ -107,7 +107,7 @@ function renderStatusMap(builds, services) {
     const aGrp = `${a.source || ''}||${a.instance || ''}`;
     const bGrp = `${b.source || ''}||${b.instance || ''}`;
     return aGrp.localeCompare(bGrp)
-      || (ord[a.status]??5) - (ord[b.status]??5)
+      || (ord[normalizeBuildStatus(a.status)]??5) - (ord[normalizeBuildStatus(b.status)]??5)
       || a.job_name.localeCompare(b.job_name);
   });
 
@@ -130,11 +130,12 @@ function renderStatusMap(builds, services) {
       </div>
       <div class="map-group-grid">`;
     items.forEach((b) => {
-      const cls = STATUS_CLS[b.status] || 'mc-unknown';
+      const sb = normalizeBuildStatus(b.status);
+      const cls = STATUS_CLS[sb] || 'mc-unknown';
       const name = b.instance ? `${b.source} · ${b.instance} / ${b.job_name}` : `${b.source} / ${b.job_name}`;
       html += `<div class="map-cell ${cls}"
         data-name="${_escHtml(name)}"
-        data-status="${_escHtml(b.status)}"
+        data-status="${_escHtml(sb)}"
         data-detail="${_escHtml(b.branch ? 'Branch: ' + b.branch : '')}"
         data-job="${_escHtml(b.job_name)}"></div>`;
     });
@@ -142,7 +143,8 @@ function renderStatusMap(builds, services) {
   });
 
   mapServices.forEach(sv => {
-    const cls = (SVC_CLS[sv.status] || 'mc-unknown') + ' mc-svc';
+    const ss = normalizeServiceStatus(sv.status);
+    const cls = (SVC_CLS[ss] || 'mc-unknown') + ' mc-svc';
     // Services are global — append as one trailing group for clarity.
     // If there are no job groups, this still renders.
     if (!html) {
@@ -158,7 +160,7 @@ function renderStatusMap(builds, services) {
     }
     html += `<div class="map-cell ${cls}"
       data-name="${_escHtml((sv.kind || '') + ': ' + (sv.name || ''))}"
-      data-status="${_escHtml(sv.status || '')}"
+      data-status="${_escHtml(ss)}"
       data-detail="${_escHtml(sv.detail || '')}"
       data-svc="${_escHtml(sv.name || '')}"></div>`;
   });

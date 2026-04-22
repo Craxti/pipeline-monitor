@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
@@ -37,35 +35,10 @@ async def collect_auto_route(request: Request):
     from web.core import runtime as rt
     from web.services import collect_api, collect_endpoints
     from web.services import request_id
-    from web.services import collect_tasks, collect_runtime_api
-    from web.services import collect_loop as collect_loop_mod
-    from web.services import sse_hub
-    from web.services.collect_entrypoints import (
-        run_collect_sync as _run_collect_sync,  # legacy wiring for now
-    )
+    from web.services import collect_runner_factory
 
     enabled_ref = {"value": bool(rt.collect_state.get("auto_collect_enabled", False))}
     enabled_at_ref = {"value": rt.collect_state.get("auto_collect_enabled_at_iso")}
-
-    async def _do_collect(cfg: dict, force_full: bool = False) -> None:
-        return await collect_tasks.do_collect(
-            cfg,
-            force_full=force_full,
-            collect_loop_mod=collect_loop_mod,
-            collect_state=rt.collect_state,
-            collect_logs=rt.collect_logs,
-            collect_slow=rt.collect_slow,
-            push_collect_log=collect_runtime_api.push_collect_log,
-            run_collect_sync=lambda c, *, force_full=False: _run_collect_sync(
-                c,
-                force_full=force_full,
-            ),
-            sse_broadcast_async=lambda payload: collect_runtime_api.sse_broadcast_async(
-                sse_hub,
-                payload,
-            ),
-            data_revision=rt.revision_rt.revision,
-        )
 
     out = await collect_endpoints.set_auto_collect(
         request_json=request.json,
@@ -73,7 +46,7 @@ async def collect_auto_route(request: Request):
         load_cfg=load_yaml_config,
         collect_state=rt.collect_state,
         parse_enabled=collect_api.parse_enabled,
-        do_collect_task_factory=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
+        do_collect_task_factory=collect_runner_factory.create_do_collect_task_factory(force_full=False),
         auto_collect_enabled_ref=enabled_ref,
         auto_collect_enabled_at_iso_ref=enabled_at_ref,
     )
@@ -122,32 +95,7 @@ async def collect_trigger_route(request: Request):
     from web.core import runtime as rt
     from web.services import collect_endpoints, collect_triggers
     from web.services import request_id
-    from web.services import collect_tasks, collect_runtime_api
-    from web.services import collect_loop as collect_loop_mod
-    from web.services import sse_hub
-    from web.services.collect_entrypoints import (
-        run_collect_sync as _run_collect_sync,  # legacy wiring for now
-    )
-
-    async def _do_collect(cfg: dict, force_full: bool = False) -> None:
-        return await collect_tasks.do_collect(
-            cfg,
-            force_full=force_full,
-            collect_loop_mod=collect_loop_mod,
-            collect_state=rt.collect_state,
-            collect_logs=rt.collect_logs,
-            collect_slow=rt.collect_slow,
-            push_collect_log=collect_runtime_api.push_collect_log,
-            run_collect_sync=lambda c, *, force_full=False: _run_collect_sync(
-                c,
-                force_full=force_full,
-            ),
-            sse_broadcast_async=lambda payload: collect_runtime_api.sse_broadcast_async(
-                sse_hub,
-                payload,
-            ),
-            data_revision=rt.revision_rt.revision,
-        )
+    from web.services import collect_runner_factory
 
     rid = request_id.rid(request)
     return await collect_endpoints.trigger_collect(
@@ -156,6 +104,6 @@ async def collect_trigger_route(request: Request):
         collect_state=rt.collect_state,
         load_cfg=load_yaml_config,
         parse_force_full=collect_triggers.parse_force_full,
-        do_collect_task_factory=lambda cfg, force_full: asyncio.create_task(_do_collect(cfg, force_full=force_full)),
+        do_collect_task_factory=collect_runner_factory.create_trigger_collect_task_factory(),
         started_payload=collect_triggers.started_payload,
     )

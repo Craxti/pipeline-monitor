@@ -1,5 +1,5 @@
 // Service uptime bars + build duration sparklines (snapshot + API enrich).
-// Load after dashboard.flaky.js, before the rest of dashboard.js.
+// Load after dashboard.incidents.js, before the rest of dashboard.js.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Uptime / SLA bars

@@ -36,6 +36,7 @@ from web.routes.logs import router as _logs_router
 from web.routes.ops import router as _ops_router
 from web.routes.services import router as _services_router
 from web.routes.settings import router as _settings_router
+from web.routes.system import router as _system_router
 from web.routes.tests import router as _tests_router
 from web.routes.webhooks import router as _webhooks_router
 
@@ -110,6 +111,7 @@ for __r in (
     _builds_router,
     _tests_router,
     _services_router,
+    _system_router,
     _settings_router,
     _chat_router,
     _dashboard_router,

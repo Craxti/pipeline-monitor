@@ -31,6 +31,7 @@ async function refreshAll() {
         loadFailures(),
         loadTests(),
         loadUptimeData().then(() => loadServices()),
+        loadSystemStats(),
       ]);
       if (!_refreshAllPending) break;
     }
@@ -165,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
   pollCollect();
   loadUptimeData().then(() => loadServices()); // load uptime before services render
   loadSummary();
+  loadSystemStats();
   populateSourcesAndInstances().then(() => {
     loadBuilds();
     loadFailures();
@@ -180,4 +182,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // LIVE-style refresh is always on; background collect runs via server config (no UI toggle).
   setLiveMode(true, { skipInitialFullRefresh: true }, false);
+  restartSystemMonitorPolling();
 });

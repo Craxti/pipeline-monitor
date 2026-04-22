@@ -62,6 +62,16 @@ def test_chat_prompt_is_not_hardcoded_in_helpers_ui() -> None:
     assert "window.chatPrompt('runbook_focus_tests'" in js
 
 
+def test_services_tab_required_panels_contract() -> None:
+    html = _read("web/templates/index.html")
+    assert 'id="tab-panel-services"' in html
+    assert 'id="panel-svcs"' in html
+    assert 'id="panel-services-incidents"' in html
+    assert 'id="panel-timeline"' in html
+    assert "/static/dashboard.incidents.js" in html
+    assert 'id="panel-flaky"' not in html
+
+
 def test_trends_global_scope_toggle_contract() -> None:
     html = _read("web/templates/index.html")
     js = _read("web/static/dashboard.trends.js")

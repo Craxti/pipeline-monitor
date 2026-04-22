@@ -8,6 +8,7 @@ import time
 def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logger, check_cancelled) -> None:
     """Collect container/service status via Docker monitor."""
     from docker_monitor.monitor import DockerMonitor
+    from web.services.collect_sync.exceptions import CollectCancelled
 
     dm_cfg = cfg.get("docker_monitor", {})
     if not dm_cfg.get("enabled"):
@@ -63,6 +64,8 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
                 "latency_ms": int((time.monotonic() - t0) * 1000),
             }
         )
+    except CollectCancelled:
+        raise
     except Exception as exc:
         logger.error("Docker monitor failed: %s", exc)
         health.append(

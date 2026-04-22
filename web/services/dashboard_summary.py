@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from web.services import freshness as _freshness
+from web.services import status_policy as _sp
 
 
 def dashboard_summary_payload(
@@ -34,12 +35,12 @@ def dashboard_summary_payload(
         counts["failed_builds"] = sum(
             1
             for b in (getattr(snap, "builds", []) or [])
-            if getattr(b, "status_normalized", None) in ("failure", "unstable")
+            if _sp.is_build_problem(getattr(b, "status_normalized", None))
         )
         counts["failed_tests"] = sum(
             1
             for t in (getattr(snap, "tests", []) or [])
-            if getattr(t, "status_normalized", None) in ("failed", "error")
+            if _sp.is_test_problem(getattr(t, "status_normalized", None))
         )
         counts["tests_total"] = len(getattr(snap, "tests", []) or [])
         counts["services_down"] = sum(
@@ -68,7 +69,17 @@ def dashboard_summary_payload(
         "last_collected_at": collect_last_collected_at,
         "last_error": collect_last_error,
         "interval_seconds": interval,
+        "stop_reason": collect_state.get("stop_reason"),
+        "phase_timings_ms": dict(collect_state.get("phase_timings_ms") or {}),
+        "incremental_stats": dict(collect_state.get("incremental_stats") or {}),
     }
+    try:
+        st = collect["incremental_stats"]
+        ch = int(st.get("jenkins_checked", 0) or 0) + int(st.get("gitlab_checked", 0) or 0)
+        sk = int(st.get("jenkins_skipped", 0) or 0) + int(st.get("gitlab_skipped", 0) or 0)
+        collect["incremental_skip_ratio"] = (float(sk) / float(ch)) if ch > 0 else None
+    except Exception:
+        collect["incremental_skip_ratio"] = None
 
     parse_coverage = (getattr(snap, "collect_meta", None) if snap else None) or {}
 

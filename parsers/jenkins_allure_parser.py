@@ -40,6 +40,7 @@ class JenkinsAllureParser:
         backoff_seconds: float = 0.8,
         records_cb: callable | None = None,
         timing_cb: callable | None = None,
+        should_cancel: callable | None = None,
     ) -> None:
         self.base_url = url.rstrip("/")
         self.auth = (username, token)
@@ -53,6 +54,11 @@ class JenkinsAllureParser:
         self.backoff_seconds = max(0.0, float(backoff_seconds or 0.0))
         self.records_cb = records_cb
         self.timing_cb = timing_cb
+        self.should_cancel = should_cancel
+
+    def _check_cancelled(self) -> None:
+        if self.should_cancel and bool(self.should_cancel()):
+            raise RuntimeError("collect cancelled")
 
     def _should_retry_status(self, status_code: int | None) -> bool:
         return status_code in (408, 425, 429, 500, 502, 503, 504)
@@ -61,6 +67,7 @@ class JenkinsAllureParser:
         url = f"{self.base_url}{path}"
         attempt = 0
         while True:
+            self._check_cancelled()
             try:
                 import time
 
@@ -82,6 +89,7 @@ class JenkinsAllureParser:
                         delay,
                     )
                     try:
+                        self._check_cancelled()
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -99,6 +107,7 @@ class JenkinsAllureParser:
                     delay = self.backoff_seconds * (2**attempt)
                     logger.warning("AllureParser: HTTP %s (%s), retry in %.1fs", path, code, delay)
                     try:
+                        self._check_cancelled()
                         import time
 
                         time.sleep(delay)
@@ -118,6 +127,7 @@ class JenkinsAllureParser:
                         exc,
                     )
                     try:
+                        self._check_cancelled()
                         import time
 
                         time.sleep(delay)
@@ -129,6 +139,7 @@ class JenkinsAllureParser:
                 return None
 
     def _fetch_build_numbers(self, job_name: str) -> list[int]:
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         # max_builds <= 0 means "no explicit limit" (Jenkins decides how many to return).
         if int(self.max_builds) <= 0:
@@ -152,6 +163,7 @@ class JenkinsAllureParser:
         Leaf nodes have fields: uid, name, status, time{start,stop,duration}.
         """
         leaves: list[dict[str, Any]] = []
+        self._check_cancelled()
         if isinstance(node, dict):
             if "uid" in node and "status" in node and "time" in node:
                 leaves.append(node)
@@ -168,11 +180,13 @@ class JenkinsAllureParser:
         build_number: int,
         uid: str,
     ) -> dict[str, Any] | None:
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         data = self._get_json(f"{jp}/{int(build_number)}/allure/data/test-cases/{uid}.json")
         return data if isinstance(data, dict) else None
 
     def _parse_allure(self, job_name: str, build_number: int) -> list[TestRecord]:
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         suites = self._get_json(f"{jp}/{int(build_number)}/allure/data/suites.json")
         if not isinstance(suites, dict):
@@ -184,6 +198,7 @@ class JenkinsAllureParser:
 
         records: list[TestRecord] = []
         for leaf in leaves:
+            self._check_cancelled()
             uid = str(leaf.get("uid") or "").strip()
             status = str(leaf.get("status") or "").strip().lower()
             name = str(leaf.get("name") or uid or "test").strip()
@@ -255,12 +270,14 @@ class JenkinsAllureParser:
 
         tasks: list[tuple[str, int]] = []
         for job_cfg in self.jobs:
+            self._check_cancelled()
             if not job_cfg.get("parse_allure", True):
                 continue
             job_name = job_cfg.get("name", "")
             if not job_name:
                 continue
             for build_num in self._fetch_build_numbers(job_name):
+                self._check_cancelled()
                 tasks.append((job_name, int(build_num)))
 
         if not tasks:
@@ -299,6 +316,7 @@ class JenkinsAllureParser:
         with ThreadPoolExecutor(max_workers=self.workers) as ex:
             futs = [ex.submit(_work, job, b) for job, b in tasks]
             for fut in as_completed(futs):
+                self._check_cancelled()
                 try:
                     recs = fut.result()
                 except Exception as exc:

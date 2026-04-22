@@ -49,25 +49,27 @@ function renderTimeline(builds, services, persistedList) {
 
   builds.forEach(b => {
     if (!b.started_at) return;
+    const st = normalizeBuildStatus(b.status);
     events.push({
       ts: b.started_at,
-      icon: STATUS_ICON[b.status] || '?',
-      cls:  STATUS_CLS[b.status]  || 'ti-info',
+      icon: STATUS_ICON[st] || '?',
+      cls:  STATUS_CLS[st]  || 'ti-info',
       title: `${b.source} / ${b.job_name} #${b.build_number || '?'}`,
-      detail: `${b.status}${b.branch ? ' · ' + b.branch : ''}${b.duration_seconds ? ' · ' + dur(b.duration_seconds) : ''}`,
+      detail: `${st}${b.branch ? ' · ' + b.branch : ''}${b.duration_seconds ? ' · ' + dur(b.duration_seconds) : ''}`,
       url: b.url,
       _prio: 0,
     });
   });
 
-  services.filter(s => s.status !== 'up').forEach(sv => {
+  services.filter(s => normalizeServiceStatus(s && s.status) !== 'up').forEach(sv => {
     if (!sv.checked_at) return;
+    const ss = normalizeServiceStatus(sv.status);
     events.push({
       ts: sv.checked_at,
-      icon: SVC_ICON[sv.status] || '?',
-      cls:  SVC_CLS[sv.status]  || 'ti-info',
+      icon: SVC_ICON[ss] || '?',
+      cls:  SVC_CLS[ss]  || 'ti-info',
       title: `${sv.kind}: ${sv.name}`,
-      detail: sv.detail || sv.status,
+      detail: sv.detail || ss,
       url: null,
       _prio: 0,
     });

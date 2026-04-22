@@ -76,32 +76,9 @@ async def api_settings_save_route(request: Request):
     """Save settings and restart collect loop if needed."""
     # Import lazily to avoid circular imports on startup.
     from web.services import cursor_proxy
-    from web.services import collect_loop as collect_loop_mod
-    from web.services import collect_tasks, collect_runtime_api
-    from web.services import sse_hub
-    from web.services.collect_entrypoints import run_collect_sync as _run_collect_sync
+    from web.services import collect_runner_factory
 
     task_ref = {"task": None}
-
-    async def _do_collect(cfg: dict, force_full: bool = False) -> None:
-        return await collect_tasks.do_collect(
-            cfg,
-            force_full=force_full,
-            collect_loop_mod=collect_loop_mod,
-            collect_state=rt.collect_state,
-            collect_logs=rt.collect_logs,
-            collect_slow=rt.collect_slow,
-            push_collect_log=collect_runtime_api.push_collect_log,
-            run_collect_sync=lambda c, *, force_full=False: _run_collect_sync(
-                c,
-                force_full=force_full,
-            ),
-            sse_broadcast_async=lambda payload: collect_runtime_api.sse_broadcast_async(
-                sse_hub,
-                payload,
-            ),
-            data_revision=rt.revision_rt.revision,
-        )
 
     out = await settings_save_endpoint.api_save_settings(
         request,
@@ -109,15 +86,8 @@ async def api_settings_save_route(request: Request):
         load_cfg=load_yaml_config,
         collect_state=rt.collect_state,
         collect_loop_task_ref=task_ref,
-        create_collect_loop_task=lambda cfg: asyncio.create_task(
-            collect_loop_mod.collect_loop(
-                cfg,
-                auto_collect_enabled_getter=lambda: bool(rt.auto_collect_rt.enabled),
-                interval_seconds_getter=lambda: int(rt.collect_state.get("interval_seconds") or 300),
-                do_collect_fn=lambda c: _do_collect(c, force_full=False),
-            )
-        ),
-        create_do_collect_task=lambda cfg: asyncio.create_task(_do_collect(cfg, force_full=False)),
+        create_collect_loop_task=collect_runner_factory.create_collect_loop_task,
+        create_do_collect_task=collect_runner_factory.create_do_collect_task_factory(force_full=False),
         sync_cursor_proxy=lambda cfg: asyncio.to_thread(
             cursor_proxy.sync_cursor_proxy_from_config,
             cfg,

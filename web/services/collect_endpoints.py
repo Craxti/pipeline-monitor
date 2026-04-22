@@ -61,6 +61,7 @@ def stop_collect_request(*, collect_state: dict) -> dict:
     if not collect_state.get("is_collecting"):
         return {"ok": False, "message": "Not collecting."}
     collect_state["cancel_requested"] = True
+    collect_state["stop_reason"] = "user_requested"
     collect_state["phase"] = "cancelled"
     collect_state["progress_main"] = "Collect cancelled"
     collect_state["progress_sub"] = "Stopped by user"

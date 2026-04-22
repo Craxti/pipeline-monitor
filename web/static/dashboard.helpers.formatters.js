@@ -70,3 +70,41 @@ function safeUrl(u) {
   }
 }
 const fmtSec = s => s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
+
+function normalizeBuildStatus(raw) {
+  const s0 = String(raw == null ? '' : raw).trim().toLowerCase();
+  const aliases = {
+    pass: 'success',
+    passed: 'success',
+    ok: 'success',
+    fail: 'failure',
+    failed: 'failure',
+    error: 'failure',
+    cancelled: 'aborted',
+    canceled: 'aborted',
+  };
+  const s = aliases[s0] || s0;
+  if (['success', 'failure', 'running', 'aborted', 'unstable', 'unknown'].includes(s)) return s;
+  return 'unknown';
+}
+
+function normalizeServiceStatus(raw) {
+  const s0 = String(raw == null ? '' : raw).trim().toLowerCase();
+  if (['up', 'healthy', 'ok', 'running'].includes(s0)) return 'up';
+  if (['down', 'unhealthy', 'offline', 'stopped'].includes(s0)) return 'down';
+  if (['degraded', 'warn', 'warning', 'unstable'].includes(s0)) return 'degraded';
+  return s0 || 'unknown';
+}
+
+function isBuildProblemStatus(raw) {
+  const s = normalizeBuildStatus(raw);
+  return s === 'failure' || s === 'unstable';
+}
+
+function incidentSeverityLevel(facts) {
+  const f = facts || {};
+  if (f.servicesDown > 0 || f.criticalBuildFailures || f.criticalTestFailures) return 'critical';
+  if (f.failedBuilds > 0 || f.failedTests > 0 || f.hasUnstableBuilds) return 'high';
+  if (f.partialErrors > 0 || f.snapshotStale) return 'warn';
+  return 'ok';
+}

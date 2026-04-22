@@ -14,7 +14,7 @@
 // Status map: dashboard.status-map.js
 // Log diff + stages: dashboard.diff-stages.js
 // Timeline: dashboard.timeline.js
-// Flaky + correlation: dashboard.flaky.js
+// Services incidents inline panel: dashboard.incidents.js
 // Uptime + sparklines: dashboard.uptime-sparklines.js
 // Snapshot reload: dashboard.load-summary.js
 // Collect bar + pollCollect: dashboard.collect-bar.js

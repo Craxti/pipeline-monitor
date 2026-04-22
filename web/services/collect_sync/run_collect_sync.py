@@ -63,6 +63,13 @@ def run_collect_sync(
 
     snap_lock = threading.Lock()
     health: list[dict[str, Any]] = []
+    incremental_stats = {
+        "jenkins_checked": 0,
+        "jenkins_skipped": 0,
+        "gitlab_checked": 0,
+        "gitlab_skipped": 0,
+    }
+    collect_state["incremental_stats"] = dict(incremental_stats)
 
     def _append_tests_live(recs: list) -> None:
         if not recs:
@@ -112,6 +119,7 @@ def run_collect_sync(
         TestRecord=TestRecord,
         append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
         check_cancelled=check_cancelled,
+        incremental_stats=incremental_stats,
     )
     logger.info("Jenkins phase completed: builds=%d tests=%d", len(snapshot.builds), len(snapshot.tests))
     _between_phases()
@@ -129,11 +137,12 @@ def run_collect_sync(
         set_collector_state_int=set_collector_state_int,
         sqlite_available=sqlite_available,
         check_cancelled=check_cancelled,
+        incremental_stats=incremental_stats,
     )
     logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
     _between_phases()
 
-    _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger)
+    _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger, check_cancelled=check_cancelled)
     logger.info("Local parsers phase completed: tests=%d", len(snapshot.tests))
     _between_phases()
 
@@ -146,6 +155,7 @@ def run_collect_sync(
         check_cancelled=check_cancelled,
     )
     logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
+    collect_state["incremental_stats"] = dict(incremental_stats)
 
     instance_health_setter(health)
     save_snapshot(snapshot)

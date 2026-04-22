@@ -472,6 +472,7 @@ function refreshActivePanel() {
   if (_dashTab === 'builds') { resetBuilds(); return; }
   if (_dashTab === 'tests') { resetFailures(); resetTests(); return; }
   if (_dashTab === 'services') { resetServices(); return; }
+  if (_dashTab === 'system') { loadSystemStats(); return; }
   if (_dashTab === 'trends') { loadTrends(_trendsViewDays, null); return; }
   if (_dashTab === 'incidents') { loadSummary(); return; }
   if (_dashTab === 'logs') { loadCollectLogs(); loadCollectSlowTop(); return; }
@@ -511,6 +512,30 @@ function _icShort(s, n=140) {
   if (!s) return '';
   if (s.length <= n) return s;
   return s.slice(0, n - 1) + '…';
+}
+
+function _icLikelyCauseHints(snap, summary) {
+  const out = [];
+  const push = (k) => { if (!out.includes(k)) out.push(k); };
+  const pe = (summary && summary.partial_errors) || [];
+  const msgs = [];
+  pe.forEach((x) => msgs.push(String((x && x.message) || '')));
+  (snap && snap.services || []).forEach((s) => msgs.push(String((s && s.detail) || '')));
+  (snap && snap.tests || []).forEach((t) => msgs.push(String((t && t.failure_message) || '')));
+  const hay = msgs.join('\n').toLowerCase();
+  if (/(timeout|timed out|connection refused|name or service not known|dns|econn|503|502|504|429|temporary failure)/.test(hay)) {
+    push('network');
+  }
+  if (/(runner|executor|node .*offline|agent .*offline|no space left on device|insufficient cpu|insufficient memory|killed process)/.test(hay)) {
+    push('runner');
+  }
+  if (/(registry|manifest unknown|image pull|pull access denied|unauthorized: authentication required|denied: requested access)/.test(hay)) {
+    push('registry');
+  }
+  if (!out.length && (snap && snap.services || []).some((s) => normalizeServiceStatus(s && s.status) === 'down')) {
+    push('service');
+  }
+  return out.slice(0, 3).map((k) => t('icenter.hint_' + k));
 }
 
 function _flashTableRow(tr) {
@@ -684,9 +709,9 @@ function renderIncidentCards(snap) {
 
   // Failed/unstable builds → event
   builds.forEach((b) => {
-    if (!b || !(b.status === 'failure' || b.status === 'unstable')) return;
+    if (!b || !isBuildProblemStatus(b.status)) return;
     const ts = _icTsMs(b.started_at);
-    const st = String(b.status || '').toLowerCase();
+    const st = normalizeBuildStatus(b.status);
     const num = (b.build_number != null && b.build_number !== '') ? ` #${b.build_number}` : '';
     const branch = b.branch ? ` · ${b.branch}` : '';
     events.push({
@@ -754,11 +779,16 @@ function renderIncidentCards(snap) {
   });
 
   // Sort: newest first; keep the list readable.
+  const dedup = new Set();
   events
     .filter((e) => e && !isNaN(e.ts))
     .sort((a, b) => b.ts - a.ts)
-    .slice(0, 30)
-    .forEach((ev) => _icAppendEventRow(wrap, ev));
+    .forEach((ev) => {
+      const k = `${ev.kind}|${ev.name}|${String(ev.tsIso || '').slice(0, 16)}`;
+      if (dedup.has(k)) return;
+      dedup.add(k);
+      if (dedup.size <= 30) _icAppendEventRow(wrap, ev);
+    });
 
   wrap.style.display = wrap.childElementCount ? 'flex' : 'none';
 }
@@ -808,7 +838,7 @@ function renderIncidentCenter(snap, summary, _metaObj) {
   const builds = snap.builds || [];
   _lastBuildsForIc = builds;
   const c = (summary && summary.counts) || {};
-  const fb = c.failed_builds != null ? c.failed_builds : builds.filter((b) => b.status === 'failure').length;
+  const fb = c.failed_builds != null ? c.failed_builds : builds.filter((b) => isBuildProblemStatus(b.status)).length;
   const ft = c.failed_tests != null ? c.failed_tests : (snap.tests || []).filter((t) => ['failed', 'error'].includes(t.status)).length;
   const sd = c.services_down != null ? c.services_down : (snap.services || []).filter((s) => s.status === 'down').length;
   const pe = (summary && summary.partial_errors) || [];
@@ -818,17 +848,20 @@ function renderIncidentCenter(snap, summary, _metaObj) {
   const hasIssue = fb > 0 || ft > 0 || sd > 0 || pe.length > 0 || stale;
   let sev = 'ok';
   let sevKey = 'severity_ok';
-  // Severity policy:
-  // - critical: down services OR failures in critical jobs/projects
-  // - high:     any failed/unstable builds or failed tests (non-critical)
-  // - warn:     partial errors / stale
-  const critBuildFails = builds.some((b) => b.critical && (b.status === 'failure' || b.status === 'unstable'));
+  const critBuildFails = builds.some((b) => b.critical && isBuildProblemStatus(b.status));
   const critJobs = new Set(builds.filter(b => b.critical).map(b => b.job_name));
   const critTestFails = (snap.tests || []).some((t) => (t.status === 'failed' || t.status === 'error') && critJobs.has(t.suite || ''));
-  if (sd > 0 || critBuildFails || critTestFails) { sev = 'critical'; sevKey = 'severity_critical'; }
-  else if (fb > 0 || ft > 0 || builds.some((b) => b.status === 'unstable')) { sev = 'high'; sevKey = 'severity_high'; }
-  else if (pe.length > 0 || stale) { sev = 'warn'; sevKey = 'severity_warn'; }
-  else if (!hasIssue) { sev = 'ok'; sevKey = 'severity_ok'; }
+  sev = incidentSeverityLevel({
+    servicesDown: sd,
+    criticalBuildFailures: critBuildFails,
+    criticalTestFailures: critTestFails,
+    failedBuilds: fb,
+    failedTests: ft,
+    hasUnstableBuilds: builds.some((b) => normalizeBuildStatus(b.status) === 'unstable'),
+    partialErrors: pe.length,
+    snapshotStale: !!stale,
+  });
+  sevKey = (sev === 'critical') ? 'severity_critical' : (sev === 'high') ? 'severity_high' : (sev === 'warn') ? 'severity_warn' : 'severity_ok';
   _lastIncidentSeverity = sev;
 
   el.classList.remove('ic-critical', 'ic-high', 'ic-warn', 'ic-ok');
@@ -853,7 +886,7 @@ function renderIncidentCenter(snap, summary, _metaObj) {
     critBuildFails: !!critBuildFails,
     ft,
     fb,
-    unstable: builds.some((b) => b.status === 'unstable'),
+    unstable: builds.some((b) => normalizeBuildStatus(b.status) === 'unstable'),
     peLen: pe.length,
     stale: !!stale,
   };
@@ -872,19 +905,23 @@ function renderIncidentCenter(snap, summary, _metaObj) {
 
   const aff = document.getElementById('ic-affected');
   if (aff) {
-    const failedJobs = [...new Set(builds.filter((b) => b.status === 'failure' || b.status === 'unstable').map((b) => b.job_name))].slice(0, 8);
+    const failedJobs = [...new Set(builds.filter((b) => isBuildProblemStatus(b.status)).map((b) => b.job_name))].slice(0, 8);
     const downNames = (snap.services || []).filter((s) => s.status === 'down').map((s) => s.name).slice(0, 8);
     const bits = [];
     if (failedJobs.length) bits.push(`<strong>${esc(t('icenter.affected_jobs'))}:</strong> ${failedJobs.map((j) => esc(j)).join(', ')}`);
     if (downNames.length) bits.push(`<strong>${esc(t('icenter.affected_svcs'))}:</strong> ${downNames.map((n) => esc(n)).join(', ')}`);
     if (pe.length) bits.push(`<strong>${esc(t('icenter.partial_err'))}:</strong> ${pe.map((p) => esc(p.message || p.name || '')).join(' · ')}`);
+    const hints = _icLikelyCauseHints(snap, summary);
+    if (hints.length) bits.push(`<strong>${esc(t('icenter.likely_cause'))}:</strong> ${hints.map((h) => esc(h)).join(' · ')}`);
     aff.innerHTML = bits.length ? bits.join('<br/>') : (hasIssue ? '' : esc(t('icenter.healthy')));
   }
 
   el.style.display = 'block';
 
   renderIncidentCards(snap);
-  const incidents = analyzeCorrelation(builds);
+  const incidents = (typeof analyzeCorrelation === 'function')
+    ? analyzeCorrelation(builds)
+    : [];
   renderIcTimeline(incidents);
 }
 
@@ -904,7 +941,7 @@ function closeRunbook() {
 }
 
 function icOpenFirstFailureLog() {
-  const fails = _lastBuildsForIc.filter((b) => b.status === 'failure' || b.status === 'unstable');
+  const fails = _lastBuildsForIc.filter((b) => isBuildProblemStatus(b.status));
   const b = fails[0];
   if (!b) {
     showToast(t('icenter.no_logs'), 'warn');

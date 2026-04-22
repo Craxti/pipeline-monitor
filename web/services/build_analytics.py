@@ -9,14 +9,13 @@ from collections import defaultdict
 from datetime import timezone
 from typing import Any
 
-from models.models import CISnapshot
+from models.models import CISnapshot, normalize_build_status
 
 
 def status_str(val: object) -> str:
     """Convert status enum/string to a stable string."""
-    if isinstance(val, str):
-        return val
-    return getattr(val, "value", str(val))
+    raw = val if isinstance(val, str) else getattr(val, "value", str(val))
+    return normalize_build_status(raw)
 
 
 def job_build_analytics(snapshot: CISnapshot) -> dict[str, dict]:

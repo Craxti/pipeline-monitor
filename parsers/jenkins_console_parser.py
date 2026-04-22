@@ -235,6 +235,7 @@ class JenkinsConsoleParser:
         records_cb: callable | None = None,
         progress_cb: callable | None = None,
         timing_cb: callable | None = None,
+        should_cancel: callable | None = None,
     ) -> None:
         self.base_url = url.rstrip("/")
         self.auth = (username, token)
@@ -248,11 +249,16 @@ class JenkinsConsoleParser:
         self.records_cb = records_cb
         self.progress_cb = progress_cb
         self.timing_cb = timing_cb
+        self.should_cancel = should_cancel
 
     # ── private helpers ───────────────────────────────────────────────────
 
     def _should_retry_status(self, status_code: int | None) -> bool:
         return status_code in (408, 425, 429, 500, 502, 503, 504)
+
+    def _check_cancelled(self) -> None:
+        if self.should_cancel and bool(self.should_cancel()):
+            raise RuntimeError("collect cancelled")
 
     def _get_with_retry(self, url: str) -> requests.Response | None:
         """
@@ -260,6 +266,7 @@ class JenkinsConsoleParser:
         """
         attempt = 0
         while True:
+            self._check_cancelled()
             try:
                 import time
 
@@ -281,6 +288,7 @@ class JenkinsConsoleParser:
                         delay,
                     )
                     try:
+                        self._check_cancelled()
                         time.sleep(delay)
                     except Exception:
                         pass
@@ -294,6 +302,7 @@ class JenkinsConsoleParser:
                     delay = self.backoff_seconds * (2**attempt)
                     logger.warning("ConsoleParser: HTTP %s (%s), retry in %.1fs", url, code, delay)
                     try:
+                        self._check_cancelled()
                         import time
 
                         time.sleep(delay)
@@ -312,6 +321,7 @@ class JenkinsConsoleParser:
                         url,
                     )
                     try:
+                        self._check_cancelled()
                         import time
 
                         time.sleep(delay)
@@ -322,6 +332,7 @@ class JenkinsConsoleParser:
                 return None
 
     def _fetch_build_numbers(self, job_name: str) -> list[int]:
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         # max_builds <= 0 means "no explicit limit" (Jenkins decides how many to return).
         if int(self.max_builds) <= 0:
@@ -378,6 +389,7 @@ class JenkinsConsoleParser:
             return []
 
     def _fetch_console(self, job_name: str, build_number: int) -> str:
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         url = f"{self.base_url}{jp}/{build_number}/consoleText"
         try:
@@ -406,6 +418,7 @@ class JenkinsConsoleParser:
         Console echo lines do not carry per-scenario duration; callers pass ``duration_seconds=None``
         into ``_parse_console`` so the Tests table does not show whole-pipeline time on every row.
         """
+        self._check_cancelled()
         jp = JenkinsClient.job_path(job_name)
         url = f"{self.base_url}{jp}/{int(build_number)}/api/json?" "tree=timestamp,duration,estimatedDuration"
         try:
@@ -457,6 +470,7 @@ class JenkinsConsoleParser:
         ts = record_ts
 
         for raw_line in text.splitlines():
+            self._check_cancelled()
             # Remove Jenkins "[Pipeline] echo" prefix
             line = _PIPELINE_PREFIX.sub("", raw_line).strip()
 
@@ -544,12 +558,14 @@ class JenkinsConsoleParser:
 
         tasks: list[tuple[str, int]] = []
         for job_cfg in self.jobs:
+            self._check_cancelled()
             if not job_cfg.get("parse_console", True):
                 continue
             job_name = job_cfg.get("name", "")
             if not job_name:
                 continue
             for build_num in self._fetch_build_numbers(job_name):
+                self._check_cancelled()
                 tasks.append((job_name, int(build_num)))
 
         if not tasks:
@@ -591,6 +607,7 @@ class JenkinsConsoleParser:
         with ThreadPoolExecutor(max_workers=self.workers) as ex:
             futs = [ex.submit(_work, job, b) for job, b in tasks]
             for fut in as_completed(futs):
+                self._check_cancelled()
                 try:
                     records = fut.result()
                 except Exception as exc:
