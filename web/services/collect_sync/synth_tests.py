@@ -29,6 +29,7 @@ def append_synthetic_tests_from_builds(
                     duration_seconds=b.duration_seconds,
                     failure_message=None,
                     timestamp=b.started_at,
+                    build_number=getattr(b, "build_number", None),
                 )
             )
     except Exception:

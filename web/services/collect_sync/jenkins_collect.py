@@ -316,124 +316,6 @@ def collect_jenkins(
                 }
             )
 
-        if inst.get("parse_console", False):
-            check_cancelled()
-            try:
-                from parsers.jenkins_console_parser import JenkinsConsoleParser
-                from web.services.collect_sync.exceptions import CollectCancelled
-
-                jobs_for_console = inst.get("jobs", []) or []
-                if inst.get("show_all_jobs", False):
-                    raw_limit = inst.get("console_jobs_limit", 25)
-                    try:
-                        limit = int(raw_limit)
-                    except Exception:
-                        limit = 25
-                    discovered = shared_discovered
-                    if discovered:
-                        wanted = {"success", "failure", "unstable"}
-                        filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
-                        if filtered:
-                            discovered = filtered
-                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
-                        explicit_by_name = {
-                            (j.get("name") or ""): j for j in (jobs_for_console or []) if (j.get("name") or "")
-                        }
-                        merged_names = list(explicit_by_name.keys())
-                        for n in discovered_sel:
-                            if n not in explicit_by_name:
-                                merged_names.append(n)
-                        jobs_for_console = [
-                            {
-                                "name": n,
-                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
-                                "parse_console": True,
-                            }
-                            for n in merged_names
-                        ]
-                        logger.info(
-                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),
-                            label,
-                            len(discovered),
-                            len(jobs_for_console),
-                            "all" if limit <= 0 else str(limit),
-                            len(explicit_by_name),
-                        )
-                    else:
-                        logger.warning(
-                            "Jenkins [%s] console: show_all_jobs on but no jobs discovered; " "skipping console parse",
-                            label,
-                        )
-                n_console_jobs_parsed = len(jobs_for_console) if jobs_for_console else 0
-                if jobs_for_console:
-                    check_cancelled()
-                    progress(
-                        "jenkins_console",
-                        f"Jenkins: {label}",
-                        f"Parsing console ({len(jobs_for_console)} job(s))…",
-                    )
-
-                def _append_tests_live_inst(recs: list) -> None:
-                    if not recs:
-                        return
-                    try:
-                        for r in recs:
-                            if getattr(r, "source_instance", None) in (None, ""):
-                                r.source_instance = inst_key
-                    except Exception:
-                        pass
-                    snapshot.tests.extend(recs)
-                    maybe_save_partial(snapshot)
-
-                def _should_cancel() -> bool:
-                    try:
-                        check_cancelled()
-                        return False
-                    except Exception:
-                        return True
-
-                console_parser = JenkinsConsoleParser(
-                    url=inst["url"],
-                    username=inst.get("username", ""),
-                    token=inst.get("token", ""),
-                    jobs=jobs_for_console,
-                    max_builds=int(inst.get("console_builds", 5) or 0),
-                    workers=int(inst.get("console_workers", 8) or 8),
-                    verify_ssl=bool(inst.get("verify_ssl", True)),
-                    retries=int(inst.get("console_retries", 3) or 3),
-                    backoff_seconds=float(inst.get("console_backoff_seconds", 0.8) or 0.8),
-                    records_cb=_append_tests_live_inst,
-                    progress_cb=lambda msg: progress(
-                        "jenkins_console",
-                        f"Jenkins: {label}",
-                        msg,
-                    ),
-                    timing_cb=lambda d: collect_slow.append(
-                        {
-                            "ts": datetime.now(tz=timezone.utc).isoformat(),
-                            "level": "info",
-                            "instance": label,
-                            "kind": d.get("kind"),
-                            "job": d.get("job"),
-                            "build": d.get("build"),
-                            "elapsed_ms": d.get("elapsed_ms"),
-                        }
-                    ),
-                    should_cancel=_should_cancel,
-                )
-                _ = console_parser.fetch_tests()
-                check_cancelled()
-            except Exception as exc:
-                if "collect cancelled" in str(exc).lower():
-                    raise CollectCancelled("Stopped by user")
-                logger.error("Jenkins [%s] console parse failed: %s", label, exc)
-                push_collect_log(
-                    "jenkins_console",
-                    f"Jenkins: {label}",
-                    f"console parse failed: {exc}",
-                    "error",
-                )
-
         if inst.get("parse_allure", False):
             check_cancelled()
             try:
@@ -557,6 +439,124 @@ def collect_jenkins(
                     "jenkins_allure",
                     f"Jenkins: {label}",
                     f"allure parse failed: {exc}",
+                    "error",
+                )
+
+        if inst.get("parse_console", False):
+            check_cancelled()
+            try:
+                from parsers.jenkins_console_parser import JenkinsConsoleParser
+                from web.services.collect_sync.exceptions import CollectCancelled
+
+                jobs_for_console = inst.get("jobs", []) or []
+                if inst.get("show_all_jobs", False):
+                    raw_limit = inst.get("console_jobs_limit", 25)
+                    try:
+                        limit = int(raw_limit)
+                    except Exception:
+                        limit = 25
+                    discovered = shared_discovered
+                    if discovered:
+                        wanted = {"success", "failure", "unstable"}
+                        filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
+                        if filtered:
+                            discovered = filtered
+                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
+                        explicit_by_name = {
+                            (j.get("name") or ""): j for j in (jobs_for_console or []) if (j.get("name") or "")
+                        }
+                        merged_names = list(explicit_by_name.keys())
+                        for n in discovered_sel:
+                            if n not in explicit_by_name:
+                                merged_names.append(n)
+                        jobs_for_console = [
+                            {
+                                "name": n,
+                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "parse_console": True,
+                            }
+                            for n in merged_names
+                        ]
+                        logger.info(
+                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),
+                            label,
+                            len(discovered),
+                            len(jobs_for_console),
+                            "all" if limit <= 0 else str(limit),
+                            len(explicit_by_name),
+                        )
+                    else:
+                        logger.warning(
+                            "Jenkins [%s] console: show_all_jobs on but no jobs discovered; " "skipping console parse",
+                            label,
+                        )
+                n_console_jobs_parsed = len(jobs_for_console) if jobs_for_console else 0
+                if jobs_for_console:
+                    check_cancelled()
+                    progress(
+                        "jenkins_console",
+                        f"Jenkins: {label}",
+                        f"Parsing console ({len(jobs_for_console)} job(s))…",
+                    )
+
+                def _append_tests_live_inst(recs: list) -> None:
+                    if not recs:
+                        return
+                    try:
+                        for r in recs:
+                            if getattr(r, "source_instance", None) in (None, ""):
+                                r.source_instance = inst_key
+                    except Exception:
+                        pass
+                    snapshot.tests.extend(recs)
+                    maybe_save_partial(snapshot)
+
+                def _should_cancel() -> bool:
+                    try:
+                        check_cancelled()
+                        return False
+                    except Exception:
+                        return True
+
+                console_parser = JenkinsConsoleParser(
+                    url=inst["url"],
+                    username=inst.get("username", ""),
+                    token=inst.get("token", ""),
+                    jobs=jobs_for_console,
+                    max_builds=int(inst.get("console_builds", 5) or 0),
+                    workers=int(inst.get("console_workers", 8) or 8),
+                    verify_ssl=bool(inst.get("verify_ssl", True)),
+                    retries=int(inst.get("console_retries", 3) or 3),
+                    backoff_seconds=float(inst.get("console_backoff_seconds", 0.8) or 0.8),
+                    records_cb=_append_tests_live_inst,
+                    progress_cb=lambda msg: progress(
+                        "jenkins_console",
+                        f"Jenkins: {label}",
+                        msg,
+                    ),
+                    timing_cb=lambda d: collect_slow.append(
+                        {
+                            "ts": datetime.now(tz=timezone.utc).isoformat(),
+                            "level": "info",
+                            "instance": label,
+                            "kind": d.get("kind"),
+                            "job": d.get("job"),
+                            "build": d.get("build"),
+                            "elapsed_ms": d.get("elapsed_ms"),
+                        }
+                    ),
+                    should_cancel=_should_cancel,
+                )
+                _ = console_parser.fetch_tests()
+                check_cancelled()
+            except Exception as exc:
+                if "collect cancelled" in str(exc).lower():
+                    raise CollectCancelled("Stopped by user")
+                logger.error("Jenkins [%s] console parse failed: %s", label, exc)
+                push_collect_log(
+                    "jenkins_console",
+                    f"Jenkins: {label}",
+                    f"console parse failed: {exc}",
                     "error",
                 )
 

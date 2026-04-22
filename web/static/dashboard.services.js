@@ -101,11 +101,7 @@ async function loadServices() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
-    if (_dashIsCollecting && tbody && tbody.querySelector('tr:not(.empty-row)')) {
-      s.done = true;
-      updateFilterSummary();
-      return;
-    }
+    if (keepTableOnTransientEmpty(tbody, rows, s)) return;
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); return;
   }
@@ -173,7 +169,7 @@ async function loadServices() {
   </tr>`;
   }).join('');
 
-  if (s.page === 1) tbody.innerHTML = html;
+  if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
   else tbody.insertAdjacentHTML('beforeend', html);
 
   _applyGlobalSearch();

@@ -294,6 +294,48 @@ class JenkinsClient(BaseCIClient):
         path = f"{jp}/{int(build_number)}/consoleText"
         return self._get_text(path)
 
+    def _get_json_maybe(self, path: str) -> dict[str, Any] | None:
+        """GET JSON object; return ``None`` on 404 or failure (unlike ``_get`` which returns ``{}``)."""
+        url = f"{self.base_url}{path}"
+        try:
+            resp = self.session.get(url, timeout=self.timeout, verify=self.verify_ssl)
+            if resp.status_code == 404:
+                return None
+            resp.raise_for_status()
+            data = resp.json()
+            return data if isinstance(data, dict) else None
+        except Exception as exc:
+            logger.warning("Jenkins GET %s failed: %s", path, exc)
+            return None
+
+    def fetch_allure_case_dict(self, job_name: str, build_number: int, uid: str) -> dict[str, Any] | None:
+        """Jenkins Allure plugin: ``.../allure/data/test-cases/<uid>.json``."""
+        jp = self.job_path(job_name)
+        u = (uid or "").strip()
+        if not u:
+            return None
+        path = f"{jp}/{int(build_number)}/allure/data/test-cases/{u}.json"
+        return self._get_json_maybe(path)
+
+    def fetch_allure_data_bytes(self, job_name: str, build_number: int, relative_under_data: str) -> tuple[bytes, str | None] | None:
+        """GET raw bytes under ``.../allure/data/<relative_under_data>`` (e.g. ``attachments/....png``)."""
+        jp = self.job_path(job_name)
+        rel = (relative_under_data or "").strip().lstrip("/")
+        if not rel or ".." in rel:
+            return None
+        path = f"{jp}/{int(build_number)}/allure/data/{rel}"
+        url = f"{self.base_url}{path}"
+        try:
+            resp = self.session.get(url, timeout=self.timeout, verify=self.verify_ssl)
+            if resp.status_code == 404:
+                return None
+            resp.raise_for_status()
+            ct = resp.headers.get("content-type")
+            return (resp.content, ct)
+        except Exception as exc:
+            logger.warning("Jenkins GET bytes %s failed: %s", path, exc)
+            return None
+
     def fetch_reference_build_number(self, job_name: str, *, prefer_success: bool = True) -> int | None:
         """
         Return a "good reference" build number for log diffing.

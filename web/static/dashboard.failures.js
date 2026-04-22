@@ -29,7 +29,7 @@ function filterTests(status) {
   document.getElementById('f-tstatus').value = status;
   try { _persistFiltersFromForm(); } catch { /* ignore */ }
   resetTests();
-  goToInTab('tests', 'panel-tests');
+  goToInTab('test-runs', 'panel-tests');
 }
 
 async function loadFailures() {
@@ -49,6 +49,7 @@ async function loadFailures() {
   const tbody = document.getElementById('tbody-failures');
   if (res === FETCH_ABORTED) return;
   if (!res || !res.ok) {
+    if (keepTableOnTransientApiError(tbody, res, s)) return;
     if (res && res.status === 404) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`; }
     else {
       const detail = await fetchApiErrorDetail(res);
@@ -64,12 +65,7 @@ async function loadFailures() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
-    if (_dashIsCollecting && tbody && tbody.querySelector('tr:not(.empty-row)')) {
-      s.done = true;
-      updateFilterSummary();
-      _applyGlobalSearch();
-      return;
-    }
+    if (keepTableOnTransientEmpty(tbody, rows, s)) return;
     tbody.innerHTML = `<tr class="empty-row"><td colspan="5"><div>${esc(t('dash.table_no_failures'))}</div><div class="empty-hint">${t('dash.empty_failures_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
   }
@@ -105,6 +101,17 @@ async function loadFailures() {
       td1.appendChild(document.createTextNode(' '));
     }
     td1.appendChild(document.createTextNode(String(f.test_name || '')));
+    try {
+      if (typeof window.buildAllureActionButtonsFragment === 'function') {
+        const afr = window.buildAllureActionButtonsFragment(f);
+        if (afr) {
+          const aw = document.createElement('div');
+          aw.style.marginTop = '.28rem';
+          aw.appendChild(afr);
+          td1.appendChild(aw);
+        }
+      }
+    } catch { /* ignore */ }
 
     const td2 = document.createElement('td');
     td2.style.maxWidth = '160px';
@@ -130,7 +137,7 @@ async function loadFailures() {
     tr.append(td0, td1, td2, td3, td4);
     frag.appendChild(tr);
   });
-  if (s.page === 1) tbody.replaceChildren(frag);
+  if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.replaceChildren(frag); });
   else tbody.appendChild(frag);
 
   _applyGlobalSearch();

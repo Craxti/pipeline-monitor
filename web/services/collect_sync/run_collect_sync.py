@@ -12,6 +12,7 @@ from web.services.collect_sync import jenkins_collect as _jenkins_collect
 from web.services.collect_sync import local_parsers as _local_parsers
 from web.services.collect_sync import merge as _merge
 from web.services.collect_sync import progress as _progress
+from web.services.collect_sync import jenkins_merge_unified_tests as _jenkins_merge_unified
 from web.services.collect_sync import synth_tests as _synth_tests
 from web.services.collect_sync.exceptions import CollectCancelled
 
@@ -53,11 +54,12 @@ def run_collect_sync(
     )
     since = datetime.now(tz=timezone.utc) - timedelta(days=cfg.get("general", {}).get("default_lookback_days", 7))
     now = datetime.now(tz=timezone.utc)
+    prev_snapshot = None
     if force_full:
         snapshot = CISnapshot(collected_at=now, collect_meta={}, tests=[])
     else:
-        prev = load_snapshot() or CISnapshot()
-        snapshot = prev.model_copy(update={"tests": [], "collect_meta": {}, "collected_at": now})
+        prev_snapshot = load_snapshot() or CISnapshot()
+        snapshot = prev_snapshot.model_copy(update={"tests": [], "collect_meta": {}, "collected_at": now})
 
     snap_lock = threading.Lock()
     health: list[dict[str, Any]] = []
@@ -120,6 +122,12 @@ def run_collect_sync(
         incremental_stats=incremental_stats,
     )
     logger.info("Jenkins phase completed: builds=%d tests=%d", len(snapshot.builds), len(snapshot.tests))
+    # Always merge Jenkins build + Allure + console into ``jenkins_unified`` (not configurable via YAML/DB).
+    try:
+        _jenkins_merge_unified.merge_jenkins_unified_tests(snapshot, TestRecord=TestRecord, logger=logger)
+        logger.info("Jenkins unified merge applied: tests=%d", len(snapshot.tests))
+    except Exception as exc:
+        logger.warning("Jenkins unified merge skipped: %s", exc)
     _between_phases()
 
     _gitlab_collect.collect_gitlab_builds(
@@ -154,6 +162,36 @@ def run_collect_sync(
     )
     logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
     collect_state["incremental_stats"] = dict(incremental_stats)
+
+    # Guard against transient source outages: if this pass produced zero tests
+    # while CI sources failed, preserve previously collected tests so the Tests
+    # tab does not "blink" to empty on every failed auto-collect cycle.
+    try:
+        had_prev_tests = len(getattr(prev_snapshot, "tests", None) or []) > 0
+        has_current_tests = len(getattr(snapshot, "tests", None) or []) > 0
+        source_errors = any(
+            (not bool(h.get("ok", True))) and str(h.get("kind", "")).lower() in {"jenkins", "gitlab"}
+            for h in (health or [])
+            if isinstance(h, dict)
+        )
+        jenkins_test_collectors_enabled = any(
+            bool(inst.get("enabled", True))
+            and (bool(inst.get("parse_console", False)) or bool(inst.get("parse_allure", False)))
+            for inst in (cfg.get("jenkins_instances", []) or [])
+        )
+        parser_cfg = cfg.get("parsers", {}) or {}
+        local_test_collectors_enabled = bool(parser_cfg.get("pytest_xml_dirs") or parser_cfg.get("allure_json_dirs"))
+        tests_expected = bool(jenkins_test_collectors_enabled or local_test_collectors_enabled)
+        if (not force_full) and tests_expected and source_errors and (not has_current_tests) and had_prev_tests:
+            snapshot.tests = list(getattr(prev_snapshot, "tests", None) or [])
+            msg = "preserved previous tests (current collect yielded 0 tests after source errors)"
+            logger.warning("Collect safeguard applied: %s", msg)
+            try:
+                push_collect_log("tests", "Tests snapshot preserved", msg, "warn")
+            except Exception:
+                pass
+    except Exception as exc:
+        logger.debug("Tests preserve safeguard skipped: %s", exc)
 
     instance_health_setter(health)
     save_snapshot(snapshot)

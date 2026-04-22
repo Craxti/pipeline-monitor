@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         triggerCollect();
       }
-      if (e.key >= '1' && e.key <= '7' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const idx = parseInt(e.key, 10) - 1;
         if (DASH_TABS[idx]) {
           e.preventDefault();
@@ -148,8 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (rb && rb.classList.contains('open')) closeRunbook();
   });
 
-  const pTab = new URLSearchParams(location.search).get('tab');
-  let initTab = (pTab && DASH_TABS.includes(pTab)) ? pTab : (localStorage.getItem('cimon-dash-tab') || 'overview');
+  const _normLegacyTab = (t) => (t === 'tests' ? 'test-failures' : t);
+  const pTabRaw = new URLSearchParams(location.search).get('tab');
+  const pTab = _normLegacyTab(pTabRaw);
+  let storedRaw = localStorage.getItem('cimon-dash-tab');
+  if (storedRaw === 'tests') {
+    try {
+      localStorage.setItem('cimon-dash-tab', 'test-failures');
+    } catch { /* ignore */ }
+    storedRaw = 'test-failures';
+  }
+  const stored = _normLegacyTab(storedRaw);
+  let initTab = (pTab && DASH_TABS.includes(pTab)) ? pTab : (stored && DASH_TABS.includes(stored) ? stored : 'overview');
   if (!DASH_TABS.includes(initTab)) initTab = 'overview';
   setDashboardTab(initTab, { skipUrl: true });
 

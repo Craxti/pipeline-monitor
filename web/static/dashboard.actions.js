@@ -693,6 +693,15 @@ function setTestSourceQuick(v) {
   const sel = document.getElementById('f-tsource');
   if (!sel) return;
   sel.value = v;
+  const fs = document.getElementById('f-fsource');
+  if (fs) {
+    for (let i = 0; i < fs.options.length; i++) {
+      if (fs.options[i].value === v) {
+        fs.value = v;
+        break;
+      }
+    }
+  }
   updateTestsExportLinks();
   _syncTestSourceQuickButtons();
   resetFailures();
@@ -702,9 +711,11 @@ function setTestSourceQuick(v) {
 function _syncTestSourceQuickButtons() {
   const v = document.getElementById('f-tsource')?.value || '';
   const b1 = document.getElementById('tsrc-real');
-  const b2 = document.getElementById('tsrc-synth');
+  const b2 = document.getElementById('tsrc-jenkins');
+  const b3 = document.getElementById('tsrc-synth');
   if (b1) b1.classList.toggle('lv-active', v === 'real');
-  if (b2) b2.classList.toggle('lv-active', v === 'synthetic');
+  if (b2) b2.classList.toggle('lv-active', v === 'jenkins' || v === 'jenkins_unified' || v === 'jenkins_merged');
+  if (b3) b3.classList.toggle('lv-active', v === 'synthetic');
 }
 
 function toggleTimeFilter(hours) {

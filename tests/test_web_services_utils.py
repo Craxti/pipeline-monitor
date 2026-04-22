@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from models.models import BuildRecord, BuildStatus, CISnapshot
 
 
 class TestRequestIdMiddleware:
@@ -264,3 +265,133 @@ class TestBuildsEndpoints:
         )
         assert out["total"] == 1
         assert out["items"][0]["build_number"] == 2
+
+
+class TestBuildMergeHelpers:
+    def test_merge_deduplicates_same_build_number_with_different_urls(self) -> None:
+        from web.services.collect_sync.merge import merge_build_records
+
+        snap = CISnapshot(
+            builds=[
+                BuildRecord(
+                    source="jenkins",
+                    source_instance="Jenkins ARTIMATE",
+                    job_name="test_30_clusterize_add_all_new",
+                    build_number=49,
+                    status=BuildStatus.UNSTABLE,
+                    url="https://jenkins.example.com/job/test_30_clusterize_add_all_new/49/",
+                )
+            ]
+        )
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="jenkins",
+                    source_instance="Jenkins ARTIMATE",
+                    job_name="test_30_clusterize_add_all_new",
+                    build_number=49,
+                    status=BuildStatus.UNSTABLE,
+                    url="/job/test_30_clusterize_add_all_new/49/",
+                )
+            ],
+        )
+
+        assert len(snap.builds) == 1
+        assert snap.builds[0].build_number == 49
+
+    def test_merge_keeps_unknown_builds_separate_by_url(self) -> None:
+        from web.services.collect_sync.merge import merge_build_records
+
+        snap = CISnapshot(builds=[])
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="jenkins",
+                    source_instance="Jenkins ARTIMATE",
+                    job_name="job_without_history",
+                    build_number=None,
+                    status=BuildStatus.UNKNOWN,
+                    url="https://jenkins.example.com/job/job_without_history/",
+                ),
+                BuildRecord(
+                    source="jenkins",
+                    source_instance="Jenkins ARTIMATE",
+                    job_name="job_without_history",
+                    build_number=None,
+                    status=BuildStatus.UNKNOWN,
+                    url="/job/job_without_history/",
+                ),
+            ],
+        )
+
+        assert len(snap.builds) == 2
+
+    def test_merge_gitlab_same_pipeline_id_different_project_strings(self) -> None:
+        from web.services.collect_sync.merge import merge_build_records
+
+        snap = CISnapshot(builds=[])
+        inst = "GitLab ARTIMATE"
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="gitlab",
+                    source_instance=inst,
+                    job_name="group/artimate",
+                    build_number=501,
+                    status=BuildStatus.SUCCESS,
+                    url="https://gitlab.example/g/artimate/-/pipelines/501",
+                ),
+            ],
+        )
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="gitlab",
+                    source_instance=inst,
+                    job_name="42",
+                    build_number=501,
+                    status=BuildStatus.SUCCESS,
+                    url="https://gitlab.example/g/artimate/-/pipelines/501",
+                ),
+            ],
+        )
+        assert len(snap.builds) == 1
+        assert snap.builds[0].build_number == 501
+
+    def test_merge_jenkins_equivalent_job_paths_same_build(self) -> None:
+        from web.services.collect_sync.merge import merge_build_records
+
+        snap = CISnapshot(builds=[])
+        inst = "Jenkins ARTIMATE"
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="jenkins",
+                    source_instance=inst,
+                    job_name="Regress",
+                    build_number=12,
+                    status=BuildStatus.FAILURE,
+                    url="https://j/job/Regress/12/",
+                ),
+            ],
+        )
+        merge_build_records(
+            snap,
+            [
+                BuildRecord(
+                    source="jenkins",
+                    source_instance=inst,
+                    job_name="Folder/Regress",
+                    build_number=12,
+                    status=BuildStatus.FAILURE,
+                    url="https://j/job/Folder/job/Regress/12/",
+                ),
+            ],
+        )
+        assert len(snap.builds) == 1
+        assert snap.builds[0].build_number == 12

@@ -42,7 +42,7 @@ async function loadSystemStats() {
       tbody.innerHTML = items.map((p) => `<tr>
         <td>${esc(p.name || '')}</td>
         <td>${esc(String(p.pid || ''))}</td>
-        <td>${esc(_fmtPct(p.cpu_percent))}</td>
+        <td title="${esc(`raw: ${_fmtPct(p.cpu_percent_raw)}`)}">${esc(_fmtPct(p.cpu_percent))}</td>
         <td>${esc(`${_fmtPct(p.memory_percent)} (${_fmtBytes((d.memory && d.memory.total) ? (Number(d.memory.total) * Number(p.memory_percent || 0) / 100) : 0)})`)}</td>
       </tr>`).join('');
     }

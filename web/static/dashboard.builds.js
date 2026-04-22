@@ -72,6 +72,7 @@ async function loadBuilds() {
 
   const rows = data.items;
   if (s.page === 1 && !rows.length) {
+    if (keepTableOnTransientEmpty(tbody, rows, s)) return;
     tbody.innerHTML = `<tr class="empty-row"><td colspan="12"><div>${esc(t('dash.table_no_builds'))}</div><div class="empty-hint">${t('dash.empty_builds_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
     s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
   }
@@ -211,7 +212,7 @@ async function loadBuilds() {
       return;
     }
     _lastBuildsPageSig = pageSig;
-    tbody.innerHTML = html;
+    swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
   } else tbody.insertAdjacentHTML('beforeend', html);
   // Apply collapsed state for any groups present in this page.
   try {

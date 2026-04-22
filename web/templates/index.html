@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260420k" />
+<link rel="stylesheet" href="/static/app.css?v=20260422m" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
@@ -15,35 +15,35 @@
 <script src="/static/dashboard.helpers.formatters.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
-<script src="/static/dashboard.helpers.state.js?v=20260422h" defer></script>
-<script src="/static/dashboard.helpers.ui.js?v=20260422b" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260423a" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260423b" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
-<script src="/static/dashboard.builds.js?v=20260422g" defer></script>
-<script src="/static/dashboard.failures.js?v=20260420d" defer></script>
-<script src="/static/dashboard.tests.js?v=20260420d" defer></script>
-<script src="/static/dashboard.services.js?v=20260422c" defer></script>
-<script src="/static/dashboard.system.js?v=20260422b" defer></script>
-<script src="/static/dashboard.collect-panel.js?v=20260417i" defer></script>
+<script src="/static/dashboard.builds.js?v=20260422n" defer></script>
+<script src="/static/dashboard.tests.js?v=20260423f" defer></script>
+<script src="/static/dashboard.failures.js?v=20260423e" defer></script>
+<script src="/static/dashboard.services.js?v=20260422n" defer></script>
+<script src="/static/dashboard.system.js?v=20260423a" defer></script>
+<script src="/static/dashboard.collect-panel.js?v=20260423a" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
 <script src="/static/dashboard.timeline.js?v=20260417i" defer></script>
 <script src="/static/dashboard.incidents.js?v=20260422b" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
 <script src="/static/dashboard.load-summary.js?v=20260422b" defer></script>
-<script src="/static/dashboard.collect-bar.js?v=20260422h" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260423b" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
 <script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.js?v=20260420h" defer></script>
-<script src="/static/dashboard.actions.js?v=20260422g" defer></script>
+<script src="/static/dashboard.actions.js?v=20260422p" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
 <script src="/static/dashboard.live.js?v=20260422h" defer></script>
-<script src="/static/dashboard.init.js?v=20260422i" defer></script>
+<script src="/static/dashboard.init.js?v=20260423a" defer></script>
 
 <!-- ── Header ── -->
 <header>
@@ -145,8 +145,12 @@
     <span class="dash-tab-sub" data-i18n="tabNav.builds_sub">Pipelines, filters & starred</span>
   </div>
   <div class="dash-tab-cell">
-    <button type="button" class="dash-tab" role="tab" id="tabbtn-tests" aria-selected="false" aria-controls="tab-panel-tests" data-tab="tests" data-i18n="tabNav.tests">Tests</button>
-    <span class="dash-tab-sub" data-i18n="tabNav.tests_sub">Top failures & all runs</span>
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-test-failures" aria-selected="false" aria-controls="tab-panel-test-failures" data-tab="test-failures" data-i18n="tabNav.test_failures">Top failures</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.test_failures_sub">Aggregated failing tests</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-test-runs" aria-selected="false" aria-controls="tab-panel-test-runs" data-tab="test-runs" data-i18n="tabNav.test_runs">Test runs</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.test_runs_sub">All runs, filters & export</span>
   </div>
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-services" aria-selected="false" aria-controls="tab-panel-services" data-tab="services" data-i18n="tabNav.services">Services</button>
@@ -357,8 +361,8 @@
 </section>
   </div>
 
-<div id="tab-panel-tests" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-tests" hidden>
-<section id="sec-tests" class="dash-section">
+<div id="tab-panel-test-failures" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-failures" hidden>
+<section id="sec-test-failures" class="dash-section">
 <!-- ── Top Failures Panel ── -->
 <div class="panel" id="panel-failures">
   <div class="panel-head">
@@ -370,12 +374,17 @@
       <button type="button" class="time-filter-btn" id="tf-f-7d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[7]" data-i18n-title="dash.tf_7d" title="">7d</button>
       <button type="button" class="time-filter-btn" id="tf-f-30d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[30]" data-i18n-title="dash.tf_30d" title="">30d</button>
       <select class="f-select" id="f-fsource" title="Test source">
-        <option value="real" selected>Real (Allure+Console)</option>
-        <option value="synthetic">Synthetic (Build→Test)</option>
-        <option value="">All</option>
+        <option value="real" selected>Real (no raw Jenkins parsers)</option>
+        <option value="jenkins">Jenkins (merged: build+Allure+console)</option>
+        <option value="gitlab">GitLab</option>
+        <option value="synthetic">Synthetic (build as test)</option>
+        <option value="">All sources</option>
+        <optgroup label="Raw / debug">
         <option value="jenkins_allure">jenkins_allure</option>
         <option value="jenkins_console">jenkins_console</option>
         <option value="jenkins_build">jenkins_build</option>
+        <option value="jenkins_unified">jenkins_unified</option>
+        </optgroup>
       </select>
       <input class="f-input" id="f-fname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
       <input class="f-input" id="f-fsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
@@ -411,25 +420,35 @@
     <div class="sentinel" id="sentinel-failures"></div>
     </div>
   </div>
+</section>
+</div>
 
+<div id="tab-panel-test-runs" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-runs" hidden>
+<section id="sec-test-runs" class="dash-section">
 <!-- ── Test Runs Panel ── -->
 <div class="panel" id="panel-tests">
   <div class="panel-head">
     <h2>&#9989; <span data-i18n="dash.tests_runs_title">All Test Runs</span></h2>
     <span class="panel-count" id="tests-count">0</span>
     <span class="panel-count" style="border-color:transparent;padding:.05rem .15rem">
-      <button type="button" class="log-lvl-btn" id="tsrc-real" data-dash-action="setTestSourceQuick" data-dash-args='["real"]' title="Real (Allure+Console)">Real</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-real" data-dash-action="setTestSourceQuick" data-dash-args='["real"]' title="Real: merged Jenkins + other parsers (no raw Allure/console rows)">Real</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-jenkins" data-dash-action="setTestSourceQuick" data-dash-args='["jenkins"]' title="Jenkins only: one row per test (build time + Allure + console)">Jenkins</button>
       <button type="button" class="log-lvl-btn" id="tsrc-synth" data-dash-action="setTestSourceQuick" data-dash-args='["synthetic"]' title="Job-as-tests (synthetic)">Jobs</button>
     </span>
     <span class="panel-count" id="tests-breakdown" style="border-color:transparent;color:var(--muted);font-size:.72rem">—</span>
     <div class="filters">
       <select class="f-select" id="f-tsource">
-        <option value="real" selected>Real (Allure+Console)</option>
-        <option value="synthetic">Synthetic (Build→Test)</option>
-        <option value="">All</option>
+        <option value="real" selected>Real (no raw Jenkins parsers)</option>
+        <option value="jenkins">Jenkins (merged: build+Allure+console)</option>
+        <option value="gitlab">GitLab</option>
+        <option value="synthetic">Synthetic (build as test)</option>
+        <option value="">All sources</option>
+        <optgroup label="Raw / debug">
         <option value="jenkins_allure">jenkins_allure</option>
         <option value="jenkins_console">jenkins_console</option>
         <option value="jenkins_build">jenkins_build</option>
+        <option value="jenkins_unified">jenkins_unified</option>
+        </optgroup>
       </select>
       <select class="f-select" id="f-tstatus">
         <option value="" data-i18n="dash.opt_all_tstatus">All statuses</option>
@@ -468,13 +487,13 @@
           <th colspan="2" data-i18n="dash.tg_test_id">Test</th>
           <th colspan="1" data-i18n="dash.tg_result">Result</th>
           <th colspan="2" data-i18n="dash.tg_timing">Timing</th>
-          <th colspan="1" data-i18n="dash.tg_detail">Details</th>
+          <th colspan="2" data-i18n="dash.tg_detail">Details</th>
         </tr>
         <tr class="th-cols">
-        <th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_status">Status</th><th data-i18n="dash.th_duration">Duration</th><th data-i18n="dash.th_timestamp">Timestamp</th><th class="col-compact-hide" data-i18n="dash.th_error">Error</th></tr>
+        <th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_status">Status</th><th data-i18n="dash.th_duration">Duration</th><th data-i18n="dash.th_timestamp">Timestamp</th><th class="col-compact-hide" data-i18n="dash.th_allure">Allure</th><th class="col-compact-hide" data-i18n="dash.th_error">Error</th></tr>
         </thead>
       <tbody id="tbody-tests">
-        <tr class="empty-row"><td colspan="6" data-i18n="dash.table_loading">Loading…</td></tr>
+        <tr class="empty-row"><td colspan="7" data-i18n="dash.table_loading">Loading…</td></tr>
         </tbody>
       </table>
     <div class="sentinel" id="sentinel-tests"></div>
@@ -942,6 +961,20 @@
     <div id="collectslow-box"></div>
   </div>
 </section>
+</div>
+
+<!-- Allure description / screenshots (Jenkins) -->
+<div class="modal-overlay" id="allure-meta-modal" aria-hidden="true" data-dash-overlay-dismiss="closeAllureMetaModal">
+  <div class="log-modal-card" style="max-width:min(920px,96vw)" role="dialog" aria-modal="true" aria-labelledby="allure-meta-title">
+    <div class="log-modal-header">
+      <h3 id="allure-meta-title">Allure</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeAllureMetaModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:flex-start">
+      <div id="allure-meta-sub" style="color:var(--muted);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></div>
+    </div>
+    <div id="allure-meta-body" style="padding:0 1rem 1rem;font-size:.85rem;line-height:1.45;max-height:min(62vh,520px);overflow:auto"></div>
+  </div>
 </div>
 
 <!-- Slow op details modal -->

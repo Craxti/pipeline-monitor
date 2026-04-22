@@ -37,7 +37,7 @@ PAIRS: list[tuple[str, str]] = [
         ' data-dash-action="runbookFocusBuildFailures"',
     ),
     (
-        " onclick=\"goToInTab('tests','panel-tests');"
+        " onclick=\"goToInTab('test-runs','panel-tests');"
         "document.getElementById('f-tstatus').value='failed';"
         'resetTests();"',
         ' data-dash-action="runbookFocusTestFailures"',

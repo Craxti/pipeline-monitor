@@ -10,6 +10,10 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+# In "real" view we still hide console raw rows, but keep allure rows visible
+# so users can always open Description/Screenshots even when merge pairing is incomplete.
+_REAL_HIDDEN_JENKINS_SOURCES = frozenset({"jenkins_console"})
+
 
 def aggregate_top_failing_tests(
     tests: list[Any],
@@ -71,6 +75,11 @@ def aggregate_top_failing_tests(
                 "count": len(recs),
                 "suite": suite_val,
                 "message": msg,
+                # Latest failing run — for Allure buttons in Top failures (same shape as test-runs rows).
+                "build_number": getattr(latest, "build_number", None),
+                "allure_uid": getattr(latest, "allure_uid", None),
+                "allure_description": getattr(latest, "allure_description", None),
+                "allure_attachments": getattr(latest, "allure_attachments", None),
             }
         )
 
@@ -94,7 +103,43 @@ def filter_tests_by_source(items: list[Any], source: str) -> list[Any]:
     if s == "synthetic":
         return [t for t in items if (t.source or "").strip().lower() == "jenkins_build"]
     if s == "real":
-        return [t for t in items if (t.source or "").strip().lower() != "jenkins_build"]
+        return [
+            t
+            for t in items
+            if (t.source or "").strip().lower() != "jenkins_build"
+            and (t.source or "").strip().lower() not in _REAL_HIDDEN_JENKINS_SOURCES
+        ]
+    if s in ("jenkins", "jenkins_merged", "jenkins_unified"):
+        return [t for t in items if (t.source or "").strip().lower() == "jenkins_unified"]
+    if s == "jenkins_allure":
+        # Raw ``jenkins_allure`` rows are merged away at collect time; keep filter useful on unified rows.
+        out: list[Any] = []
+        for t in items:
+            sl = (t.source or "").strip().lower()
+            if sl == "jenkins_allure":
+                out.append(t)
+                continue
+            if sl != "jenkins_unified":
+                continue
+            uid = getattr(t, "allure_uid", None)
+            if uid is not None and str(uid).strip():
+                out.append(t)
+        return out
+    if s == "jenkins_console":
+        out_c: list[Any] = []
+        for t in items:
+            sl = (t.source or "").strip().lower()
+            if sl == "jenkins_console":
+                out_c.append(t)
+                continue
+            if sl != "jenkins_unified":
+                continue
+            fm = str(getattr(t, "failure_message", None) or "")
+            if "[Console]" in fm:
+                out_c.append(t)
+        return out_c
+    if s == "gitlab":
+        return [t for t in items if (t.source or "").strip().lower() == "gitlab"]
     return [t for t in items if (t.source or "").strip().lower() == s]
 
 
@@ -137,6 +182,8 @@ def tests_breakdown_real_vs_synth(items: list[Any]) -> dict[str, int]:
     syn_failed = 0
     for t in items:
         src = (t.source or "").strip().lower()
+        if src in _REAL_HIDDEN_JENKINS_SOURCES:
+            continue
         is_syn = src == "jenkins_build"
         if is_syn:
             syn_total += 1

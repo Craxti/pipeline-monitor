@@ -36,8 +36,9 @@ function _autoRefreshVisiblePanelsDuringCollect(summaryObj) {
   _collectAutoRefreshTs = now;
 
   // Keep only the active tab live to avoid hammering the backend.
-  if (_dashTab === 'tests') {
+  if (_dashTab === 'test-failures') {
     resetFailures(true);
+  } else if (_dashTab === 'test-runs') {
     resetTestsSoft(true);
   } else if (_dashTab === 'builds') {
     resetBuilds(true);

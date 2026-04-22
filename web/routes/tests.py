@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse, Response
 
 router = APIRouter(tags=["tests"])
 
@@ -92,6 +92,55 @@ async def export_tests_route(
         hours=hours,
         source=source,
     )
+
+
+@router.get("/api/tests/jenkins-allure-details", response_class=JSONResponse)
+async def api_tests_jenkins_allure_details_route(
+    suite: str = Query("", description="Jenkins job name / path"),
+    build_number: int = Query(..., ge=1),
+    uid: str = Query(..., min_length=1, max_length=200),
+    source_instance: str = Query("", description="Instance label from snapshot"),
+):
+    """Return Allure case description + image attachment list (fetched from Jenkins with server credentials)."""
+    from web.core.config import load_yaml_config
+    from web.services import jenkins_allure_details as jad
+
+    cfg = load_yaml_config()
+    payload = jad.fetch_allure_details_payload(
+        cfg,
+        source_instance=source_instance or None,
+        suite=suite,
+        build_number=build_number,
+        uid=uid,
+    )
+    if not payload:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    return JSONResponse(payload)
+
+
+@router.get("/api/tests/jenkins-allure-attachment")
+async def api_tests_jenkins_allure_attachment_route(
+    suite: str = Query(""),
+    build_number: int = Query(..., ge=1),
+    src: str = Query(..., min_length=1, max_length=512, description="Path under allure/data"),
+    source_instance: str = Query(""),
+):
+    """Proxy Allure attachment bytes from Jenkins (images etc.)."""
+    from web.core.config import load_yaml_config
+    from web.services import jenkins_allure_details as jad
+
+    cfg = load_yaml_config()
+    out = jad.fetch_allure_attachment_bytes(
+        cfg,
+        source_instance=source_instance or None,
+        suite=suite,
+        build_number=build_number,
+        src=src,
+    )
+    if not out:
+        return Response(status_code=404)
+    data, ct = out
+    return Response(content=data, media_type=ct or "application/octet-stream")
 
 
 @router.get("/api/export/failures")

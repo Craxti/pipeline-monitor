@@ -499,6 +499,7 @@ class JenkinsConsoleParser:
                                 duration_seconds=duration_seconds,
                                 failure_message=failure_message,
                                 timestamp=ts,
+                                build_number=int(build_number),
                             )
                         )
                         continue
@@ -525,6 +526,7 @@ class JenkinsConsoleParser:
                         status="passed",
                         duration_seconds=duration_seconds,
                         timestamp=ts,
+                        build_number=int(build_number),
                     )
                 )
                 continue
@@ -541,6 +543,7 @@ class JenkinsConsoleParser:
                         duration_seconds=duration_seconds,
                         failure_message=m.group(2).strip()[:_FAILURE_MSG_MAX],
                         timestamp=ts,
+                        build_number=int(build_number),
                     )
                 )
 

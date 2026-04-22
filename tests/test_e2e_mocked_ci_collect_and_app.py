@@ -69,6 +69,8 @@ def test_fastapi_dashboard_html_and_public_api(client: TestClient) -> None:
     assert r.status_code == 200
     assert "text/html" in r.headers.get("content-type", "")
     assert "dashboard.helpers.formatters" in r.text
+    assert 'id="tab-panel-test-failures"' in r.text
+    assert 'id="tab-panel-test-runs"' in r.text
 
     pub = client.get("/api/settings/public")
     assert pub.status_code == 200

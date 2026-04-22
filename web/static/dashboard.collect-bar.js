@@ -217,7 +217,13 @@ async function pollCollect() {
   }
   // During collect we want visible panels to update often (pollCollect runs every 2–3s).
   try { _autoRefreshVisiblePanelsDuringCollect({ collect: state }); } catch { /* ignore */ }
-  if (_prevCollecting && !state.is_collecting) refreshAll();
+  if (_prevCollecting && !state.is_collecting) {
+    // Same moment is_collecting flips false, refreshAll runs — keepTable grace needs this even without SSE.
+    try {
+      _lastCollectFinishedAt = Date.now();
+    } catch { /* ignore */ }
+    refreshAll();
+  }
   _prevCollecting = state.is_collecting;
 }
 

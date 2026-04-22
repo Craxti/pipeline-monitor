@@ -125,6 +125,10 @@ async def api_top_failures(
             if src_l == "jenkins_build":
                 st = (rec.status or "").strip().lower()
                 return "Job failed/unstable" if st in ("failed", "error") else "Job failed"
+            if src_l == "jenkins_unified":
+                fm = rec.failure_message or ""
+                if fm and str(fm).strip().lower() != "null":
+                    return str(fm).strip()
             return None
 
         for t in tests_items:
@@ -174,7 +178,10 @@ async def api_top_failures(
             message_max=300,
         )
         for it in all_items:
-            it.setdefault("source", src if src not in ("real", "synthetic") else None)
+            it.setdefault(
+                "source",
+                src if src not in ("real", "synthetic", "jenkins", "jenkins_merged", "gitlab") else None,
+            )
 
     total = len(all_items)
     start = (page - 1) * per_page

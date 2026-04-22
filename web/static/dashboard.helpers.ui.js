@@ -45,6 +45,98 @@ function emptyStateActionsHtml() {
   </div>`;
 }
 
+/** Table has at least one real data row (not loading / empty placeholder). */
+function tbodyHasDataRows(tbody) {
+  try {
+    if (!tbody) return false;
+    return !!tbody.querySelector('tr:not(.empty-row)');
+  } catch {
+    return false;
+  }
+}
+
+/** Timestamp (ms) of last collect_done — transient empty API right after refresh should not blank tables. */
+let _lastCollectFinishedAt = 0;
+
+/** Grace after collect ends: snapshot/API may briefly return 0 rows before new data is readable. */
+const _KEEP_TABLE_AFTER_COLLECT_MS = 45000;
+
+/**
+ * In LIVE mode, keep the previous table when page-1 API returns zero rows (transient during/after collect).
+ * Returns true if the caller should skip blanking the tbody.
+ */
+function keepTableOnTransientEmpty(tbody, rows, state) {
+  try {
+    if (!tbody || !state || state.page !== 1) return false;
+    if (!Array.isArray(rows) || rows.length) return false;
+    if (typeof _liveMode === 'undefined' || !_liveMode) return false;
+    if (!tbodyHasDataRows(tbody)) return false;
+    const now = Date.now();
+    const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+    const sinceFinish =
+      typeof _lastCollectFinishedAt !== 'undefined' &&
+      _lastCollectFinishedAt > 0 &&
+      now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
+    if (!inCollect && !sinceFinish) return false;
+    state.done = true;
+    state.loading = false;
+    try { updateFilterSummary(); } catch { /* ignore */ }
+    try { _applyGlobalSearch(); } catch { /* ignore */ }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * In LIVE mode, avoid replacing a populated table with the generic API error row during/shortly after collect
+ * (transient 5xx / network while snapshot is being rewritten).
+ */
+function keepTableOnTransientApiError(tbody, res, state) {
+  try {
+    if (!tbody || !state || state.page !== 1) return false;
+    if (typeof _liveMode === 'undefined' || !_liveMode) return false;
+    if (!tbodyHasDataRows(tbody)) return false;
+    const now = Date.now();
+    const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+    const sinceFinish =
+      typeof _lastCollectFinishedAt !== 'undefined' &&
+      _lastCollectFinishedAt > 0 &&
+      now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
+    if (!inCollect && !sinceFinish) return false;
+    state.done = true;
+    state.loading = false;
+    try { updateFilterSummary(); } catch { /* ignore */ }
+    try { _applyGlobalSearch(); } catch { /* ignore */ }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Apply a DOM update to tbody with a short opacity cross-fade (LIVE only). */
+function swapTableContentSmooth(tbody, applyFn) {
+  if (!tbody || typeof applyFn !== 'function') return;
+  if (typeof _liveMode === 'undefined' || !_liveMode || typeof requestAnimationFrame !== 'function') {
+    applyFn();
+    return;
+  }
+  try {
+    tbody.style.transition = 'opacity 0.16s ease';
+    tbody.style.opacity = '0.9';
+  } catch { /* ignore */ }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        applyFn();
+        tbody.style.opacity = '1';
+      } catch {
+        try { applyFn(); } catch { /* ignore */ }
+      }
+    });
+  });
+}
+
 function _fmtBuildContext(analytics) {
   const a = analytics || {};
   const parts = [];
@@ -157,6 +249,7 @@ function initEventSource() {
         const d = JSON.parse(ev.data);
         if (d.type === 'collect_done') {
           showToast(t('dash.collect_done_toast'), 'ok');
+          try { _lastCollectFinishedAt = Date.now(); } catch { /* ignore */ }
           // Defer so the SSE handler returns quickly; coalesce with pollCollect via refreshAll single-flight.
           setTimeout(() => {
             refreshAll();
@@ -287,7 +380,7 @@ function runbookFocusBuildFailures() {
 }
 
 function runbookFocusTestFailures() {
-  goToInTab('tests', 'panel-tests');
+  goToInTab('test-runs', 'panel-tests');
   const el = document.getElementById('f-tstatus');
   if (el) el.value = 'failed';
   resetTests();
@@ -470,7 +563,14 @@ function initDashFormControlBindings() {
 function refreshActivePanel() {
   if (_dashTab === 'overview') { loadSummary(); return; }
   if (_dashTab === 'builds') { resetBuilds(); return; }
-  if (_dashTab === 'tests') { resetFailures(); resetTests(); return; }
+  if (_dashTab === 'test-failures') {
+    resetFailures();
+    return;
+  }
+  if (_dashTab === 'test-runs') {
+    resetTests();
+    return;
+  }
   if (_dashTab === 'services') { resetServices(); return; }
   if (_dashTab === 'system') { loadSystemStats(); return; }
   if (_dashTab === 'trends') { loadTrends(_trendsViewDays, null); return; }
@@ -765,7 +865,7 @@ function renderIncidentCards(snap) {
         ['tf-t-6h','tf-t-24h','tf-t-7d'].forEach((id) => document.getElementById(id)?.classList.remove('active'));
         document.getElementById('tf-t-7d')?.classList.add('active');
         try { localStorage.setItem('cimon-tests-hours', String(_testsHours)); } catch { /* ignore */ }
-        goToInTab('tests', 'panel-tests');
+        goToInTab('test-runs', 'panel-tests');
         const fs = document.getElementById('f-tstatus');
         const fn = document.getElementById('f-tname');
         const fsu = document.getElementById('f-tsuite');

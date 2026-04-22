@@ -125,6 +125,12 @@ class TestRecord(BaseModel):
     failure_message: Optional[str] = None
     timestamp: Optional[datetime] = None
     file_path: Optional[str] = None
+    # Jenkins: pipeline build number (used to merge allure + console + synthetic job row).
+    build_number: Optional[int] = None
+    # Jenkins Allure (optional): for unified / jenkins_allure rows — UI + lazy proxy to Jenkins.
+    allure_uid: Optional[str] = None
+    allure_description: Optional[str] = None
+    allure_attachments: Optional[list[dict[str, Any]]] = None
 
     @computed_field
     @property

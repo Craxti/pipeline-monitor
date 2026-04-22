@@ -32,7 +32,17 @@ function liveDashboardPollMs() {
   return Math.round(_clampLiveDashboardPollSec(_liveDashboardPollSec) * 1000);
 }
 
-const DASH_TABS = ['overview', 'builds', 'tests', 'services', 'system', 'trends', 'incidents', 'logs'];
+const DASH_TABS = [
+  'overview',
+  'builds',
+  'test-failures',
+  'test-runs',
+  'services',
+  'system',
+  'trends',
+  'incidents',
+  'logs',
+];
 let _dashTab = 'overview';
 let _backTopInit = false;
 
@@ -60,8 +70,8 @@ function setDashboardTab(name, opts) {
   }
   // Prevent stale panel requests from overriding current UI.
   if (name !== 'builds') abortFetchKey('builds');
-  if (name !== 'tests') abortFetchKey('tests');
-  if (name !== 'tests') abortFetchKey('failures');
+  if (name !== 'test-runs') abortFetchKey('tests');
+  if (name !== 'test-failures') abortFetchKey('failures');
   if (name !== 'services') abortFetchKey('services');
   if (name !== 'trends') abortFetchKey('trends');
 }

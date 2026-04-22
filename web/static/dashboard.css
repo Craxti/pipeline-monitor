@@ -746,6 +746,10 @@ html.light .trends-filters-bar{background:rgba(0,0,0,.03)}
 .map-leg-dot.sd-succ{background:var(--st-success)}.map-leg-dot.sd-fail{background:var(--st-failure)}
 .map-leg-dot.sd-run{background:var(--st-running)}.map-leg-dot.sd-warn{background:var(--st-unstable)}.map-leg-dot.sd-unk{background:var(--st-unknown)}
 /* Grouped table headers */
+/* LIVE refresh: subtle opacity when table body is swapped (see swapTableContentSmooth). */
+.tbl-wrap table.tbl-grouped > tbody {
+  transition: opacity 0.16s ease;
+}
 table.tbl-grouped{border-collapse:separate;border-spacing:0}
 table.tbl-grouped thead tr.th-groups th{
   position:sticky;top:0;z-index:14;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;

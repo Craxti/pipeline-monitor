@@ -18,6 +18,10 @@ import requests
 from clients.jenkins_client import JenkinsClient
 from models.models import TestRecord
 from parsers.allure_failure_text import failure_text_from_allure_case_dict
+from parsers.allure_rich_meta import (
+    allure_image_attachments_from_case,
+    allure_plain_description_from_case,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -208,11 +212,17 @@ class JenkinsAllureParser:
             stop_ms = t.get("stop")
 
             failure_message = None
+            allure_description = None
+            allure_attachments: list[dict[str, str]] | None = None
+            det: dict[str, Any] | None = None
             if uid and status in ("failed", "broken"):
                 det = self._fetch_case_details(job_name, build_number, uid) or {}
                 extracted = failure_text_from_allure_case_dict(det, max_len=8000).strip()
                 if extracted:
                     failure_message = extracted[:4000]
+                allure_description = allure_plain_description_from_case(det, max_len=12000)
+                imgs = allure_image_attachments_from_case(det)
+                allure_attachments = imgs or None
             if failure_message is None and status in ("failed", "broken"):
                 failure_message = f"Allure status={status!r} (no message/trace in report)"
 
@@ -259,6 +269,10 @@ class JenkinsAllureParser:
                     duration_seconds=duration_seconds,
                     failure_message=failure_message,
                     timestamp=ts,
+                    build_number=int(build_number),
+                    allure_uid=uid or None,
+                    allure_description=allure_description,
+                    allure_attachments=allure_attachments,
                 )
             )
 

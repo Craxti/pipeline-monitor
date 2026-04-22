@@ -4,7 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status" />
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_web_services_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_web_services_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/merge.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/merge.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.tests.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.tests.js" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -125,13 +131,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00013" summary="fix cursor">
-      <created>1776438706918</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1776438706918</updated>
     </task>
     <task id="LOCAL-00014" summary="fix event, helpers">
       <created>1776438818459</created>
@@ -469,7 +468,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776862180724</updated>
     </task>
-    <option name="localTasksCounter" value="62" />
+    <task id="LOCAL-00062" summary="fix life time + stop + system status">
+      <created>1776862447243</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1776862447243</updated>
+    </task>
+    <option name="localTasksCounter" value="63" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
