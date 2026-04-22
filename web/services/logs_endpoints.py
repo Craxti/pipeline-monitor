@@ -72,17 +72,52 @@ async def api_logs_diff(
     diff_logs: Callable[..., Any],
 ) -> Any:
     """Return a unified diff between relevant logs."""
+    logger.info(
+        "GET logs diff requested source=%s job=%s build=%s instance_url=%s",
+        source,
+        job_name,
+        build_number,
+        instance_url or "default",
+    )
     check_rate_limit(f"diff:{source}:{job_name}:{build_number}", window=5)
     cfg = load_cfg()
     snap = load_snapshot()
-    return diff_logs(
-        source=source,
-        job_name=job_name,
-        build_number=build_number,
-        instance_url=instance_url,
-        cfg=cfg,
-        snapshot=snap,
-    )
+    try:
+        result = diff_logs(
+            source=source,
+            job_name=job_name,
+            build_number=build_number,
+            instance_url=instance_url,
+            cfg=cfg,
+            snapshot=snap,
+        )
+        logger.info(
+            "GET logs diff completed source=%s job=%s build=%s reference=%s",
+            source,
+            job_name,
+            build_number,
+            result.get("reference_build"),
+        )
+        return result
+    except HTTPException as exc:
+        logger.warning(
+            "GET logs diff failed source=%s job=%s build=%s status=%s detail=%s",
+            source,
+            job_name,
+            build_number,
+            exc.status_code,
+            exc.detail,
+        )
+        raise
+    except Exception as exc:
+        logger.exception(
+            "GET logs diff unexpected error source=%s job=%s build=%s: %s",
+            source,
+            job_name,
+            build_number,
+            exc,
+        )
+        raise HTTPException(500, f"Internal error while diffing logs: {exc}") from exc
 
 
 async def api_pipeline_stages(
@@ -145,6 +180,11 @@ async def api_logs_docker_stream(
     container = container.strip()
     if not container:
         raise HTTPException(400, "container is required")
-    check_rate_limit(f"log:docker:stream:{container}", window=3)
+    host_key = (docker_host or "local").strip() or "local"
+    mode = "follow" if follow else "tail"
+    # Keep light abuse protection but avoid false positives when the UI does
+    # a buffered tail load and then quickly switches to live follow mode.
+    window = 0.75 if follow else 0.15
+    check_rate_limit(f"log:docker:stream:{mode}:{host_key}:{container}", window=window)
     cfg = load_cfg()
     return docker_logs_stream_response(cfg=cfg, container=container, follow=follow, tail=tail, docker_host=docker_host)

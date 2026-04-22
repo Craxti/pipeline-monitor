@@ -22,7 +22,7 @@ function _buildLogCell(b) {
   const src = (b.source || '').toLowerCase();
   const bn = b.build_number;
   if (bn == null) return '—';
-  if (src === 'jenkins') {
+  if (src === 'jenkins' || src.startsWith('jenkins_')) {
     const p = { job_name: b.job_name, build_number: bn, instance_url: jenkinsBaseFromBuildUrl(b.url) };
     const showDiff = b.status === 'failure' || b.status === 'unstable';
     const diffArgs = JSON.stringify(['jenkins', b.job_name, bn, jenkinsBaseFromBuildUrl(b.url)]);
@@ -31,7 +31,7 @@ function _buildLogCell(b) {
       ${showDiff ? `<button type="button" class="act-btn log-btn" style="font-size:.65rem" onclick='openLogDiff(...${diffArgs})' title="${_svgTitleAttr(t('log.compare_title'))}">&#8644;</button>` : ''}
     </span>`;
   }
-  if (src === 'gitlab') {
+  if (src === 'gitlab' || src.startsWith('gitlab_')) {
     const p = { project_id: b.job_name, pipeline_id: bn, instance_url: gitlabBaseFromPipelineUrl(b.url) };
     const stagesArgs = JSON.stringify([b.job_name, bn, gitlabBaseFromPipelineUrl(b.url), 'GitLab: ' + b.job_name + ' #' + bn]);
     const showDiff = b.status === 'failure' || b.status === 'unstable';

@@ -7,8 +7,11 @@ from typing import Any
 
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
+import logging
 
 from web.services.ops_actions import docker_host_cfg, find_gitlab_instance, find_jenkins_instance
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_jenkins_log(
@@ -86,6 +89,13 @@ def diff_logs(
 ) -> dict[str, Any]:
     """Fetch current and reference logs and return a unified diff."""
     import difflib
+    logger.info(
+        "diff_logs start source=%s job=%s build=%s instance_url=%s",
+        source,
+        job_name,
+        build_number,
+        instance_url or "default",
+    )
 
     if snapshot is None:
         raise HTTPException(404, "No snapshot data")
@@ -159,6 +169,8 @@ def diff_logs(
 
                 prev_text = client.fetch_console_text(job_name, int(prev_build_number))
                 break
+            except HTTPException:
+                raise
             except Exception as exc:
                 last_fetch_err = str(exc)
     elif source.lower() == "gitlab":
@@ -183,6 +195,8 @@ def diff_logs(
                     )
                 prev_text = client.fetch_pipeline_logs(job_name, int(prev_build_number))
                 break
+            except HTTPException:
+                raise
             except Exception as exc:
                 last_fetch_err = str(exc)
     else:
@@ -203,7 +217,7 @@ def diff_logs(
     prev_lines = prev_text.splitlines()
     diff = list(difflib.unified_diff(prev_lines, cur_lines, lineterm="", n=4))
 
-    return {
+    result = {
         "ok": True,
         "current_build": build_number,
         "reference_build": prev_build_number,
@@ -213,6 +227,15 @@ def diff_logs(
         "cur_lines": len(cur_lines),
         "prev_lines": len(prev_lines),
     }
+    logger.info(
+        "diff_logs completed source=%s job=%s current=%s reference=%s diff_lines=%s",
+        source,
+        job_name,
+        build_number,
+        prev_build_number,
+        len(diff),
+    )
+    return result
 
 
 def pipeline_stages(

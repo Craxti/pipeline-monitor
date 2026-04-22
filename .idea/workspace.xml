@@ -4,24 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix docker">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix config.yaml">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ci_monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/ci_monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker/entrypoint.sh" beforeDir="false" afterPath="$PROJECT_DIR$/docker/entrypoint.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_auth_and_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_auth_and_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_smoke.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_smoke.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/core/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/chat_prompts.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/chat_prompts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/cursor_proxy.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/cursor_proxy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/clients/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/base.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/clients/jenkins_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/jenkins_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.example.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker_monitor/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/docker_monitor/monitor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/actions_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/actions_endpoints.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/logs_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/logs_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_endpoints.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/ops_actions.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ops_actions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.actions.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.actions.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.builds.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.builds.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.services.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.services.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -143,20 +143,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00007" summary="fix builds">
-      <created>1776421263854</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1776421263854</updated>
-    </task>
-    <task id="LOCAL-00008" summary="fix visuals">
-      <created>1776423251755</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1776423251755</updated>
     </task>
     <task id="LOCAL-00009" summary="fix visuals">
       <created>1776430425389</created>
@@ -487,7 +473,21 @@
       <option name="project" value="LOCAL" />
       <updated>1776851335869</updated>
     </task>
-    <option name="localTasksCounter" value="56" />
+    <task id="LOCAL-00056" summary="fix config.yaml">
+      <created>1776853902632</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1776853902632</updated>
+    </task>
+    <task id="LOCAL-00057" summary="fix config.yaml">
+      <created>1776854064338</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1776854064338</updated>
+    </task>
+    <option name="localTasksCounter" value="58" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -502,7 +502,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix dashboard, cache, request_id, api, fresh" />
     <MESSAGE value="fix moduls arch" />
     <MESSAGE value="pep8 + docs + unittests" />
     <MESSAGE value="pars fix" />
@@ -527,6 +526,7 @@
     <MESSAGE value="add docs" />
     <MESSAGE value="fix port 8020" />
     <MESSAGE value="fix docker" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix docker" />
+    <MESSAGE value="fix config.yaml" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix config.yaml" />
   </component>
 </project>

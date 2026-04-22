@@ -20,7 +20,7 @@ jenkins_instances:
   show_all_history_jobs_cap: 45
   verify_ssl: true
   parse_allure: false
-  show_all_limit_jobs: 25
+  show_all_limit_jobs: 0
 gitlab_instances:
 - name: GitLab
   enabled: false

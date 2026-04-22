@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
+import requests
 from models.models import BuildRecord, BuildStatus
 from .base import BaseCIClient
 
@@ -319,8 +320,45 @@ class JenkinsClient(BaseCIClient):
     def trigger_build(self, job_name: str) -> dict:
         """Trigger a new build for the given job. Returns status info."""
         jp = self.job_path(job_name)
-        resp = self._post(f"{jp}/build")
-        return {"ok": True, "status": resp.status_code, "job": job_name}
+        logger.info("Jenkins trigger_build requested: job=%s", job_name)
+        headers: dict[str, str] = {}
+        try:
+            crumb = self._get("/crumbIssuer/api/json")
+            if isinstance(crumb, dict):
+                field = str(crumb.get("crumbRequestField") or "").strip()
+                value = str(crumb.get("crumb") or "").strip()
+                if field and value:
+                    headers[field] = value
+                    logger.info("Jenkins crumb received for job=%s field=%s", job_name, field)
+        except Exception:
+            headers = {}
+            logger.warning("Jenkins crumb request failed for job=%s; trying without crumb", job_name)
+        # Some Jenkins jobs are parameterized and only accept /buildWithParameters.
+        # Try /build first, then fallback.
+        last_exc: Exception | None = None
+        for endpoint in (f"{jp}/build", f"{jp}/buildWithParameters"):
+            try:
+                logger.info("Jenkins trigger attempt: endpoint=%s job=%s", endpoint, job_name)
+                resp = self._post(endpoint, headers=headers or None)
+                result = {"ok": True, "status": resp.status_code, "job": job_name}
+                logger.info("Jenkins trigger success: %s", result)
+                return result
+            except requests.HTTPError as exc:
+                last_exc = exc
+                status = exc.response.status_code if exc.response is not None else None
+                logger.warning(
+                    "Jenkins trigger HTTP error: endpoint=%s job=%s status=%s",
+                    endpoint,
+                    job_name,
+                    status,
+                )
+                # Try fallback only for request-shape related statuses.
+                if endpoint.endswith("/build") and status in (400, 404, 405):
+                    continue
+                raise
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("Failed to trigger Jenkins build")
 
     def fetch_job_list(self) -> list[str]:
         """

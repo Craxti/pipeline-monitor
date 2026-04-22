@@ -43,7 +43,7 @@ def collect_jenkins(
             verify_ssl = bool(inst.get("verify_ssl", True))
             progress("jenkins_builds", f"Jenkins: {label}", "Preparing job list…")
 
-            _raw_limit = inst.get("show_all_limit_jobs", 50)
+            _raw_limit = inst.get("show_all_limit_jobs", 0)
             try:
                 _raw_limit = int(_raw_limit)
             except Exception:
@@ -76,6 +76,21 @@ def collect_jenkins(
                 except Exception as exc:
                     logger.warning("Jenkins [%s] fetch_job_list failed: %s", label, exc)
                     shared_discovered = []
+                if show_all_limit_jobs is not None and len(shared_discovered) > show_all_limit_jobs:
+                    msg = (
+                        f"show_all_limit_jobs={show_all_limit_jobs} trims discovered jobs "
+                        f"({len(shared_discovered)} total) for Jenkins: {label}"
+                    )
+                    logger.warning(msg)
+                    try:
+                        push_collect_log(
+                            "jenkins_builds",
+                            f"Jenkins: {label}",
+                            msg,
+                            "warn",
+                        )
+                    except Exception:
+                        pass
 
             try:
                 effective_max_builds = int(inst.get("max_builds", 10))

@@ -4,8 +4,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // SERVICES
 // ─────────────────────────────────────────────────────────────────────────────
-function resetServices(soft=false) {
+function resetServices(soft=false, force=false) {
   const s = _state.svcs; s.page=1; s.done=false;
+  if (force) {
+    // A docker action may finish while an older services request is still in flight.
+    // Cancel stale request and allow immediate fresh poll.
+    try { abortFetchKey('services'); } catch { /* ignore */ }
+    s.loading = false;
+  }
   const tb = document.getElementById('tbody-svcs');
   if (!soft) tb.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_loading'))}</td></tr>`;
   loadServices();
@@ -140,13 +146,13 @@ async function loadServices() {
       logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>`;
       if (up) {
         actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-stop" title="Остановить" onclick="dockerContainerAction(this,${nm},'stop',${hostArg})">&#9632; Stop</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart',${hostArg})">&#8635; Restart</button>
+          <button type="button" class="act-btn docker-stop" title="Остановить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"stop",${hostArg}]'>&#9632; Stop</button>
+          <button type="button" class="act-btn docker-btn" title="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635; Restart</button>
         </div>`;
       } else {
         actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-start" title="Запустить" onclick="dockerContainerAction(this,${nm},'start',${hostArg})">&#9654; Start</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart',${hostArg})">&#8635; Restart</button>
+          <button type="button" class="act-btn docker-start" title="Запустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"start",${hostArg}]'>&#9654; Start</button>
+          <button type="button" class="act-btn docker-btn" title="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635; Restart</button>
         </div>`;
       }
     }
@@ -155,7 +161,7 @@ async function loadServices() {
     const ch = lastCh[String(sv.name || '')];
     const chAgo = ch && ch.ts ? _fmtAgo(ch.ts) : '';
     const chTxt = chAgo ? ` · ${chAgo}` : '';
-    return `<tr>
+    return `<tr data-svc-name="${encodeURIComponent(String(sv.name || ''))}" data-svc-host="${encodeURIComponent(String(sv.source_instance || ''))}" data-svc-kind="${encodeURIComponent(String(sv.kind || ''))}">
     <td><strong title="${_svgTitleAttr(sv.name)}">${esc(sv.name)}</strong></td>
     <td>${esc(sv.kind)}</td>
     <td>${badge(sv.status)}</td>

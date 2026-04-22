@@ -34,6 +34,8 @@ class BaseCIClient(ABC):
         verify_ssl: bool = True,
     ) -> None:
         self.base_url = url.rstrip("/")
+        # Backward compatibility: some call sites still reference `.url`.
+        self.url = self.base_url
         self.token = token
         self.timeout = timeout
         self.verify_ssl = verify_ssl

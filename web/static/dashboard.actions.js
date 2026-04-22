@@ -79,7 +79,17 @@ function openActionConfirm(opts) {
   });
 }
 
-async function triggerJenkinsBuild(btn, jobName) {
+async function triggerJenkinsBuild(a, b, c) {
+  let btn = a;
+  let jobName = b;
+  let instanceUrl = c || '';
+  // Called via delegated data-dash-action: (jobName, buttonEl)
+  if (typeof a === 'string') {
+    jobName = a;
+    instanceUrl = typeof b === 'string' ? b : '';
+    btn = c;
+  }
+  if (!btn || typeof btn.classList === 'undefined') return;
   const r = await openActionConfirm({
     kind: 'jenkins',
     title: t('dash.act_jenkins_title'),
@@ -95,10 +105,14 @@ async function triggerJenkinsBuild(btn, jobName) {
     const res = await fetch(apiUrl('api/action/jenkins/build'), {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({job_name: jobName}),
+      body: JSON.stringify({
+        job_name: jobName,
+        instance_url: String(instanceUrl || ''),
+      }),
     });
     if (res.ok) {
       showToast(tf('dash.act_jenkins_queued', { name: jobName }), 'ok');
+      _monitorBuildsAfterTrigger();
     } else {
       const err = await res.json().catch(() => ({}));
       showToast(tf('dash.act_fail', { detail: err.detail || res.statusText }), 'err');
@@ -108,7 +122,23 @@ async function triggerJenkinsBuild(btn, jobName) {
   btn.innerHTML = '&#9654; ' + t('dash.act_run');
 }
 
-async function triggerGitlabPipeline(btn, projectId, ref) {
+async function triggerGitlabPipeline(...args) {
+  const btn = args[args.length - 1];
+  if (!btn || typeof btn.classList === 'undefined') return;
+  const rest = args.slice(0, -1);
+  let projectId = '';
+  let ref = 'main';
+  let instanceUrl = '';
+  if (rest.length >= 3) {
+    projectId = String(rest[0] ?? '');
+    ref = String(rest[1] ?? 'main');
+    instanceUrl = String(rest[2] ?? '');
+  } else if (rest.length === 2) {
+    projectId = String(rest[0] ?? '');
+    ref = String(rest[1] ?? 'main');
+  } else {
+    return;
+  }
   const r = await openActionConfirm({
     kind: 'gitlab',
     title: t('dash.act_gitlab_title'),
@@ -126,7 +156,11 @@ async function triggerGitlabPipeline(btn, projectId, ref) {
     const res = await fetch(apiUrl('api/action/gitlab/pipeline'), {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({project_id: projectId, ref: branch}),
+      body: JSON.stringify({
+        project_id: projectId,
+        ref: branch,
+        instance_url: String(instanceUrl || ''),
+      }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -134,6 +168,7 @@ async function triggerGitlabPipeline(btn, projectId, ref) {
         ? tf('dash.act_gitlab_toast_linked', { url: data.web_url })
         : t('dash.act_gitlab_toast_queued');
       showToast(msg, 'ok');
+      _monitorBuildsAfterTrigger();
     } else {
       const err = await res.json().catch(() => ({}));
       showToast(tf('dash.act_fail', { detail: err.detail || res.statusText }), 'err');
@@ -176,7 +211,47 @@ function _dockerConfirmOpts(action, containerName) {
   };
 }
 
-async function dockerContainerAction(btn, containerName, action, dockerHost = '') {
+function _mapDockerContainerStateToSvcStatus(state) {
+  return String(state || '').toLowerCase() === 'running' ? 'up' : 'down';
+}
+
+function _touchServiceRowStatus(containerName, dockerHost, containerState) {
+  const tbody = document.getElementById('tbody-svcs');
+  if (!tbody) return;
+  const nameEnc = encodeURIComponent(String(containerName || ''));
+  const hostEnc = encodeURIComponent(String(dockerHost || ''));
+  const rows = Array.from(tbody.querySelectorAll(`tr[data-svc-name="${nameEnc}"]`));
+  if (!rows.length) return;
+  const row = rows.find((r) => (r.getAttribute('data-svc-host') || '') === hostEnc) || rows[0];
+  const statusCell = row && row.children ? row.children[2] : null;
+  if (!statusCell) return;
+  statusCell.innerHTML = badge(_mapDockerContainerStateToSvcStatus(containerState));
+}
+
+function _monitorBuildsAfterTrigger() {
+  try { resetBuilds(true, true); } catch { /* ignore */ }
+  let n = 0;
+  const maxPolls = 8;
+  const tid = setInterval(() => {
+    n += 1;
+    try { resetBuilds(true, true); } catch { /* ignore */ }
+    if (n >= maxPolls) clearInterval(tid);
+  }, 2500);
+}
+
+async function dockerContainerAction(a, b, c, d = '') {
+  let btn = a;
+  let containerName = b;
+  let action = c;
+  let dockerHost = d;
+  // Called via delegated data-dash-action: (containerName, action, dockerHost, buttonEl)
+  if (typeof a === 'string') {
+    containerName = a;
+    action = b;
+    dockerHost = c || '';
+    btn = d;
+  }
+  if (!btn || typeof btn.closest !== 'function') return;
   const cfg = _dockerConfirmOpts(action, containerName);
   const r = await openActionConfirm(cfg);
   if (!r) return;
@@ -201,7 +276,13 @@ async function dockerContainerAction(btn, containerName, action, dockerHost = ''
       const verbKey = { start: 'dash.act_docker_verb_start', stop: 'dash.act_docker_verb_stop', restart: 'dash.act_docker_verb_restart' }[action];
       const verb = verbKey ? t(verbKey) : action;
       showToast(tf('dash.act_docker_toast', { verb, name: containerName, extra: st ? ` (${st})` : '' }), 'ok');
-      resetServices(true);
+      _touchServiceRowStatus(containerName, String(dockerHost || ''), st);
+      // Force a fresh services fetch: cancel potentially stale in-flight request.
+      resetServices(true, true);
+      // Docker state may lag for a brief moment; do one follow-up refresh.
+      setTimeout(() => {
+        try { resetServices(true, true); } catch { /* ignore */ }
+      }, 1200);
     } else {
       const err = await res.json().catch(() => ({}));
       const detail = err.detail || res.statusText;
@@ -494,10 +575,11 @@ function _buildFavRow(b) {
   const src = (b.source || '').toLowerCase();
   let actionBtn = '';
   if (src === 'jenkins') {
-    actionBtn = `<button class="act-btn" onclick="triggerJenkinsBuild(this,${JSON.stringify(b.job_name)})">&#9654; ${esc(t('dash.act_run'))}</button>`;
+    actionBtn = `<button class="act-btn" data-dash-action="triggerJenkinsBuild" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(jenkinsBaseFromBuildUrl(b.url))}]'>&#9654; ${esc(t('dash.act_run'))}</button>`;
   } else if (src === 'gitlab') {
     const ref = b.branch || 'main';
-    actionBtn = `<button class="act-btn" onclick="triggerGitlabPipeline(this,${JSON.stringify(b.job_name)},${JSON.stringify(ref)})">&#9654; ${esc(t('dash.act_run'))}</button>`;
+    const glUrl = gitlabBaseFromPipelineUrl(b.url);
+    actionBtn = `<button class="act-btn" data-dash-action="triggerGitlabPipeline" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(ref)},${JSON.stringify(glUrl)}]'>&#9654; ${esc(t('dash.act_run'))}</button>`;
   }
   const ctx = _fmtBuildContext(_jobAnalytics[b.job_name]);
   const jt = _svgTitleAttr(b.job_name);
@@ -691,11 +773,28 @@ function _appendLogChunk(chunk) {
     if (!_logSearchQuery && _logLevelFilter === 'all') {
       // Fast path during streaming — plain text, no re-parse
       pre.textContent = _logRawText;
-      pre.scrollTop = pre.scrollHeight;
+      if (_isLogAutoScrollEnabled()) pre.scrollTop = pre.scrollHeight;
     } else {
       _renderLogLines();
     }
   }, 250);
+}
+
+function _isLogAutoScrollEnabled() {
+  const follow = document.getElementById('log-follow');
+  return !!(follow && follow.checked);
+}
+
+function _getDockerLogTail() {
+  const tailEnabledEl = document.getElementById('log-tail-enabled');
+  const tailLinesEl = document.getElementById('log-tail-lines');
+  const tailEnabled = !tailEnabledEl || !!tailEnabledEl.checked;
+  if (!tailEnabled) return 50000;
+  let tail = parseInt((tailLinesEl && tailLinesEl.value) || '1000', 10);
+  if (!Number.isFinite(tail)) tail = 1000;
+  tail = Math.max(100, Math.min(50000, tail));
+  if (tailLinesEl) tailLinesEl.value = String(tail);
+  return tail;
 }
 
 function _renderLogLines() {
@@ -712,7 +811,7 @@ function _renderLogLines() {
   // Fast path: no filters and large log → plain text
   if (!q && lvl === 'all' && _logRawText.length > 400000) {
     pre.textContent = _logRawText;
-    if (_logIsStreaming) pre.scrollTop = pre.scrollHeight;
+    if (_isLogAutoScrollEnabled()) pre.scrollTop = pre.scrollHeight;
     const cnt = document.getElementById('log-search-count');
     if (cnt) cnt.textContent = '';
     return;
@@ -793,7 +892,7 @@ function _renderLogLines() {
   const cnt = document.getElementById('log-search-count');
   if (cnt) cnt.textContent = qRaw ? `${matchCount} match${matchCount !== 1 ? 'es' : ''}` : '';
 
-  if (_logIsStreaming) pre.scrollTop = pre.scrollHeight;
+  if (_isLogAutoScrollEnabled()) pre.scrollTop = pre.scrollHeight;
 
   // Scroll first match into view
   if (qRaw) {
@@ -902,7 +1001,8 @@ async function loadDockerLogsIntoModal(container) {
   _setLogText(t('dash.log_fetching'));
   _logAbort = new AbortController();
   const dec = new TextDecoder('utf-8');
-  const q = 'api/logs/docker/stream?container=' + encodeURIComponent(name) + '&follow=false&tail=1000'
+  const tail = _getDockerLogTail();
+  const q = 'api/logs/docker/stream?container=' + encodeURIComponent(name) + '&follow=false&tail=' + encodeURIComponent(String(tail))
     + (host ? '&docker_host=' + encodeURIComponent(host) : '');
   const u = apiUrl(q);
   try {
@@ -964,9 +1064,10 @@ async function startDockerLogStream(container, dockerHost = '') {
   const dec = new TextDecoder();
   _logAbort = new AbortController();
   _logIsStreaming = true;
+  const tail = _getDockerLogTail();
   try {
     const res = await fetch(
-      apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container) + '&follow=true&tail=1000'
+      apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container) + '&follow=true&tail=' + encodeURIComponent(String(tail))
         + (dockerHost ? '&docker_host=' + encodeURIComponent(dockerHost) : '')),
       { signal: _logAbort.signal }
     );
@@ -1005,16 +1106,28 @@ async function openLogViewer(kind, params) {
   stopLogStream();
   _resetLogSearch();
   const followChk = document.getElementById('log-follow');
+  const tailEnabled = document.getElementById('log-tail-enabled');
+  const tailLines = document.getElementById('log-tail-lines');
   if (followChk) {
     followChk.checked = false;
     followChk.onchange = null;
   }
   const followWrap = document.getElementById('log-follow-wrap');
+  const tailControls = document.getElementById('log-tail-controls');
   const btnRef = document.getElementById('log-btn-refresh');
+
+  if (tailEnabled && tailLines) {
+    const syncTailUi = () => {
+      tailLines.disabled = !tailEnabled.checked;
+    };
+    syncTailUi();
+    tailEnabled.onchange = syncTailUi;
+  }
 
   if (kind === 'docker') {
     title.textContent = 'Docker: ' + (params.container || '');
     if (followWrap) followWrap.classList.add('visible');
+    if (tailControls) tailControls.style.display = 'inline-flex';
     const running = (params.status || '').toLowerCase() === 'up';
     if (followChk) {
       followChk.disabled = !running;
@@ -1031,13 +1144,18 @@ async function openLogViewer(kind, params) {
     ov.setAttribute('aria-hidden', 'false');
     if (followChk) {
       followChk.onchange = () => {
-        if (followChk.checked) startDockerLogStream(params.container, params.docker_host || '');
+        if (followChk.checked) {
+          const pre = document.getElementById('log-modal-pre');
+          if (pre) pre.scrollTop = pre.scrollHeight;
+          startDockerLogStream(params.container, params.docker_host || '');
+        }
         else stopLogStream();
       };
     }
     await loadDockerLogsIntoModal(params);
   } else {
     if (followWrap) followWrap.classList.remove('visible');
+    if (tailControls) tailControls.style.display = 'none';
     if (btnRef) btnRef.style.display = '';
     if (kind === 'jenkins') {
       title.textContent = 'Jenkins: ' + params.job_name + ' #' + params.build_number;

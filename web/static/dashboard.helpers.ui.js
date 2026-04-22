@@ -312,7 +312,13 @@ function runbookFocusServicesProblems() {
   toggleSvcProblemsOnly(true);
 }
 
-const _DASH_ACTION_PASS_EL = new Set(['loadTrends', 'setTrendsSize']);
+const _DASH_ACTION_PASS_EL = new Set([
+  'loadTrends',
+  'setTrendsSize',
+  'triggerJenkinsBuild',
+  'triggerGitlabPipeline',
+  'dockerContainerAction',
+]);
 
 function initDashDelegatedActions() {
   // Capture phase so clicks inside modals still reach us even when `[role=dialog]`

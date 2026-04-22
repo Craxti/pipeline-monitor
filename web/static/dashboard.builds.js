@@ -4,8 +4,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILDS
 // ─────────────────────────────────────────────────────────────────────────────
-function resetBuilds(soft=false) {
+function resetBuilds(soft=false, force=false) {
   const s = _state.builds; s.page=1; s.done=false;
+  if (force) {
+    try { abortFetchKey('builds'); } catch { /* ignore */ }
+    s.loading = false;
+  }
   const tb = document.getElementById('tbody-builds');
   // Soft reset keeps current rows visible until the refreshed data arrives.
   if (!soft) {
@@ -128,11 +132,29 @@ async function loadBuilds() {
     const src = b.source.toLowerCase();
     const isStarred = !!favKeys[String(b.job_name ?? '')];
     let actionBtn = '';
-    if (src === 'jenkins') {
-      actionBtn = `<button class="act-btn" onclick="triggerJenkinsBuild(this,${JSON.stringify(b.job_name)})">&#9654; ${esc(t('dash.act_run'))}</button>`;
-    } else if (src === 'gitlab') {
+    if (src === 'jenkins' || src.startsWith('jenkins_')) {
+      const instanceUrl = jenkinsBaseFromBuildUrl(b.url);
+      const logPayload = JSON.stringify({
+        job_name: b.job_name,
+        build_number: b.build_number,
+        instance_url: instanceUrl,
+      });
+      actionBtn = `<span style="display:inline-flex;gap:6px;align-items:center">
+        <button class="act-btn" onclick='openLogViewer("jenkins",${logPayload})' title="${_svgTitleAttr(t('dash.log_console'))}">&#128466;</button>
+        ${src === 'jenkins' ? `<button class="act-btn" data-dash-action="triggerJenkinsBuild" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(instanceUrl)}]'>&#9654; ${esc(t('dash.act_run'))}</button>` : ''}
+      </span>`;
+    } else if (src === 'gitlab' || src.startsWith('gitlab_')) {
       const ref = b.branch || 'main';
-      actionBtn = `<button class="act-btn" onclick="triggerGitlabPipeline(this,${JSON.stringify(b.job_name)},${JSON.stringify(ref)})">&#9654; ${esc(t('dash.act_run'))}</button>`;
+      const glInstanceUrl = gitlabBaseFromPipelineUrl(b.url);
+      const logPayload = JSON.stringify({
+        project_id: b.job_name,
+        pipeline_id: b.build_number,
+        instance_url: glInstanceUrl,
+      });
+      actionBtn = `<span style="display:inline-flex;gap:6px;align-items:center">
+        <button class="act-btn" onclick='openLogViewer("gitlab",${logPayload})' title="${_svgTitleAttr(t('dash.pipeline_job_logs'))}">&#128466;</button>
+        ${src === 'gitlab' ? `<button class="act-btn" data-dash-action="triggerGitlabPipeline" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(ref)},${JSON.stringify(glInstanceUrl)}]'>&#9654; ${esc(t('dash.act_run'))}</button>` : ''}
+      </span>`;
     }
     const favPayloadEnc = encodeURIComponent(JSON.stringify({
       source: b.source, job_name: b.job_name, build_number: b.build_number, status: b.status, branch: b.branch,

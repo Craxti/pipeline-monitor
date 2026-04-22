@@ -92,10 +92,24 @@ class DockerMonitor:
         if act not in ("start", "stop", "restart"):
             raise ValueError(f"Invalid action: {action!r}")
 
+        host_label = DockerMonitor._docker_host_label(docker_host)
+        logger.info(
+            "Docker container_action requested: action=%s container=%s host=%s",
+            act,
+            container_name,
+            host_label,
+        )
         client = DockerMonitor._docker_client(docker_host=docker_host)
         try:
             ctr = _resolve_docker_container(client, container_name)
         except ValueError as exc:
+            logger.warning(
+                "Docker container not found for action=%s container=%s host=%s: %s",
+                act,
+                container_name,
+                host_label,
+                exc,
+            )
             raise ValueError(str(exc)) from exc
 
         if act == "start":
@@ -105,13 +119,15 @@ class DockerMonitor:
         else:
             ctr.restart(timeout=timeout)
         ctr.reload()
-        return {
+        result = {
             "ok": True,
             "name": container_name,
             "status": ctr.status,
             "action": act,
-            "docker_host": DockerMonitor._docker_host_label(docker_host),
+            "docker_host": host_label,
         }
+        logger.info("Docker container_action completed: %s", result)
+        return result
 
     @staticmethod
     def restart_container(container_name: str, timeout: int = 10, docker_host: dict | None = None) -> dict:

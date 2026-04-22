@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 
 def find_jenkins_instance(cfg: dict, url_hint: str) -> dict | None:
@@ -35,7 +38,15 @@ def trigger_jenkins_build(*, cfg: dict, job_name: str, instance_url: str) -> Any
         token=inst.get("token", ""),
         verify_ssl=bool(inst.get("verify_ssl", True)),
     )
-    return client.trigger_build(job_name)
+    logger.info(
+        "Trigger Jenkins build: job=%s instance=%s url=%s",
+        job_name,
+        inst.get("name", "Jenkins"),
+        inst.get("url", ""),
+    )
+    result = client.trigger_build(job_name)
+    logger.info("Jenkins build trigger response: job=%s result=%s", job_name, result)
+    return result
 
 
 def trigger_gitlab_pipeline(*, cfg: dict, project_id: str, ref: str, instance_url: str) -> Any:
@@ -70,4 +81,12 @@ def docker_container_action(*, cfg: dict, container_name: str, action: str, dock
     from docker_monitor.monitor import DockerMonitor
 
     host_cfg = docker_host_cfg(cfg, docker_host)
-    return DockerMonitor.container_action(container_name, action, docker_host=host_cfg)
+    logger.info(
+        "Trigger Docker action: action=%s container=%s docker_host=%s",
+        action,
+        container_name,
+        DockerMonitor._docker_host_label(host_cfg),  # pylint: disable=protected-access
+    )
+    result = DockerMonitor.container_action(container_name, action, docker_host=host_cfg)
+    logger.info("Docker action response: action=%s container=%s result=%s", action, container_name, result)
+    return result

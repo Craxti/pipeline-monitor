@@ -16,14 +16,14 @@
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.state.js?v=20260419c" defer></script>
-<script src="/static/dashboard.helpers.ui.js?v=20260419d" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260422a" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
-<script src="/static/dashboard.builds.js?v=20260417i" defer></script>
+<script src="/static/dashboard.builds.js?v=20260422e" defer></script>
 <script src="/static/dashboard.failures.js?v=20260420d" defer></script>
 <script src="/static/dashboard.tests.js?v=20260420d" defer></script>
-<script src="/static/dashboard.services.js?v=20260420d" defer></script>
+<script src="/static/dashboard.services.js?v=20260422c" defer></script>
 <script src="/static/dashboard.collect-panel.js?v=20260417i" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
@@ -36,7 +36,7 @@
 <script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.js?v=20260420h" defer></script>
-<script src="/static/dashboard.actions.js?v=20260417i" defer></script>
+<script src="/static/dashboard.actions.js?v=20260422f" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
@@ -1004,6 +1004,16 @@
     </div>
     <div class="log-modal-toolbar">
       <button type="button" class="btn btn-ghost" id="log-btn-refresh" style="font-size:.8rem">&#8635; <span data-i18n="dash.log_refresh">Refresh</span></button>
+      <span id="log-tail-controls" style="display:none;align-items:center;gap:.45rem">
+        <label id="log-tail-wrap" style="display:inline-flex;align-items:center;gap:.35rem">
+          <input type="checkbox" id="log-tail-enabled" checked />
+          <span>Tail</span>
+        </label>
+        <label id="log-tail-lines-wrap" style="display:inline-flex;align-items:center;gap:.3rem">
+          <input type="number" id="log-tail-lines" min="100" max="50000" step="100" value="1000" style="width:88px" />
+          <span>lines</span>
+        </label>
+      </span>
       <label id="log-follow-wrap">
         <input type="checkbox" id="log-follow" />
         <span data-i18n="dash.log_follow">Follow live (docker logs -f)</span>
