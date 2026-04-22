@@ -212,9 +212,9 @@ def collect_jenkins(
                     for job_cfg in explicit_jobs:
                         check_cancelled()
                         if incremental_stats is not None:
-                            incremental_stats["jenkins_checked"] = int(
-                                incremental_stats.get("jenkins_checked", 0) or 0
-                            ) + 1
+                            incremental_stats["jenkins_checked"] = (
+                                int(incremental_stats.get("jenkins_checked", 0) or 0) + 1
+                            )
                         job_name = (job_cfg.get("name") or "").strip()
                         if not job_name:
                             continue
@@ -232,9 +232,9 @@ def collect_jenkins(
                             lb_n = 0
                         if prev_bn > 0 and lb_n > 0 and lb_n <= prev_bn:
                             if incremental_stats is not None:
-                                incremental_stats["jenkins_skipped"] = int(
-                                    incremental_stats.get("jenkins_skipped", 0) or 0
-                                ) + 1
+                                incremental_stats["jenkins_skipped"] = (
+                                    int(incremental_stats.get("jenkins_skipped", 0) or 0) + 1
+                                )
                             continue
                         critical = bool(job_cfg.get("critical", False))
                         recs = client.fetch_builds_for_job(

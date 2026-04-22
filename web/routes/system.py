@@ -14,4 +14,3 @@ router = APIRouter(tags=["system"])
 async def api_system_metrics_route():
     """Return host runtime metrics for dashboard System tab."""
     return system_endpoints.system_metrics_payload()
-

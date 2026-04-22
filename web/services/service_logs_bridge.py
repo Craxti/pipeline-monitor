@@ -42,7 +42,9 @@ class RuntimeCollectLogHandler(logging.Handler):
             return
 
 
-def install_runtime_collect_log_bridge(*, push_log, root_logger: logging.Logger | None = None) -> RuntimeCollectLogHandler:
+def install_runtime_collect_log_bridge(
+    *, push_log, root_logger: logging.Logger | None = None
+) -> RuntimeCollectLogHandler:
     """Attach runtime collect log handler to root logger."""
     logger = root_logger or logging.getLogger()
     handler = RuntimeCollectLogHandler(push_log)

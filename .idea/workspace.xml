@@ -4,43 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/gitlab_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/gitlab_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/jenkins_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/jenkins_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/webhooks.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/webhooks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_composer.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_composer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/build_analytics.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/build_analytics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_loop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/local_parsers.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/local_parsers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/progress.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/progress.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/dashboard_summary.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/dashboard_summary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.flaky.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.formatters.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.formatters.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.init.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.init.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.status-map.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.status-map.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.timeline.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.timeline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.uptime-sparklines.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.uptime-sparklines.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
-    </list>
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -161,13 +125,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00012" summary="fix cursor">
-      <created>1776438691958</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1776438691958</updated>
     </task>
     <task id="LOCAL-00013" summary="fix cursor">
       <created>1776438706918</created>
@@ -505,7 +462,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776860713615</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="fix life time + stop + system status">
+      <created>1776862180724</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1776862180724</updated>
+    </task>
+    <option name="localTasksCounter" value="62" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -520,7 +484,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="pep8" />
     <MESSAGE value="add actions black" />
     <MESSAGE value="add docker" />
     <MESSAGE value="fix dashboard.js split for moduls" />
@@ -545,6 +508,7 @@
     <MESSAGE value="fix actions start restart stop docker/jenkins/git" />
     <MESSAGE value="fix life time" />
     <MESSAGE value="fix life time + stop" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix life time + stop" />
+    <MESSAGE value="fix life time + stop + system status" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix life time + stop + system status" />
   </component>
 </project>

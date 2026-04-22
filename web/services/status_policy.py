@@ -36,4 +36,3 @@ def incident_severity(
     if partial_errors > 0 or snapshot_stale:
         return "warn"
     return "ok"
-

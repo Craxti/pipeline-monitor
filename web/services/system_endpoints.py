@@ -57,4 +57,3 @@ def system_metrics_payload() -> dict:
         "process_count": int(len(procs)),
         "top_processes": procs[:12],
     }
-

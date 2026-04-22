@@ -89,6 +89,7 @@ def diff_logs(
 ) -> dict[str, Any]:
     """Fetch current and reference logs and return a unified diff."""
     import difflib
+
     logger.info(
         "diff_logs start source=%s job=%s build=%s instance_url=%s",
         source,

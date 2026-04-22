@@ -33,5 +33,3 @@ def create_collect_loop_task(cfg: dict) -> asyncio.Task:
             cfg,
         )
     )
-
-

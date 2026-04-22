@@ -80,9 +80,7 @@ def collect_gitlab_builds(
                     check_cancelled()
                     prev = int(get_collector_state_int(wm_key, 0) or 0)
                     if prev > 0:
-                        head = client._get(
-                            f"/api/v4/projects/{resolved_id}/pipelines?per_page=1&order_by=id&sort=desc"
-                        )
+                        head = client._get(f"/api/v4/projects/{resolved_id}/pipelines?per_page=1&order_by=id&sort=desc")
                         check_cancelled()
                         if isinstance(head, list) and head:
                             try:
@@ -91,9 +89,9 @@ def collect_gitlab_builds(
                                 top_id = 0
                             if top_id and top_id <= prev:
                                 if incremental_stats is not None:
-                                    incremental_stats["gitlab_skipped"] = int(
-                                        incremental_stats.get("gitlab_skipped", 0) or 0
-                                    ) + 1
+                                    incremental_stats["gitlab_skipped"] = (
+                                        int(incremental_stats.get("gitlab_skipped", 0) or 0) + 1
+                                    )
                                 continue
 
                 recs = client.fetch_pipelines_for_project(

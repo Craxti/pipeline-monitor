@@ -40,9 +40,7 @@ def run_collect_sync(
     g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))
     dm_enabled = bool(cfg.get("docker_monitor", {}).get("enabled"))
     incremental_collect = (
-        (not force_full)
-        and sqlite_available
-        and bool(cfg.get("general", {}).get("incremental_collect", True))
+        (not force_full) and sqlite_available and bool(cfg.get("general", {}).get("incremental_collect", True))
     )
     logger.info(
         "Collect cycle started (force_full=%s, incremental=%s, lookback_days=%s, jenkins=%d, gitlab=%d, docker=%s)",

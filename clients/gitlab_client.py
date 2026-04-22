@@ -148,10 +148,7 @@ class GitLabClient(BaseCIClient):
         should_cancel: callable | None = None,
     ) -> list[BuildRecord]:
         """List recent pipelines for one project (``per_page`` capped server-side)."""
-        path = (
-            f"/api/v4/projects/{resolved_id}/pipelines"
-            f"?per_page={int(per_page)}&order_by=id&sort=desc"
-        )
+        path = f"/api/v4/projects/{resolved_id}/pipelines" f"?per_page={int(per_page)}&order_by=id&sort=desc"
         data = self._get(path)
         if not isinstance(data, list):
             logger.warning(

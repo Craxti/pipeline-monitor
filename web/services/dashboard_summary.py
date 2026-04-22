@@ -38,9 +38,7 @@ def dashboard_summary_payload(
             if _sp.is_build_problem(getattr(b, "status_normalized", None))
         )
         counts["failed_tests"] = sum(
-            1
-            for t in (getattr(snap, "tests", []) or [])
-            if _sp.is_test_problem(getattr(t, "status_normalized", None))
+            1 for t in (getattr(snap, "tests", []) or []) if _sp.is_test_problem(getattr(t, "status_normalized", None))
         )
         counts["tests_total"] = len(getattr(snap, "tests", []) or [])
         counts["services_down"] = sum(
