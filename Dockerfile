@@ -10,9 +10,10 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
+RUN chmod +x /app/docker/entrypoint.sh
 
-EXPOSE 8000
+EXPOSE 8020
 
-# Default: serve FastAPI dashboard. Mount config.yaml to /app/config.yaml and data/ to /app/data.
-CMD ["python", "-m", "uvicorn", "web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default: bootstrap runtime config + start dashboard.
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 

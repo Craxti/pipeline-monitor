@@ -76,8 +76,21 @@ MIT License (2026). See `LICENSE`.
 
 ### Run with Docker (recommended)
 
+**Requirements:** [Docker](https://docs.docker.com/get-docker/) with Compose v2 (Docker Desktop includes it).
+
 The repository includes a `Dockerfile` and a `compose.yml` for a **one-command start**.
-No local Python setup is required.
+No local Python is required. On first start the app copies `config.example.yaml` into a persistent volume; edit later via **Settings** in the UI (or by replacing the file inside the `pipeline-monitor-runtime` volume).
+
+**From a fresh clone**
+
+```bash
+git clone https://github.com/Craxti/pipeline-monitor.git
+cd pipeline-monitor
+docker compose up -d --build
+# Dashboard: http://127.0.0.1:8020/health
+```
+
+**Already in the repo folder**
 
 ```bash
 # 1) Build and start in background
@@ -93,12 +106,24 @@ docker compose logs -f
 docker compose down
 ```
 
+**Prebuilt image (when published to GHCR; tag may be `main` or `latest`)**
+
+```bash
+docker pull ghcr.io/craxti/pipeline-monitor:latest
+docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
+  -v pipeline-monitor-runtime:/app/runtime \
+  -v pipeline-monitor-data:/app/data \
+  ghcr.io/craxti/pipeline-monitor:latest
+```
+
+If the first pull 404s, the image is not published yet: use `docker compose up -d --build` from a clone, or your fork’s `ghcr.io/<fork-owner>/<repo>:<tag>`.
+
 Notes:
 - **Config persistence**: stored in Docker volume `pipeline-monitor-runtime` (`/app/runtime/config.yaml`).
 - **Data persistence**: stored in Docker volume `pipeline-monitor-data` (`/app/data`).
-- **Bootstrap config**: on first start, container auto-copies `config.example.yaml` to runtime config.
-- **Port**: `8020:8020` (change in `compose.yml` if needed).
-- **API token (optional)**: set `CICD_MON_API_TOKEN` in `compose.yml` (or use `web.api_token` in `config.yaml`).
+- **Bootstrap config**: on first start, the entrypoint copies `config.example.yaml` to `/app/runtime/config.yaml` and symlinks it as `/app/config.yaml`.
+- **Port**: `8020:8020` (change the host side in `compose.yml` if needed, e.g. `9080:8020`).
+- **API token (optional)**: set `CICD_MON_API_TOKEN` under `environment` in `compose.yml` (or `web.api_token` in the saved `config.yaml` in the volume).
 
 ### Run with Docker (without compose)
 
@@ -106,15 +131,29 @@ Notes:
 docker build -t pipeline-monitor-web:local .
 ```
 
-PowerShell example:
+**Linux / macOS (named volumes, same as Compose)**
 
-```powershell
-docker run --rm -p 8020:8020 `
-  -e PYTHONUNBUFFERED=1 `
-  -v "${PWD}\config.yaml:/app/config.yaml:ro" `
-  -v "${PWD}\data:/app/data" `
+```bash
+docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
+  -e PYTHONUNBUFFERED=1 \
+  -v pipeline-monitor-runtime:/app/runtime \
+  -v pipeline-monitor-data:/app/data \
+  --restart unless-stopped \
   pipeline-monitor-web:local
 ```
+
+**PowerShell**
+
+```powershell
+docker run -d --name pipeline-monitor-web -p 8020:8020 `
+  -e PYTHONUNBUFFERED=1 `
+  -v pipeline-monitor-runtime:/app/runtime `
+  -v pipeline-monitor-data:/app/data `
+  --restart unless-stopped `
+  pipeline-monitor-web:local
+```
+
+Do **not** mount a file onto `/app/config.yaml` with this image: the entrypoint uses a symlink to `/app/runtime/config.yaml` inside the volume. Use the runtime volume (or edit in UI).
 
 ### 1. Install dependencies
 

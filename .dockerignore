@@ -1,3 +1,23 @@
+# Never bake a developer's local secrets into a published image
+config.yaml
+config.local.yaml
+
+.git
+.github
+.idea
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+build
+dist
+agent-transcripts
+terminals
+data
 .venv/
 venv/
 __pycache__/
