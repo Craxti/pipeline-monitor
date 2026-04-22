@@ -107,7 +107,9 @@ async def action_docker_restart(
         raise HTTPException(400, "container_name is required")
     try:
         cfg = load_cfg()
-        return docker_container_action(cfg=cfg, container_name=container_name, action="restart", docker_host=docker_host)
+        return docker_container_action(
+            cfg=cfg, container_name=container_name, action="restart", docker_host=docker_host
+        )
     except Exception as exc:
         logger.error("Docker restart failed: %s", exc)
         raise HTTPException(500, f"Failed to restart container: {exc}") from exc

@@ -116,7 +116,7 @@ docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
   ghcr.io/craxti/pipeline-monitor:latest
 ```
 
-If the first pull 404s, the image is not published yet: use `docker compose up -d --build` from a clone, or your fork’s `ghcr.io/<fork-owner>/<repo>:<tag>`.
+If the first pull 404s, the image is not published yet: use `docker compose up -d --build` from a clone, or your fork’s `ghcr.io/<fork-owner>/<repo>:<tag>`. After you push, open the latest **Actions** run for the **Docker publish** workflow and confirm the **Build and push** step is green; if it failed, the image is not in GHCR yet. A successful push appears under **GitHub → Packages** for the repo (not under **Code** in the file tree). Private images require `docker login ghcr.io` before `docker pull`.
 
 Notes:
 - **Config persistence**: stored in Docker volume `pipeline-monitor-runtime` (`/app/runtime/config.yaml`).

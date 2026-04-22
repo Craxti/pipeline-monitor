@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="add docs">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix docker">
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -33,13 +33,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/github/talkie&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "D:/prooftech/proj/pipeline-monitor"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\prooftech\proj\pipeline-monitor" />
@@ -127,27 +127,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00002" summary="fix arch">
-      <created>1776350635895</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1776350635895</updated>
-    </task>
-    <task id="LOCAL-00003" summary="fix arch">
-      <created>1776351121413</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1776351121413</updated>
-    </task>
-    <task id="LOCAL-00004" summary="fix arch">
-      <created>1776351195645</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1776351195645</updated>
     </task>
     <task id="LOCAL-00005" summary="fix arch">
       <created>1776412919120</created>
@@ -471,7 +450,28 @@
       <option name="project" value="LOCAL" />
       <updated>1776666321549</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="fix port 8020">
+      <created>1776850507696</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850507696</updated>
+    </task>
+    <task id="LOCAL-00052" summary="fix docker">
+      <created>1776850636628</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850636628</updated>
+    </task>
+    <task id="LOCAL-00053" summary="fix docker">
+      <created>1776850676536</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850676536</updated>
+    </task>
+    <option name="localTasksCounter" value="54" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -486,8 +486,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix event, helpers" />
-    <MESSAGE value="fix sse_hub, collect loop" />
     <MESSAGE value="fix dashboard, cache, request_id, api, fresh" />
     <MESSAGE value="fix moduls arch" />
     <MESSAGE value="pep8 + docs + unittests" />
@@ -511,6 +509,8 @@
     <MESSAGE value="add test_connections&#10;add fast start ui" />
     <MESSAGE value="fix ui" />
     <MESSAGE value="add docs" />
-    <option name="LAST_COMMIT_MESSAGE" value="add docs" />
+    <MESSAGE value="fix port 8020" />
+    <MESSAGE value="fix docker" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix docker" />
   </component>
 </project>
