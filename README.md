@@ -50,8 +50,7 @@ MIT License (2026). See `LICENSE`.
 │   ├── static/         # Dashboard JS/CSS/assets
 │   └── templates/      # Jinja2 pages/partials
 ├── ci_monitor.py       # CLI entrypoint
-├── config.yaml         # Instance configuration
-├── config.example.yaml # Example configuration
+├── config.example.yaml # Example defaults (first seed into DB)
 ├── pyproject.toml      # Tooling config (ruff/pytest/etc.)
 ├── requirements.txt    # Runtime dependencies
 └── data/               # Runtime/generated (monitor.db, reports, ...)
@@ -79,7 +78,7 @@ MIT License (2026). See `LICENSE`.
 **Requirements:** [Docker](https://docs.docker.com/get-docker/) with Compose v2 (Docker Desktop includes it).
 
 The repository includes a `Dockerfile` and a `compose.yml` for a **one-command start**.
-No local Python is required. On first start the app copies `config.example.yaml` into a persistent volume; edit later via **Settings** in the UI (or by replacing the file inside the `pipeline-monitor-runtime` volume).
+No local Python is required. The app stores **all settings in SQLite** (`data/monitor.db` key `app_config_json`); on first start it seeds from `config.example.yaml` if the DB is empty. Edit later via **Settings** in the UI.
 
 **From a fresh clone**
 
@@ -111,7 +110,8 @@ docker compose down
 ```bash
 docker pull ghcr.io/craxti/pipeline-monitor:latest
 docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
-  -v pipeline-monitor-runtime:/app/runtime \
+  -e CICD_MON_DATA_DIR=/app/data \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   -v pipeline-monitor-data:/app/data \
   ghcr.io/craxti/pipeline-monitor:latest
 ```
@@ -119,11 +119,10 @@ docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
 If the first pull 404s, the image is not published yet: use `docker compose up -d --build` from a clone, or your fork’s `ghcr.io/<fork-owner>/<repo>:<tag>`. After you push, open the latest **Actions** run for the **Docker publish** workflow and confirm the **Build and push** step is green; if it failed, the image is not in GHCR yet. A successful push appears under **GitHub → Packages** for the repo (not under **Code** in the file tree). Private images require `docker login ghcr.io` before `docker pull`.
 
 Notes:
-- **Config persistence**: stored in Docker volume `pipeline-monitor-runtime` (`/app/runtime/config.yaml`).
-- **Data persistence**: stored in Docker volume `pipeline-monitor-data` (`/app/data`).
-- **Bootstrap config**: on first start, the entrypoint copies `config.example.yaml` to `/app/runtime/config.yaml` and symlinks it as `/app/config.yaml`.
+- **Config + history DB**: stored in Docker volume `pipeline-monitor-data` as `/app/data/monitor.db` (settings + `meta` + historical tables).
+- **Docker monitoring from the container** (optional): mount `/var/run/docker.sock` as in the `docker run` example and `compose.yml`.
 - **Port**: `8020:8020` (change the host side in `compose.yml` if needed, e.g. `9080:8020`).
-- **API token (optional)**: set `CICD_MON_API_TOKEN` under `environment` in `compose.yml` (or `web.api_token` in the saved `config.yaml` in the volume).
+- **API token (optional)**: set `CICD_MON_API_TOKEN` in `compose.yml` or `web.api_token` in **Settings** (saved in the DB).
 
 ### Run with Docker (without compose)
 
@@ -135,8 +134,9 @@ docker build -t pipeline-monitor-web:local .
 
 ```bash
 docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
+  -e CICD_MON_DATA_DIR=/app/data \
   -e PYTHONUNBUFFERED=1 \
-  -v pipeline-monitor-runtime:/app/runtime \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   -v pipeline-monitor-data:/app/data \
   --restart unless-stopped \
   pipeline-monitor-web:local
@@ -146,14 +146,17 @@ docker run --rm -d --name pipeline-monitor-web -p 8020:8020 \
 
 ```powershell
 docker run -d --name pipeline-monitor-web -p 8020:8020 `
+  -e CICD_MON_DATA_DIR=/app/data `
   -e PYTHONUNBUFFERED=1 `
-  -v pipeline-monitor-runtime:/app/runtime `
+  -v /var/run/docker.sock:/var/run/docker.sock `
   -v pipeline-monitor-data:/app/data `
   --restart unless-stopped `
   pipeline-monitor-web:local
 ```
 
-Do **not** mount a file onto `/app/config.yaml` with this image: the entrypoint uses a symlink to `/app/runtime/config.yaml` inside the volume. Use the runtime volume (or edit in UI).
+Settings and history live in `monitor.db` on the `pipeline-monitor-data` volume; use **Settings** in the UI or a DB backup to change configuration.
+
+**Migrating an old `config.yaml` into the DB:** on first start with an empty `monitor.db`, the app will import a file at `/app/config.yaml` if you mount it (read-only is fine), e.g. `-v /path/to/config.yaml:/app/config.yaml:ro` for one run, then remove the mount.
 
 ### 1. Install dependencies
 
@@ -163,7 +166,7 @@ py -m pip install -r requirements.txt
 
 ### 2. Configure
 
-Edit `config.yaml` — at minimum enable the systems you use.
+Use **Settings** in the web UI (or seed/migrate: optional local `config.yaml` is read once to populate the DB on first start if the DB is empty; primary store is `data/monitor.db`). At minimum, enable the systems you use in Settings.
 The current config supports **multiple Jenkins and GitLab instances**.
 
 ```yaml
@@ -233,7 +236,7 @@ py ci_monitor.py web
 # open http://127.0.0.1:8020 (or whatever web.host/web.port are)
 ```
 
-If the page never finishes loading while `web.live_reload` is `true`, set it to `false` in `config.yaml`. Uvicorn’s `--reload` restarts the worker when files under `web/` change; rapid restarts (IDE, formatters) can interrupt the browser. Reload mode watches only the `web/` tree, not the whole repo.
+If the page never finishes loading while `web.live_reload` is `true`, set it to `false` in **Settings** (saved in `data/monitor.db`). Uvicorn’s `--reload` restarts the worker when files under `web/` change; rapid restarts (IDE, formatters) can interrupt the browser. Reload mode watches only the `web/` tree, not the whole repo.
 
 The dashboard shows:
 - Builds / pipelines (Jenkins & GitLab)
@@ -251,7 +254,7 @@ You can require a shared token (header) for dangerous endpoints: saving settings
 Configure either:
 
 - **Environment variable**: `CICD_MON_API_TOKEN`
-- **config.yaml**: `web.api_token: "<token>"`
+- **Settings / DB**: `web.api_token: "<token>"` in the app config (stored in `data/monitor.db`)
 
 If no token is configured, auth is **disabled** for backward compatibility.
 
@@ -265,14 +268,14 @@ If you run Ollama locally, you can point the dashboard AI provider to an OpenAI-
 ### 6. Check Docker / HTTP services
 
 ```bash
-# Enable in config.yaml first
+# Enable docker_monitor in Settings first
 py ci_monitor.py docker-check
 ```
 
 ### 7. Send Telegram notifications
 
 ```bash
-# Enable in config.yaml, then:
+# Enable notifications in Settings, then:
 py ci_monitor.py collect --notify
 # or standalone:
 py ci_monitor.py notify
@@ -283,7 +286,9 @@ py ci_monitor.py notify
 ## CLI Reference
 
 ```
-py ci_monitor.py [--config CONFIG] [--log-level LEVEL] COMMAND [OPTIONS]
+py ci_monitor.py [--config FILE.yaml] [--log-level LEVEL] COMMAND [OPTIONS]
+
+Omit `--config` to use the same settings as the web app (stored in `data/monitor.db`).
 
 Commands:
   collect       Collect CI/CD data and generate reports
@@ -301,7 +306,7 @@ collect options:
 
 ---
 
-## Configuration Reference (`config.yaml`)
+## Configuration Reference (Settings / `monitor.db`; shape matches YAML)
 
 ```yaml
 general:
@@ -436,8 +441,7 @@ py ci_monitor.py collect --format all --notify
 ```
 pipeline-monitor/
 ├── ci_monitor.py          # Main CLI entry point
-├── config.yaml            # Local instance configuration
-├── config.example.yaml    # Example configuration
+├── config.example.yaml    # Example seed (imported into DB on first start)
 ├── config_migrations.py   # Config migrations/helpers
 ├── requirements.txt       # Runtime dependencies
 ├── pyproject.toml         # Tooling config (ruff/pytest/etc.)
@@ -468,7 +472,7 @@ pipeline-monitor/
 
 1. Create `parsers/testng_parser.py` inheriting from `BaseParser`
 2. Set `glob_pattern` and implement `parse_file()` returning `list[TestRecord]`
-3. Add its directory config to `config.yaml` under `parsers:`
+3. Add its directory config under `parsers:` in **Settings** (same shape as the reference below)
 
 ---
 
@@ -501,7 +505,7 @@ pipeline-monitor/
 py ci_monitor.py report --format html
 py ci_monitor.py report --format csv
 
-# Optional: collect using your local parsers (configure `parsers.*_dirs` in config.yaml)
+# Optional: collect using your local parsers (configure `parsers.*_dirs` in Settings)
 # py ci_monitor.py collect --format all
 
 # Start dashboard

@@ -18,7 +18,6 @@ async def api_save_settings(
     *,
     settings_api_save: Callable[..., Awaitable[Any]],
     load_cfg: Callable[[], dict],
-    config_yaml_path: Callable[[], Any],
     collect_state: dict,
     collect_loop_task_ref: dict,
     create_collect_loop_task: Callable[[dict], asyncio.Task],
@@ -59,7 +58,6 @@ async def api_save_settings(
     return await settings_api_save(
         request_json=request.json,
         load_cfg=load_cfg,
-        config_yaml_path=config_yaml_path,
         cancel_collect_task=_cancel_collect_task,
         set_collect_state_after_save=_set_collect_state_after_save,
         restart_collect_after_save=_restart_collect_after_save,

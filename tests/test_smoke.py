@@ -15,7 +15,7 @@ ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Change working directory so the app can find config.yaml and data/
+# Change working directory so ``data/`` and ``monitor.db`` use the test repo.
 import os
 
 os.chdir(ROOT)

@@ -15,7 +15,7 @@ def shared_api_token(cfg: Optional[dict] = None) -> str:
     Shared token for protecting sensitive endpoints.
     Sources (highest priority first):
     - env: CICD_MON_API_TOKEN
-    - config.yaml: web.api_token
+    - runtime config: web.api_token in SQLite (``app_config`` / Settings)
     If empty, auth is considered disabled (backwards-compatible).
     """
     env_tok = (os.getenv("CICD_MON_API_TOKEN") or "").strip()

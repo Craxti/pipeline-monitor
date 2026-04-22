@@ -1,12 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-mkdir -p /app/runtime /app/data
+mkdir -p /app/data
 
-if [ ! -f /app/runtime/config.yaml ]; then
-  cp /app/config.example.yaml /app/runtime/config.yaml
-fi
+# All settings live in SQLite: /app/data/monitor.db (meta `app_config_json`)
+export CICD_MON_DATA_DIR="/app/data"
 
-ln -sf /app/runtime/config.yaml /app/config.yaml
-
+cd /app
 exec python /app/ci_monitor.py web

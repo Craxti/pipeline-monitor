@@ -292,7 +292,7 @@ def _resolve_cursor_agent_from_config(cfg: dict) -> str | None:
 
 
 def resolve_cursor_agent_cached(cfg: dict) -> str | None:
-    """Resolve Cursor Agent binary path, caching by `config.yaml` mtime."""
+    """Resolve Cursor Agent binary path, caching by config DB mtime (``monitor.db``)."""
     global _cursor_agent_resolve_cache
     cpath = config_yaml_path()
     try:

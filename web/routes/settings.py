@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from web.core.auth import require_shared_token
-from web.core.config import config_yaml_path, load_yaml_config
+from web.core.config import load_yaml_config
 from web.core import runtime as rt
 from web.core.templates import create_templates
 from web.services import (
@@ -107,7 +107,6 @@ async def api_settings_save_route(request: Request):
         request,
         settings_api_save=settings_api.save_settings_and_restart_collect,
         load_cfg=load_yaml_config,
-        config_yaml_path=config_yaml_path,
         collect_state=rt.collect_state,
         collect_loop_task_ref=task_ref,
         create_collect_loop_task=lambda cfg: asyncio.create_task(

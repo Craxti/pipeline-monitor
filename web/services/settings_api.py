@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
-import yaml
 from fastapi import HTTPException
 
+from web.core.config import save_app_config
 from web.core.settings_secrets import (
     mask_settings_for_response,
     merge_settings_secrets,
@@ -27,7 +27,6 @@ async def save_settings_and_restart_collect(
     *,
     request_json: Callable[[], Awaitable[Any]],
     load_cfg: Callable[[], dict],
-    config_yaml_path: Callable[[], Any],
     cancel_collect_task: Callable[[], Awaitable[None]],
     set_collect_state_after_save: Callable[[dict], None],
     restart_collect_after_save: Callable[[dict], None],
@@ -41,11 +40,7 @@ async def save_settings_and_restart_collect(
 
     saved = load_cfg()
     merged = merge_settings_secrets(new_cfg, saved)
-
-    p = config_yaml_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with p.open("w", encoding="utf-8") as fh:
-        yaml.dump(merged, fh, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    save_app_config(merged)
 
     await cancel_collect_task()
     set_collect_state_after_save(merged)

@@ -135,34 +135,25 @@ class TestWebCoreConfig:
         assert out["jenkins_instances"][0]["name"] == "Jenkins"
         assert out["gitlab_instances"][0]["name"] == "GitLab"
 
-    def test_config_yaml_path_prefers_repo_root(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_config_store_path_uses_cicd_mon_data_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        from web.core import config as cfg_mod
+
+        dd = tmp_path / "dd"
+        dd.mkdir()
+        monkeypatch.setenv("CICD_MON_DATA_DIR", str(dd))
+        p = cfg_mod.config_yaml_path()
+        assert p == dd / "monitor.db"
+
+    def test_data_dir_bootstrap_from_legacy_config_yaml(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from web.core import config as cfg_mod
         from web.core import paths as paths_mod
 
-        repo_root = tmp_path / "repo"
-        repo_root.mkdir()
-        (repo_root / "config.yaml").write_text("x: 1", encoding="utf-8")
-
-        monkeypatch.setattr(paths_mod, "REPO_ROOT", repo_root)
-        p = cfg_mod.config_yaml_path()
-        assert p == repo_root / "config.yaml"
-
-    def test_config_yaml_path_falls_back_to_cwd_when_repo_missing(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        from web.core import config as cfg_mod
-        from web.core import paths as paths_mod
-
-        repo_root = tmp_path / "repo"
-        repo_root.mkdir()
-        # no repo_root/config.yaml
-
-        cwd = tmp_path / "cwd"
-        cwd.mkdir()
-        (cwd / "config.yaml").write_text("x: 2", encoding="utf-8")
-
-        monkeypatch.setattr(paths_mod, "REPO_ROOT", repo_root)
-        monkeypatch.chdir(cwd)
-
-        p = cfg_mod.config_yaml_path()
-        assert p == (cwd / "config.yaml").resolve()
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "config.yaml").write_text(
+            "general:\n  data_dir: customd\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(paths_mod, "REPO_ROOT", repo)
+        p = cfg_mod.data_dir_bootstrap()
+        assert p == (repo / "customd").resolve()

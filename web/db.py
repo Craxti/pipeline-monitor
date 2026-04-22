@@ -37,6 +37,8 @@ META_LATEST_SNAPSHOT = "latest_snapshot_json"
 META_LATEST_SNAPSHOT_SEQ = "latest_snapshot_seq"
 META_EVENT_FEED = "event_feed_json"
 META_TRENDS_HISTORY = "trends_history_json"
+# Full app configuration JSON (replaces `config.yaml` in production).
+META_APP_CONFIG_JSON = "app_config_json"
 
 
 def init_db(data_dir: str | Path) -> Path:
@@ -219,7 +221,7 @@ def _migrate_legacy_json_files(conn: sqlite3.Connection, data_dir: Path) -> None
 
 
 def ensure_database_initialized(*, data_dir: str | Path | None = None) -> bool:
-    """Open SQLite under ``general.data_dir`` (or explicit ``data_dir``). Returns False on failure."""
+    """Open SQLite (``CICD_MON_DATA_DIR`` / ``general.data_dir`` in legacy yaml / ``data``). Returns False on failure."""
     if data_dir is not None:
         try:
             init_db(data_dir)
@@ -229,13 +231,40 @@ def ensure_database_initialized(*, data_dir: str | Path | None = None) -> bool:
     if _DB_PATH is not None:
         return True
     try:
-        from web.core.config import load_yaml_config
+        import os
 
-        cfg = load_yaml_config()
-        init_db(cfg.get("general", {}).get("data_dir", "data"))
+        from web.core.config import data_dir_bootstrap
+
+        init_db(data_dir_bootstrap())
     except Exception:
-        logger.debug("ensure_database_initialized (yaml) failed", exc_info=True)
+        logger.debug("ensure_database_initialized (bootstrap) failed", exc_info=True)
     return _DB_PATH is not None
+
+
+def get_app_config_from_db() -> dict | None:
+    """Load JSON app config from ``meta``; ``None`` if missing or not initialized."""
+    if _DB_PATH is None:
+        return None
+    try:
+        with _conn() as conn:
+            raw = _meta_get(conn, META_APP_CONFIG_JSON)
+    except Exception as exc:
+        logger.debug("get_app_config_from_db failed: %s", exc)
+        return None
+    if not (raw or "").strip():
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+
+def set_app_config_to_db(cfg: dict) -> None:
+    """Serialize and store the full app configuration in ``meta`` (requires ``init_db`` first)."""
+    if _DB_PATH is None:
+        raise RuntimeError("DB not initialized")
+    with _conn() as conn:
+        _meta_set(conn, META_APP_CONFIG_JSON, json.dumps(cfg, ensure_ascii=False, indent=2))
 
 
 def is_db_ready() -> bool:

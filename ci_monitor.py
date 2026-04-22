@@ -3,8 +3,8 @@
 CI/CD Monitor — main entry point.
 
 Usage examples:
-  python ci_monitor.py collect --config config.yaml
-  python ci_monitor.py collect --config config.yaml --from yesterday --format all
+  python ci_monitor.py collect
+  python ci_monitor.py collect --config legacy.yaml
   python ci_monitor.py report  --format html
   python ci_monitor.py web
   python ci_monitor.py docker-check
@@ -35,11 +35,12 @@ from config_migrations import migrate_telegram_notifications
 from notifications.telegram_notifier import notify_telegram_from_config
 from docker_monitor.monitor import DockerMonitor
 from web.app import save_snapshot
+from web.core.logging_setup import clear_request_id, configure_logging
 
 
 # ── Optional hardcoded Jenkins overrides ──────────────────────────────────────
 #
-# If you want to run without putting credentials/jobs into config.yaml, you can
+# If you want to run without storing credentials in SQLite or YAML, you can
 # set these constants прямо в коде. When set, they override every Jenkins
 # instance in config.
 #
@@ -55,7 +56,7 @@ JENKINS_VERIFY_SSL: bool | None = None  # True/False to override; None = use con
 # If non-empty, only these Jenkins jobs will be collected (for all instances).
 # Each entry becomes {"name": <job>, "critical": False, "parse_console": True}.
 # If you want allowlist to apply only to one Jenkins instance, set
-# JENKINS_ALLOWLIST_INSTANCE_NAME to that instance's `name` from config.yaml.
+# JENKINS_ALLOWLIST_INSTANCE_NAME to that instance's `name` from the app config.
 JENKINS_ALLOWLIST_INSTANCE_NAME: str = ""  # e.g. "ProofTech Jenkins"
 JENKINS_JOBS_ALLOWLIST: list[str] = []
 
@@ -64,11 +65,8 @@ JENKINS_JOBS_ALLOWLIST: list[str] = []
 
 
 def _setup_logging(level: str = "INFO") -> None:
-    logging.basicConfig(
-        level=getattr(logging, level.upper(), logging.INFO),
-        format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    configure_logging(level=level)
+    clear_request_id()
 
 
 # ── Config helpers ────────────────────────────────────────────────────────────
@@ -149,13 +147,28 @@ def _save_snapshot(snapshot: CISnapshot, cfg: dict) -> None:
 
 
 @click.group()
-@click.option("--config", "-c", default="config.yaml", show_default=True, help="Path to YAML config file.")
+@click.option(
+    "--config",
+    "-c",
+    default=None,
+    type=click.Path(),
+    help="Optional YAML (CLI only). Omit to use the same config as the web app (stored in monitor.db).",
+)
 @click.option("--log-level", default=None, help="Override log level (DEBUG/INFO/WARNING).")
 @click.pass_context
-def cli(ctx: click.Context, config: str, log_level: Optional[str]) -> None:
+def cli(ctx: click.Context, config: Optional[str], log_level: Optional[str]) -> None:
     """CI/CD Monitor — collect, report, and watch your pipelines."""
     ctx.ensure_object(dict)
-    cfg = _load_config(config)
+    if config is None:
+        pr = Path(__file__).resolve().parent
+        import os
+
+        os.chdir(pr)
+        from web.core.config import load_yaml_config
+
+        cfg = load_yaml_config()
+    else:
+        cfg = _load_config(config)
     log_lvl = log_level or cfg.get("general", {}).get("log_level", "INFO")
     _setup_logging(log_lvl)
     ctx.obj["cfg"] = cfg
@@ -387,7 +400,7 @@ def web(ctx: click.Context) -> None:
             "Only the `web/` tree is watched — edits under `parsers/`, `data/`, etc. do not reload the server."
         )
         click.echo(
-            "[web] If the browser never loads or keeps spinning, set `web.live_reload: false` in config.yaml "
+            "[web] If the browser never loads or keeps spinning, set `web.live_reload: false` in Settings (SQLite) "
             "(constant reloads from IDE/indexers interrupt connections)."
         )
         uvicorn.run(
@@ -426,7 +439,7 @@ def docker_check(ctx: click.Context) -> None:
     )
     statuses = monitor.check_all()
     if not statuses:
-        click.echo("[docker-check] No services checked (configure docker_monitor in config.yaml).")
+        click.echo("[docker-check] No services checked (enable/configure docker_monitor in the app config).")
         return
     for s in statuses:
         icon = "✅" if s.status == "up" else "❌"

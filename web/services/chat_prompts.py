@@ -22,7 +22,7 @@ CHAT_TEXTS: dict[str, dict[str, str]] = {
             "can offer a re-run button.\n"
             "- If the user asks to collect/refresh data, say 'collect' or 'refresh data'.\n"
             "- The client sends the exact browser page and tab in «Current UI location». "
-            "Treat that as where the user is now: on Settings, focus on config.yaml fields and "
+            "Treat that as where the user is now: on Settings, focus on app config fields and "
             "CI monitor settings; on a dashboard tab, focus on that tab (builds, tests, services, ...).\n"
         ),
         "runbook_focus_tests": (
@@ -63,7 +63,7 @@ CHAT_TEXTS: dict[str, dict[str, str]] = {
             "- Если джоб нужно перезапустить, явно указывай имя джоба для кнопки rerun.\n"
             "- Если пользователь просит обновить данные, явно скажи collect / refresh data.\n"
             "- Клиент передает точное место в UI через «Current UI location». "
-            "На Settings фокусируйся на полях config.yaml и настройках монитора, "
+            "На Settings фокусируйся на полях настроек монитора (SQLite/Settings), "
             "на вкладках дашборда — на соответствующей вкладке (builds/tests/services и т.д.).\n"
         ),
         "runbook_focus_tests": (

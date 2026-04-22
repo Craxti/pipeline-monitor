@@ -14,6 +14,6 @@ RUN chmod +x /app/docker/entrypoint.sh
 
 EXPOSE 8020
 
-# Default: bootstrap runtime config + start dashboard.
+# Default: config in ``/app/data/monitor.db`` + start dashboard.
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 
