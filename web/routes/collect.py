@@ -21,7 +21,7 @@ async def collect_status_route():
     return collect_endpoints.collect_status(
         collect_status_payload=collect_api.collect_status_payload,
         collect_state=rt.collect_state,
-        auto_collect_enabled=bool(rt.auto_collect_rt.enabled),
+        auto_collect_enabled=True,
         auto_collect_enabled_at_iso=rt.auto_collect_rt.enabled_at_iso,
     )
 

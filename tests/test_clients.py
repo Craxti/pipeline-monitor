@@ -138,11 +138,34 @@ class TestJenkinsClient:
         client = _make_jenkins()
         fake_resp = MagicMock()
         fake_resp.status_code = 201
-        with patch.object(client, "_post", return_value=fake_resp) as mock_post:
-            result = client.trigger_build("myjob")
-        mock_post.assert_called_once_with("/job/myjob/build")
+        fake_resp.headers = {"Location": ""}
+        with patch.object(client, "_get", return_value={}):
+            with patch.object(client, "_post", return_value=fake_resp) as mock_post:
+                result = client.trigger_build("myjob")
+        mock_post.assert_called_once_with("/job/myjob/build", headers=None)
         assert result["ok"] is True
         assert result["job"] == "myjob"
+
+    def test_trigger_build_polls_queue_when_location_set(self) -> None:
+        client = _make_jenkins()
+        fake_resp = MagicMock()
+        fake_resp.status_code = 201
+        fake_resp.headers = {"Location": "http://jenkins/queue/item/5/"}
+
+        queue_json = {"executable": {"number": 42, "url": "http://jenkins/job/myjob/42/"}}
+
+        def _get_side_effect(path: str, **kw):
+            if "crumbIssuer" in path:
+                return {}
+            if "queue/item" in path:
+                return queue_json
+            return {}
+
+        with patch.object(client, "_get", side_effect=_get_side_effect):
+            with patch.object(client, "_post", return_value=fake_resp):
+                result = client.trigger_build("myjob")
+        assert result.get("build_number") == 42
+        assert "myjob" in (result.get("url") or "")
 
 
 # ── GitLabClient ──────────────────────────────────────────────────────────────

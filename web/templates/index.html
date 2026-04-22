@@ -15,12 +15,12 @@
 <script src="/static/dashboard.helpers.formatters.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
-<script src="/static/dashboard.helpers.state.js?v=20260419c" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260422g" defer></script>
 <script src="/static/dashboard.helpers.ui.js?v=20260422a" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
-<script src="/static/dashboard.builds.js?v=20260422e" defer></script>
+<script src="/static/dashboard.builds.js?v=20260422g" defer></script>
 <script src="/static/dashboard.failures.js?v=20260420d" defer></script>
 <script src="/static/dashboard.tests.js?v=20260420d" defer></script>
 <script src="/static/dashboard.services.js?v=20260422c" defer></script>
@@ -30,33 +30,25 @@
 <script src="/static/dashboard.timeline.js?v=20260417i" defer></script>
 <script src="/static/dashboard.flaky.js?v=20260417i" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
-<script src="/static/dashboard.load-summary.js?v=20260417i" defer></script>
-<script src="/static/dashboard.collect-bar.js?v=20260419a" defer></script>
+<script src="/static/dashboard.load-summary.js?v=20260422a" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260422h" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
 <script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.js?v=20260420h" defer></script>
-<script src="/static/dashboard.actions.js?v=20260422f" defer></script>
+<script src="/static/dashboard.actions.js?v=20260422g" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260417i" defer></script>
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
-<script src="/static/dashboard.live.js?v=20260417i" defer></script>
-<script src="/static/dashboard.init.js?v=20260417i" defer></script>
+<script src="/static/dashboard.live.js?v=20260422h" defer></script>
+<script src="/static/dashboard.init.js?v=20260422h" defer></script>
 
 <!-- ── Header ── -->
 <header>
   <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
   <h1 data-i18n="dash.app_title">CI/CD Monitor</h1>
   <p class="app-tagline" data-i18n="dash.tagline">One panel for CI + tests + services.</p>
-  <div class="live-block">
-    <label class="live-toggle" id="live-toggle-wrap" data-i18n-title="dash.live_mode_hint">
-      <input type="checkbox" id="chk-live-mode" aria-describedby="live-help-text" />
-      <span class="pill live-pill" data-i18n="dash.live">LIVE</span>
-    </label>
-    <span id="live-help-text" class="live-help" data-i18n="dash.live_help"></span>
-  </div>
-
   <div class="collect-bar">
     <div class="dot" id="cdot"></div>
     <div class="collect-text" role="status" aria-live="polite" aria-relevant="text">
@@ -71,10 +63,6 @@
       &#9632; <span data-i18n="dash.collect_stop">Stop</span>
     </button>
   </div>
-  <label class="live-toggle" style="margin-left:.35rem" data-i18n-title="dash.collect_full_title" title="">
-    <input type="checkbox" id="collect-full">
-    <span class="pill" style="font-size:.72rem" data-i18n="dash.collect_full_pill">FULL</span>
-  </label>
   <button class="btn btn-ghost" data-dash-action="refreshAll">&#8635; <span data-i18n="dash.refresh">Refresh</span></button>
   <button class="btn btn-ghost" id="btn-theme" data-dash-action="toggleTheme" data-i18n-title="dash.theme" title="">&#9681;</button>
   <div class="lang-toggle" id="lang-toggle" data-i18n-title="dash.lang_title" title="">

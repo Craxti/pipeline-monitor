@@ -13,6 +13,7 @@ from web.services import (
     cursor_proxy_lifecycle,
     lifespan_factory,
     proxy_routes,
+    service_logs_bridge,
     sqlite_boot,
 )
 
@@ -37,6 +38,7 @@ def make_app_lifespan(
     """
 
     collect_task: asyncio.Task | None = None
+    service_log_handler: logging.Handler | None = None
 
     def _set_main_loop(loop: asyncio.AbstractEventLoop) -> None:
         rt.main_loop = loop
@@ -62,6 +64,11 @@ def make_app_lifespan(
         return collect_task
 
     def _log_boot(proxy_paths: list[str]) -> None:
+        nonlocal service_log_handler
+        if service_log_handler is None:
+            service_log_handler = service_logs_bridge.install_runtime_collect_log_bridge(
+                push_log=rt.collect_rt_state.push_log
+            )
         app_boot_log.log_boot(
             app_build=app_build,
             config_path=config_path(),
@@ -77,6 +84,9 @@ def make_app_lifespan(
         )
 
     async def _shutdown_proxy() -> None:
+        nonlocal service_log_handler
+        service_logs_bridge.uninstall_runtime_collect_log_bridge(service_log_handler)
+        service_log_handler = None
         await cursor_proxy_lifecycle.shutdown_proxy(
             shutdown_fn=shutdown_embedded_cursor_proxy,
             logger=logger,

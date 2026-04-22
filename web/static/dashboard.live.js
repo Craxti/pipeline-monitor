@@ -27,37 +27,32 @@ function applyLivePollingIntervals(opts) {
     refreshAll();
   }
   pollCollect();
+  const period = typeof liveDashboardPollMs === 'function' ? liveDashboardPollMs() : 20000;
   _ivAutoRefresh = setInterval(() => {
     refreshAll();
     pollCollect();
-  }, 5 * 60 * 1000);
+  }, period);
+}
+
+/** Re-schedule LIVE timers after config from /api/meta changes (poll interval). */
+function restartLiveDashboardTimers() {
+  if (!_liveMode) return;
+  applyLivePollingIntervals({ skipInitialFullRefresh: true });
 }
 
 /**
  * @param {boolean} on
  * @param {{ skipInitialFullRefresh?: boolean }} [opts]
- * @param {boolean} [syncServer] When false, do not POST /api/collect/auto (used on first paint if LIVE is off,
- *   so headless ``web.auto_collect`` stays enabled). Omit or true: always sync (checkbox changes).
+ * @param {boolean} [_syncServer] Deprecated; background collect is always on (no /api/collect/auto from UI).
  */
-function setLiveMode(on, opts, syncServer) {
+function setLiveMode(on, opts, _syncServer) {
   opts = opts || {};
-  if (syncServer === undefined) syncServer = true;
   _liveMode = !!on;
-  try { localStorage.setItem('cimon-live', _liveMode ? '1' : '0'); } catch { /* ignore */ }
   document.body.classList.toggle('dashboard-live', _liveMode);
   const w = document.getElementById('live-toggle-wrap');
   if (w) w.classList.toggle('is-live', _liveMode);
   const chk = document.getElementById('chk-live-mode');
   if (chk) chk.checked = _liveMode;
-  if (syncServer) {
-    try {
-      fetch(apiUrl('api/collect/auto'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: _liveMode }),
-      }).catch(() => null);
-    } catch { /* ignore */ }
-  }
   applyLivePollingIntervals(opts);
 }
 

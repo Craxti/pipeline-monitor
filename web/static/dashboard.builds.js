@@ -6,10 +6,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 function resetBuilds(soft=false, force=false) {
   const s = _state.builds; s.page=1; s.done=false;
+  if (force) _lastBuildsPageSig = '';
   if (force) {
     try { abortFetchKey('builds'); } catch { /* ignore */ }
     s.loading = false;
   }
+  if (!soft) _lastBuildsPageSig = '';
   const tb = document.getElementById('tbody-builds');
   // Soft reset keeps current rows visible until the refreshed data arrives.
   if (!soft) {
@@ -77,6 +79,15 @@ async function loadBuilds() {
   const favKeys = _loadFavKeys();
   const _srcKey = (x) => String(x || '').trim().toLowerCase();
   const _instKey = (x) => String(x || '').trim().toLowerCase();
+  const _buildsRowSig = (b) => [
+    _srcKey(b.source),
+    _instKey(b.instance),
+    String(b.job_name ?? ''),
+    String(b.build_number ?? ''),
+    String(b.status_normalized || b.status || ''),
+    String(b.duration_seconds ?? ''),
+    String(b.started_at || ''),
+  ].join('\x1f');
   const sorted = [...rows].sort((a, b) => (a.source || '').localeCompare(b.source || '') || String(a.instance || '').localeCompare(String(b.instance || '')) || String(a.started_at || '').localeCompare(String(b.started_at || '')));
   const groupCountsApi = data.group_counts && typeof data.group_counts === 'object' ? data.group_counts : null;
   // Fallback: per-page counts (if API omits group_counts).
@@ -190,8 +201,18 @@ async function loadBuilds() {
   </tr>`);
   });
   const html = htmlParts.join('');
-  if (s.page === 1) tbody.innerHTML = html;
-  else tbody.insertAdjacentHTML('beforeend', html);
+  if (s.page === 1) {
+    const pageSig = sorted.map(_buildsRowSig).join('\x1e');
+    if (_liveMode && pageSig && pageSig === _lastBuildsPageSig) {
+      s.loading = false;
+      updateFilterSummary();
+      _applyGlobalSearch();
+      if (!data.has_more) s.done = true;
+      return;
+    }
+    _lastBuildsPageSig = pageSig;
+    tbody.innerHTML = html;
+  } else tbody.insertAdjacentHTML('beforeend', html);
   // Apply collapsed state for any groups present in this page.
   try {
     const keys = new Set(sorted.map((b) => encodeURIComponent(`${_srcKey(b.source)}||${_instKey(b.instance)}`)));

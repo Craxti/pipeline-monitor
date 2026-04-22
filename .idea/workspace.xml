@@ -4,24 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix config.yaml">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix actions start restart stop docker/jenkins/git">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/base.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/base.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/clients/jenkins_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/jenkins_client.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.example.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker_monitor/monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/docker_monitor/monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/actions_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/actions_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/logs_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/logs_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/logs_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/ops_actions.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/ops_actions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.actions.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.actions.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/routes/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/meta_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/meta_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/public_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/public_settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/static/dashboard.builds.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.builds.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.services.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.services.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.init.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.init.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.live.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.live.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -143,13 +138,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00009" summary="fix visuals">
-      <created>1776430425389</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1776430425389</updated>
     </task>
     <task id="LOCAL-00010" summary="fix visuals">
       <created>1776434495028</created>
@@ -487,7 +475,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776854064338</updated>
     </task>
-    <option name="localTasksCounter" value="58" />
+    <task id="LOCAL-00058" summary="fix actions start restart stop docker/jenkins/git">
+      <created>1776857733136</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1776857733136</updated>
+    </task>
+    <option name="localTasksCounter" value="59" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -502,7 +497,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fix moduls arch" />
     <MESSAGE value="pep8 + docs + unittests" />
     <MESSAGE value="pars fix" />
     <MESSAGE value="pep8" />
@@ -527,6 +521,7 @@
     <MESSAGE value="fix port 8020" />
     <MESSAGE value="fix docker" />
     <MESSAGE value="fix config.yaml" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix config.yaml" />
+    <MESSAGE value="fix actions start restart stop docker/jenkins/git" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix actions start restart stop docker/jenkins/git" />
   </component>
 </project>

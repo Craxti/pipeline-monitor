@@ -37,11 +37,20 @@ async def api_save_settings(
             collect_loop_task_ref["task"] = None
 
     def _set_collect_state_after_save(merged: dict) -> None:
+        from web.services import collect_interval_policy as _cip
+
         collect_state["is_collecting"] = False
         collect_state["cancel_requested"] = False
         collect_state["last_error"] = None
         w_cfg = merged.get("web", {})
-        collect_state["interval_seconds"] = int(w_cfg.get("collect_interval_seconds", 300))
+        if w_cfg.get("auto_collect", True):
+            collect_state["dashboard_live_fast_collect"] = True
+        else:
+            collect_state["dashboard_live_fast_collect"] = False
+        collect_state["interval_seconds"] = _cip.effective_collect_interval_seconds(
+            w_cfg,
+            dashboard_live_fast_collect=bool(collect_state.get("dashboard_live_fast_collect")),
+        )
 
     def _restart_collect_after_save(merged: dict) -> None:
         import logging

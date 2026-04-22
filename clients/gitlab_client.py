@@ -112,8 +112,17 @@ class GitLabClient(BaseCIClient):
         if resolved is None:
             resolved = quote_plus(project_id)
         resp = self._post(f"/api/v4/projects/{resolved}/pipeline", json={"ref": ref})
-        data = resp.json()
-        return {"ok": True, "pipeline_id": data.get("id"), "web_url": data.get("web_url")}
+        raw = resp.json()
+        data = raw if isinstance(raw, dict) else {}
+        return {
+            "ok": True,
+            "pipeline_id": data.get("id"),
+            "web_url": data.get("web_url"),
+            "ref": data.get("ref") or ref,
+            "status": data.get("status"),
+            "created_at": data.get("created_at"),
+            "project_id": project_id,
+        }
 
     def fetch_project_list(self) -> list[str]:
         """Return path_with_namespace for all projects the token has access to."""

@@ -35,6 +35,14 @@ async function loadSummary() {
   }
   if (metaObj) {
     _jobAnalytics = metaObj.job_analytics || {};
+    const wu = metaObj.web_ui;
+    if (wu && typeof wu.live_dashboard_poll_seconds !== 'undefined') {
+      const next = _clampLiveDashboardPollSec(wu.live_dashboard_poll_seconds);
+      if (next !== _liveDashboardPollSec) {
+        _liveDashboardPollSec = next;
+        try { restartLiveDashboardTimers(); } catch { /* live.js not loaded yet */ }
+      }
+    }
     updateCorrelationHint(metaObj);
   } else {
     const ch = document.getElementById('correlation-hint');

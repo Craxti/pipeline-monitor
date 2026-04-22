@@ -102,7 +102,7 @@ const I18N = {
       test_failures: 'Test failures',
       services: 'Services',
       notes: 'Notes',
-      notes_body: 'If you suspect stale data, run Collect (or FULL). Use the Logs tab to spot retries, 429/503, and slow jobs.',
+      notes_body: 'If you suspect stale data, run Full sync. Use the Logs tab to spot retries, 429/503, and slow jobs.',
     },
     flaky: {
       badge: 'FLAKY',
@@ -111,8 +111,8 @@ const I18N = {
       badge_title: 'This job often flips success and failure',
     },
     no_data: {
-      text: 'No snapshot loaded yet. Run <strong>Collect</strong> in the header or <code>python ci_monitor.py collect</code> from the project folder.',
-      settings: 'Open Settings', collect: 'Then click Collect here to refresh the dashboard.',
+      text: 'No snapshot loaded yet. Use <strong>Full sync</strong> in the header or <code>python ci_monitor.py collect</code> from the project folder.',
+      settings: 'Open Settings', collect: 'Then click Full sync here to refresh the dashboard.',
     },
     exec: {
       prefix: '30-day uptime (aggregated): average',
@@ -127,7 +127,7 @@ const I18N = {
       snapshot_label: 'Snapshot',
       snapshot_utc: 'Snapshot (UTC)',
       age: 'Age',
-      stale_warn: 'Data may be stale — run Collect or check auto-collect interval.',
+      stale_warn: 'Data may be stale — run Full sync or check collect interval in Settings.',
       collect_err: 'Last collect error',
     },
     correlation: {
@@ -162,7 +162,7 @@ const I18N = {
       preset_failed: 'Failed · 24h',
       preset_starred: 'Starred',
       presets_aria: 'Quick filter presets',
-      collect: 'Collect',
+      collect: 'Full sync',
       collect_stop: 'Stop',
       collect_stop_title: 'Stop collection — finishes the current step, then aborts',
       collect_stop_sent: 'Stop requested — collection will abort after the current step.',
@@ -579,7 +579,7 @@ const I18N = {
       test_connection_failed: 'Connection test failed.',
       auto_collect: 'Auto-Collection',
       auto_collect_on: 'Auto Collect on Startup',
-      auto_collect_hint: 'Automatically fetch data when the web server starts',
+      auto_collect_hint: 'Run periodic full collects in the background while the web server is up (no dashboard toggle).',
       interval: 'Collect Interval (seconds)',
       interval_hint: '60 = 1 min · 300 = 5 min · 3600 = 1 h',
       lookback: 'Default Lookback (days)',
@@ -807,7 +807,7 @@ const I18N = {
       test_failures: 'Падения тестов',
       services: 'Сервисы',
       notes: 'Заметки',
-      notes_body: 'Если данные кажутся устаревшими, запустите Collect (или режим ПОЛНЫЙ). На вкладке «Логи» ищите повторы, 429/503 и долгие джобы.',
+      notes_body: 'Если данные кажутся устаревшими, запустите «Полная синхронизация». На вкладке «Логи» ищите повторы, 429/503 и долгие джобы.',
     },
     flaky: {
       badge: 'FLAKY',
@@ -816,8 +816,8 @@ const I18N = {
       badge_title: 'Джоб часто чередует успех и падение',
     },
     no_data: {
-      text: 'Снимок данных ещё не загружен. Нажмите <strong>Collect</strong> в шапке или выполните <code>python ci_monitor.py collect</code> в каталоге проекта.',
-      settings: 'Открыть настройки', collect: 'Затем снова нажмите Collect, чтобы обновить дашборд.',
+      text: 'Снимок данных ещё не загружен. Нажмите <strong>Полная синхронизация</strong> в шапке или выполните <code>python ci_monitor.py collect</code> в каталоге проекта.',
+      settings: 'Открыть настройки', collect: 'Затем снова нажмите «Полная синхронизация», чтобы обновить дашборд.',
     },
     exec: {
       prefix: 'Uptime за 30 дней (сводка): среднее',
@@ -832,7 +832,7 @@ const I18N = {
       snapshot_label: 'Снимок',
       snapshot_utc: 'Снимок (UTC)',
       age: 'Возраст',
-      stale_warn: 'Данные могли устареть — запустите Collect или проверьте интервал авто-сбора.',
+      stale_warn: 'Данные могли устареть — запустите полную синхронизацию или проверьте интервал сбора в настройках.',
       collect_err: 'Ошибка последнего collect',
     },
     correlation: {
@@ -867,7 +867,7 @@ const I18N = {
       preset_failed: 'Падения · 24ч',
       preset_starred: 'Избранное',
       presets_aria: 'Быстрые пресеты фильтров',
-      collect: 'Собрать',
+      collect: 'Полная синхронизация',
       collect_stop: 'Стоп',
       collect_stop_title: 'Остановить сбор — дождётся конца текущего шага и прервётся',
       collect_stop_sent: 'Запрошена остановка — сбор прервётся после текущего шага.',
@@ -1284,7 +1284,7 @@ const I18N = {
       test_connection_failed: 'Проверка подключения не удалась.',
       auto_collect: 'Авто-сбор',
       auto_collect_on: 'Авто-сбор при старте',
-      auto_collect_hint: 'Загружать данные при запуске веб-сервера',
+      auto_collect_hint: 'Периодически собирать данные в фоне, пока работает веб-сервер (без переключателя на дашборде).',
       interval: 'Интервал сбора (сек)',
       interval_hint: '60 = 1 мин · 300 = 5 мин · 3600 = 1 ч',
       lookback: 'Глубина по умолчанию (дни)',

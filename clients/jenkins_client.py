@@ -7,9 +7,10 @@ Docs: https://www.jenkins.io/doc/book/using/remote-access-api/
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import requests
 from models.models import BuildRecord, BuildStatus
@@ -317,6 +318,46 @@ class JenkinsClient(BaseCIClient):
             return n
         return _num("lastBuild")
 
+    def _api_path_from_location(self, location: str) -> str | None:
+        """Turn Location header (absolute or relative) into a path for ``_get``."""
+        loc = (location or "").strip()
+        if not loc:
+            return None
+        base = self.base_url.rstrip("/")
+        if loc.startswith(base):
+            rest = loc[len(base) :]
+            return rest if rest.startswith("/") else "/" + rest
+        parsed = urlparse(loc)
+        path = (parsed.path or "").strip()
+        if path.startswith("/"):
+            return path
+        return "/" + path if path else None
+
+    def _poll_queue_for_executable(self, location: str, *, max_wait_s: float = 18.0) -> dict[str, Any]:
+        """Follow queue item until Jenkins assigns an executable build (or timeout)."""
+        base_path = self._api_path_from_location(location)
+        if not base_path:
+            return {}
+        qpath = base_path.rstrip("/") + "/api/json?tree=executable[number,url],cancelled,why"
+        deadline = time.monotonic() + max_wait_s
+        while time.monotonic() < deadline:
+            data = self._get(qpath)
+            if not isinstance(data, dict):
+                break
+            if data.get("cancelled"):
+                logger.info("Jenkins queue item cancelled: %s", qpath)
+                break
+            ex = data.get("executable")
+            if isinstance(ex, dict) and ex.get("number") is not None:
+                try:
+                    num = int(ex["number"])
+                except (TypeError, ValueError):
+                    num = None
+                if num is not None:
+                    return {"build_number": num, "url": str(ex.get("url") or "").strip() or None}
+            time.sleep(0.35)
+        return {}
+
     def trigger_build(self, job_name: str) -> dict:
         """Trigger a new build for the given job. Returns status info."""
         jp = self.job_path(job_name)
@@ -340,7 +381,13 @@ class JenkinsClient(BaseCIClient):
             try:
                 logger.info("Jenkins trigger attempt: endpoint=%s job=%s", endpoint, job_name)
                 resp = self._post(endpoint, headers=headers or None)
-                result = {"ok": True, "status": resp.status_code, "job": job_name}
+                result: dict[str, Any] = {"ok": True, "status": resp.status_code, "job": job_name}
+                loc = (resp.headers.get("Location") or resp.headers.get("location") or "").strip()
+                if loc:
+                    extra = self._poll_queue_for_executable(loc)
+                    if extra:
+                        result.update(extra)
+                        logger.info("Jenkins queue resolved: job=%s %s", job_name, extra)
                 logger.info("Jenkins trigger success: %s", result)
                 return result
             except requests.HTTPError as exc:

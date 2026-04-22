@@ -178,13 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
   populateTrendsInstanceFilters();
   loadTrends(_trendsViewDays, null);
 
-  const chkLive = document.getElementById('chk-live-mode');
-  if (chkLive) {
-    chkLive.checked = localStorage.getItem('cimon-live') === '1';
-    chkLive.addEventListener('change', () => setLiveMode(chkLive.checked));
-    // If LIVE is on: POST so server matches (e.g. after restart). If off: do not POST — would disable headless web.auto_collect.
-    setLiveMode(chkLive.checked, { skipInitialFullRefresh: true }, chkLive.checked);
-  } else {
-    applyLivePollingIntervals({ skipInitialFullRefresh: true });
-  }
+  // LIVE-style refresh is always on; background collect runs via server config (no UI toggle).
+  setLiveMode(true, { skipInitialFullRefresh: true }, false);
 });

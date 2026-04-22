@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
+from web.services import collect_interval_policy as _cip
 from web.services import freshness as _freshness
 
 
@@ -22,6 +23,12 @@ async def meta_payload(
     interval = int(w_cfg.get("collect_interval_seconds", 300))
     stale_threshold = interval * 2
 
+    poll_sec = _cip.clamp_live_dashboard_poll_seconds(w_cfg.get("live_dashboard_poll_seconds", 20))
+    live_collect = _cip.clamp_live_collect_interval_seconds(
+        w_cfg.get("live_collect_interval_seconds", 90),
+        base=interval,
+    )
+
     snap = await load_snapshot_async()
     job_analytics: dict = {}
     if snap:
@@ -39,4 +46,8 @@ async def meta_payload(
         "correlation": correlation_last_hour(),
         "job_analytics": job_analytics,
         "parse_coverage": (getattr(snap, "collect_meta", None) if snap else None) or {},
+        "web_ui": {
+            "live_dashboard_poll_seconds": poll_sec,
+            "live_collect_interval_seconds": live_collect,
+        },
     }

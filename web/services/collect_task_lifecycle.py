@@ -6,6 +6,8 @@ import asyncio
 from collections.abc import Callable
 from datetime import datetime, timezone
 
+from web.services import collect_interval_policy as _cip
+
 
 def prime_auto_collect_for_web_config(w_cfg: dict, *, logger) -> None:
     """
@@ -40,14 +42,18 @@ def start_collect_loop_task(
     logger,
 ) -> asyncio.Task | None:
     """Start background collect loop task if enabled in config."""
-    interval = int(w_cfg.get("collect_interval_seconds", 300))
-    collect_state["interval_seconds"] = interval
-    if w_cfg.get("auto_collect", True):
-        prime_auto_collect_for_web_config(w_cfg, logger=logger)
-        logger.info("Collect loop task started (interval=%ds).", interval)
-        return create_task(collect_loop(cfg))
-    logger.info("Auto-collect disabled in config (web.auto_collect=false).")
-    return None
+    if not w_cfg.get("auto_collect", True):
+        logger.info("Auto-collect disabled in config (web.auto_collect=false).")
+        return None
+    collect_state["dashboard_live_fast_collect"] = True
+    collect_state["interval_seconds"] = _cip.effective_collect_interval_seconds(
+        w_cfg,
+        dashboard_live_fast_collect=True,
+    )
+    interval = int(collect_state["interval_seconds"] or 300)
+    prime_auto_collect_for_web_config(w_cfg, logger=logger)
+    logger.info("Collect loop task started (interval=%ds).", interval)
+    return create_task(collect_loop(cfg))
 
 
 async def cancel_task(task: asyncio.Task | None) -> None:

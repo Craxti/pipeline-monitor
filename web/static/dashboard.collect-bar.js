@@ -7,7 +7,8 @@
 let _collectInterval = 300, _lastCollectedAt = null, _ticker = null;
 /** True while server reports collect in progress — used to avoid flashing empty tables on transient snapshot gaps. */
 let _dashIsCollecting = false;
-let _liveMode = false;
+/** Dashboard always uses LIVE-style polling (no toggle). */
+let _liveMode = true;
 let _ivPollCollect = null, _ivLoadSummary = null, _ivNotif = null;
 let _ivAutoRefresh = null;
 let _ivCollectFastPoll = null;
@@ -328,11 +329,10 @@ async function triggerCollect() {
   tickPre();
   if (_collectElapsedTimer) clearInterval(_collectElapsedTimer);
   _collectElapsedTimer = setInterval(tickPre, 1000);
-  const forceFull = !!document.getElementById('collect-full')?.checked;
   const cr = await fetch(apiUrl('api/collect'), {
     method:'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ force_full: forceFull }),
+    body: JSON.stringify({ force_full: true }),
   }).catch(()=>null);
   if (cr && cr.ok) _dashIsCollecting = true;
   _prevCollecting = true;

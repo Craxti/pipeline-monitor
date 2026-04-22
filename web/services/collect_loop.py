@@ -37,8 +37,9 @@ async def do_collect(
     collect_state["progress_counts"] = {"builds": 0, "tests": 0, "services": 0}
     collect_state["last_error"] = None
     try:
+        # Keep runtime logs history between collect sessions so UI logs tab
+        # remains useful as a service activity journal.
         try:
-            collect_logs.clear()
             collect_slow.clear()
         except Exception:
             pass
@@ -86,11 +87,13 @@ async def collect_loop(
     interval_seconds_getter: Callable[[], int],
     do_collect_fn: Callable[[dict], Awaitable[None]],
 ) -> None:
-    """Collect immediately on start, then repeat every interval."""
+    """Collect immediately on start, then repeat every interval.
+
+    ``auto_collect_enabled_getter`` is unused: the loop runs for the lifetime of the task
+    (task is only started when background collect is enabled in config / lifespan).
+    """
+    _ = auto_collect_enabled_getter  # kept for call-site compatibility
     while True:
-        if not auto_collect_enabled_getter():
-            await asyncio.sleep(1.0)
-            continue
         interval = int(interval_seconds_getter() or 300)
         await do_collect_fn(cfg)  # force_full is decided by the wrapper bound in app.py
         await asyncio.sleep(max(5, interval))

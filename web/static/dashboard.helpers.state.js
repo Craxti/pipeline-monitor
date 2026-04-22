@@ -16,6 +16,22 @@ let _collectLogsInstances = new Set();
 let _collectLogsLastCollectId = '';
 let _collectLogsSlowPollTs = 0;
 
+/** Builds table LIVE: skip full tbody rewrite when /api/builds payload unchanged (reduces flicker). */
+let _lastBuildsPageSig = '';
+
+function _clampLiveDashboardPollSec(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 20;
+  return Math.min(120, Math.max(8, Math.round(n)));
+}
+
+/** Seconds between LIVE dashboard refreshAll() polls (from api/meta web_ui). */
+let _liveDashboardPollSec = 20;
+
+function liveDashboardPollMs() {
+  return Math.round(_clampLiveDashboardPollSec(_liveDashboardPollSec) * 1000);
+}
+
 const DASH_TABS = ['overview', 'builds', 'tests', 'services', 'trends', 'incidents', 'logs'];
 let _dashTab = 'overview';
 let _backTopInit = false;

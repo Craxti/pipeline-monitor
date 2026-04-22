@@ -215,17 +215,41 @@ function _mapDockerContainerStateToSvcStatus(state) {
   return String(state || '').toLowerCase() === 'running' ? 'up' : 'down';
 }
 
-function _touchServiceRowStatus(containerName, dockerHost, containerState) {
+function _normSvcNameKey(raw) {
+  try {
+    return String(decodeURIComponent(raw || '')).trim().replace(/^\/+/, '').toLowerCase();
+  } catch {
+    return String(raw || '').trim().replace(/^\/+/, '').toLowerCase();
+  }
+}
+
+function _normSvcHostKey(raw) {
+  let h = '';
+  try { h = decodeURIComponent(raw || ''); } catch { h = String(raw || ''); }
+  const t = String(h).trim().toLowerCase();
+  return t || 'local';
+}
+
+function _touchServiceRowStatus(containerName, dockerHost, containerState, detailText) {
   const tbody = document.getElementById('tbody-svcs');
   if (!tbody) return;
-  const nameEnc = encodeURIComponent(String(containerName || ''));
-  const hostEnc = encodeURIComponent(String(dockerHost || ''));
-  const rows = Array.from(tbody.querySelectorAll(`tr[data-svc-name="${nameEnc}"]`));
-  if (!rows.length) return;
-  const row = rows.find((r) => (r.getAttribute('data-svc-host') || '') === hostEnc) || rows[0];
-  const statusCell = row && row.children ? row.children[2] : null;
-  if (!statusCell) return;
-  statusCell.innerHTML = badge(_mapDockerContainerStateToSvcStatus(containerState));
+  const wantName = String(containerName || '').trim().replace(/^\/+/, '').toLowerCase();
+  const wantHost = String(dockerHost || '').trim().toLowerCase() || 'local';
+  const rows = Array.from(tbody.querySelectorAll('tr[data-svc-name]'));
+  const row = rows.find((r) => {
+    const n = _normSvcNameKey(r.getAttribute('data-svc-name') || '');
+    const h = _normSvcHostKey(r.getAttribute('data-svc-host') || '');
+    return n === wantName && h === wantHost;
+  }) || rows.find((r) => _normSvcNameKey(r.getAttribute('data-svc-name') || '') === wantName);
+  if (!row || !row.children) return;
+  const statusCell = row.children[2];
+  const detailCell = row.children[3];
+  if (statusCell) {
+    statusCell.innerHTML = badge(_mapDockerContainerStateToSvcStatus(containerState));
+  }
+  if (detailCell && detailText) {
+    detailCell.textContent = detailText;
+  }
 }
 
 function _monitorBuildsAfterTrigger() {
@@ -273,10 +297,14 @@ async function dockerContainerAction(a, b, c, d = '') {
     if (res.ok) {
       const data = await res.json();
       const st = data.status || '';
+      const rowName = String(data.name || data.container_name || containerName || '');
+      const rowHost = String(data.docker_host != null ? data.docker_host : dockerHost || '');
+      const hostShown = String(rowHost || '').trim() || 'local';
+      const detailStr = `host=${hostShown}; state=${String(st || '').toLowerCase()}`;
       const verbKey = { start: 'dash.act_docker_verb_start', stop: 'dash.act_docker_verb_stop', restart: 'dash.act_docker_verb_restart' }[action];
       const verb = verbKey ? t(verbKey) : action;
-      showToast(tf('dash.act_docker_toast', { verb, name: containerName, extra: st ? ` (${st})` : '' }), 'ok');
-      _touchServiceRowStatus(containerName, String(dockerHost || ''), st);
+      showToast(tf('dash.act_docker_toast', { verb, name: rowName || containerName, extra: st ? ` (${st})` : '' }), 'ok');
+      _touchServiceRowStatus(rowName || containerName, rowHost, st, detailStr);
       // Force a fresh services fetch: cancel potentially stale in-flight request.
       resetServices(true, true);
       // Docker state may lag for a brief moment; do one follow-up refresh.

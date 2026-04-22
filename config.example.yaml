@@ -76,5 +76,9 @@ web:
   host: 0.0.0.0
   port: 8020
   live_reload: true
-  auto_collect: false
+  auto_collect: true
   collect_interval_seconds: 300
+  # When dashboard LIVE is on: how often the UI pulls fresh data (seconds, 8–120).
+  live_dashboard_poll_seconds: 20
+  # When LIVE is on: background full collect repeats at most this often (seconds, 20–collect_interval_seconds).
+  live_collect_interval_seconds: 90
