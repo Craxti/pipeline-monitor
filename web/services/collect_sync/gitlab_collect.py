@@ -49,6 +49,12 @@ def collect_gitlab_builds(
                     "latency_ms": int((time.monotonic() - t0) * 1000),
                 }
             )
+            logger.info(
+                "GitLab [%s] collection ok (show_all=%s, latency_ms=%d)",
+                label,
+                bool(inst.get("show_all_projects", False)),
+                int((time.monotonic() - t0) * 1000),
+            )
         except Exception as exc:
             logger.error("GitLab [%s] failed: %s", label, exc)
             health.append(

@@ -24,6 +24,7 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
 
         all_services = []
         for h in hosts:
+            logger.info("Docker monitor host check started: %s", h.get("name") or h.get("host") or "unknown")
             monitor = DockerMonitor(
                 containers=dm_cfg.get("containers", []),
                 http_checks=[],
@@ -43,6 +44,12 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
         )
         all_services.extend(http_monitor._check_http())
         snapshot.services = all_services
+        logger.info(
+            "Docker monitor completed: hosts=%d, http_checks=%d, services=%d",
+            len(hosts),
+            len(dm_cfg.get("http_checks", []) or []),
+            len(all_services),
+        )
         health.append(
             {
                 "name": "Docker monitor",

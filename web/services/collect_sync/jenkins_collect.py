@@ -195,6 +195,12 @@ def collect_jenkins(
                     "latency_ms": int((time.monotonic() - t0) * 1000),
                 }
             )
+            logger.info(
+                "Jenkins [%s] build collection ok (show_all=%s, latency_ms=%d)",
+                label,
+                bool(inst.get("show_all_jobs", False)),
+                int((time.monotonic() - t0) * 1000),
+            )
         except Exception as exc:
             logger.error("Jenkins [%s] builds failed: %s", label, exc)
             push_collect_log(
@@ -435,3 +441,10 @@ def collect_jenkins(
             "console_jobs_parsed": n_console_jobs_parsed,
             "allure_jobs_parsed": n_allure_jobs_parsed,
         }
+        logger.info(
+            "Jenkins [%s] parsing summary: jobs_indexed=%d, console_jobs=%d, allure_jobs=%d",
+            label,
+            jobs_index_size,
+            n_console_jobs_parsed,
+            n_allure_jobs_parsed,
+        )

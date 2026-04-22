@@ -36,6 +36,17 @@ def run_collect_sync(
     logger,
 ) -> None:
     """Full collection — runs in a thread-pool executor (blocking)."""
+    j_enabled = sum(1 for i in cfg.get("jenkins_instances", []) if i.get("enabled", True))
+    g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))
+    dm_enabled = bool(cfg.get("docker_monitor", {}).get("enabled"))
+    logger.info(
+        "Collect cycle started (force_full=%s, lookback_days=%s, jenkins=%d, gitlab=%d, docker=%s)",
+        force_full,
+        cfg.get("general", {}).get("default_lookback_days", 7),
+        j_enabled,
+        g_enabled,
+        "on" if dm_enabled else "off",
+    )
     since = datetime.now(tz=timezone.utc) - timedelta(days=cfg.get("general", {}).get("default_lookback_days", 7))
     now = datetime.now(tz=timezone.utc)
     if force_full:
@@ -90,6 +101,7 @@ def run_collect_sync(
         TestRecord=TestRecord,
         append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
     )
+    logger.info("Jenkins phase completed: builds=%d tests=%d", len(snapshot.builds), len(snapshot.tests))
     _between_phases()
 
     _gitlab_collect.collect_gitlab_builds(
@@ -101,9 +113,11 @@ def run_collect_sync(
         config_instance_label=config_instance_label,
         logger=logger,
     )
+    logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
     _between_phases()
 
     _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger)
+    logger.info("Local parsers phase completed: tests=%d", len(snapshot.tests))
     _between_phases()
 
     _docker_collect.collect_docker_services(
@@ -113,6 +127,7 @@ def run_collect_sync(
         health=health,
         logger=logger,
     )
+    logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
 
     instance_health_setter(health)
     save_snapshot(snapshot)

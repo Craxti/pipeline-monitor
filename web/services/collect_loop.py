@@ -60,7 +60,7 @@ async def do_collect(
         except Exception:
             pass
     except Exception as exc:
-        logger.error("Collection error: %s", exc)
+        logger.exception("Collection failed: %s", exc)
         collect_state["last_error"] = str(exc)
     finally:
         collect_state["cancel_requested"] = False
