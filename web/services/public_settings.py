@@ -26,7 +26,7 @@ def public_settings_payload(
         "project_name": g.get("project_name", "CI/CD Monitor"),
         "web": {
             "host": w.get("host", "0.0.0.0"),
-            "port": int(w.get("port", 8000)),
+            "port": int(w.get("port", 8020)),
             "auto_collect": w.get("auto_collect", True),
             "collect_interval_seconds": int(w.get("collect_interval_seconds", 300)),
             "live_reload": w.get("live_reload", True),

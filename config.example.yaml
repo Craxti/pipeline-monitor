@@ -44,11 +44,18 @@ notifications:
     bots: []
 docker_monitor:
   enabled: true
+  include_local_host: true
+  docker_hosts:
+  - name: prod-docker-1
+    enabled: false
+    host: 10.10.10.15
+    username: ""
+    password: ""
   show_all_containers: true
   containers: []
   http_checks:
   - name: cicd - Settings
-    url: http://127.0.0.1:8000/
+    url: http://127.0.0.1:8020/
   timeout_seconds: 5
 openai:
   provider: ollama
@@ -67,7 +74,7 @@ openai:
     url: ""
 web:
   host: 0.0.0.0
-  port: 8000
+  port: 8020
   live_reload: true
   auto_collect: false
   collect_interval_seconds: 300

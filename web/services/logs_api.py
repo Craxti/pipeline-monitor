@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 
-from web.services.ops_actions import find_gitlab_instance, find_jenkins_instance
+from web.services.ops_actions import docker_host_cfg, find_gitlab_instance, find_jenkins_instance
 
 
 def fetch_jenkins_log(
@@ -266,24 +266,32 @@ def pipeline_stages(
     raise HTTPException(502, detail=last_err or "Could not fetch pipeline stages")
 
 
-def docker_logs_tail(*, container: str, tail: int = 4000) -> dict[str, Any]:
+def docker_logs_tail(*, cfg: dict, container: str, tail: int = 1000, docker_host: str = "") -> dict[str, Any]:
     """Return last N lines of docker logs for a container."""
     from docker_monitor.monitor import DockerMonitor
 
-    text = DockerMonitor.container_logs_tail(container, tail=max(100, min(int(tail), 50_000)))
+    host_cfg = docker_host_cfg(cfg, docker_host)
+    text = DockerMonitor.container_logs_tail(
+        container,
+        tail=max(100, min(int(tail), 50_000)),
+        docker_host=host_cfg,
+    )
     return {"ok": True, "log": text}
 
 
 def docker_logs_stream_response(
     *,
+    cfg: dict,
     container: str,
     follow: bool = True,
-    tail: int = 200,
+    tail: int = 1000,
+    docker_host: str = "",
 ) -> StreamingResponse:
     """Stream docker logs for a container as plain text."""
     from docker_monitor.monitor import DockerMonitor
 
     t = max(100, min(int(tail), 50_000))
+    host_cfg = docker_host_cfg(cfg, docker_host)
 
     def gen():
         yield from DockerMonitor.iter_container_logs_stream(
@@ -291,6 +299,7 @@ def docker_logs_stream_response(
             follow=follow,
             tail=t,
             timestamps=True,
+            docker_host=host_cfg,
         )
 
     return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")

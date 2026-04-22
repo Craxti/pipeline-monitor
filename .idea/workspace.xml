@@ -5,30 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="add docs">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/black.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/black.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/nightly-regression.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/nightly-regression.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/premerge-smoke.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/premerge-smoke.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/DEVELOPER_GUIDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/HOW_FILTERS_WORK_END_TO_END.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/HOW_FILTERS_WORK_END_TO_END.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_property_parsers_and_webhook.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_property_parsers_and_webhook.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_trends_history_summary.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_trends_history_summary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/chat.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/chat.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/dashboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/chat_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/chat_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/trends_uptime.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/trends_uptime.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.chat.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.chat.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.shell.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.shell.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.trends.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.trends.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +37,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/prooftech/proj/pipeline-monitor&quot;
+    &quot;last_opened_file_path&quot;: &quot;D:/github/talkie&quot;
   }
 }</component>
   <component name="RecentsManager">
@@ -150,13 +127,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00001" summary="1">
-      <created>1776345776797</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1776345776797</updated>
     </task>
     <task id="LOCAL-00002" summary="fix arch">
       <created>1776350635895</created>
@@ -494,7 +464,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776623843643</updated>
     </task>
-    <option name="localTasksCounter" value="50" />
+    <task id="LOCAL-00050" summary="add docs">
+      <created>1776666321549</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1776666321549</updated>
+    </task>
+    <option name="localTasksCounter" value="51" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

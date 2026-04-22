@@ -176,7 +176,7 @@ function _dockerConfirmOpts(action, containerName) {
   };
 }
 
-async function dockerContainerAction(btn, containerName, action) {
+async function dockerContainerAction(btn, containerName, action, dockerHost = '') {
   const cfg = _dockerConfirmOpts(action, containerName);
   const r = await openActionConfirm(cfg);
   if (!r) return;
@@ -193,7 +193,7 @@ async function dockerContainerAction(btn, containerName, action) {
     const res = await fetch(apiUrl('api/action/docker/container'), {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ container_name: containerName, action }),
+      body: JSON.stringify({ container_name: containerName, action, docker_host: String(dockerHost || '') }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -895,14 +895,16 @@ async function loadGitlabLogsIntoModal(p) {
 }
 
 async function loadDockerLogsIntoModal(container) {
-  const name = String(container || '').trim();
+  const params = (typeof container === 'object' && container) ? container : { container };
+  const name = String(params.container || '').trim();
+  const host = String(params.docker_host || '').trim();
   stopLogStream();
   _setLogText(t('dash.log_fetching'));
   _logAbort = new AbortController();
   const dec = new TextDecoder('utf-8');
-  const u = apiUrl(
-    'api/logs/docker/stream?container=' + encodeURIComponent(name) + '&follow=false&tail=4000'
-  );
+  const q = 'api/logs/docker/stream?container=' + encodeURIComponent(name) + '&follow=false&tail=1000'
+    + (host ? '&docker_host=' + encodeURIComponent(host) : '');
+  const u = apiUrl(q);
   try {
     const r = await fetch(u, { signal: _logAbort.signal });
     if (!r.ok) {
@@ -957,14 +959,15 @@ async function loadDockerLogsIntoModal(container) {
   }
 }
 
-async function startDockerLogStream(container) {
+async function startDockerLogStream(container, dockerHost = '') {
   stopLogStream();
   const dec = new TextDecoder();
   _logAbort = new AbortController();
   _logIsStreaming = true;
   try {
     const res = await fetch(
-      apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container) + '&follow=true&tail=200'),
+      apiUrl('api/logs/docker/stream?container=' + encodeURIComponent(container) + '&follow=true&tail=1000'
+        + (dockerHost ? '&docker_host=' + encodeURIComponent(dockerHost) : '')),
       { signal: _logAbort.signal }
     );
     if (!res.ok) {
@@ -1021,18 +1024,18 @@ async function openLogViewer(kind, params) {
     if (btnRef) btnRef.onclick = () => {
       stopLogStream();
       if (followChk) followChk.checked = false;
-      loadDockerLogsIntoModal(params.container);
+      loadDockerLogsIntoModal(params);
     };
     _setLogText(t('dash.log_fetching'));
     ov.classList.add('open');
     ov.setAttribute('aria-hidden', 'false');
     if (followChk) {
       followChk.onchange = () => {
-        if (followChk.checked) startDockerLogStream(params.container);
+        if (followChk.checked) startDockerLogStream(params.container, params.docker_host || '');
         else stopLogStream();
       };
     }
-    await loadDockerLogsIntoModal(params.container);
+    await loadDockerLogsIntoModal(params);
   } else {
     if (followWrap) followWrap.classList.remove('visible');
     if (btnRef) btnRef.style.display = '';

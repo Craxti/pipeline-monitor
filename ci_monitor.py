@@ -378,7 +378,7 @@ def web(ctx: click.Context) -> None:
 
     w_cfg = ctx.obj["cfg"].get("web", {})
     host = w_cfg.get("host", "0.0.0.0")
-    port = int(w_cfg.get("port", 8000))
+    port = int(w_cfg.get("port", 8020))
     click.echo(f"[web] Starting dashboard at http://{host}:{port}")
     reload = bool(w_cfg.get("live_reload", True))
     if reload:

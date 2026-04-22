@@ -134,17 +134,19 @@ async function loadServices() {
     if (sv.kind === 'docker') {
       const up = (sv.status || '').toLowerCase() === 'up';
       const nm = JSON.stringify(sv.name);
-      const p = { container: sv.name, status: sv.status };
+      const host = String(sv.source_instance || '');
+      const hostArg = JSON.stringify(host);
+      const p = { container: sv.name, status: sv.status, docker_host: host };
       logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>`;
       if (up) {
         actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-stop" title="Остановить" onclick="dockerContainerAction(this,${nm},'stop')">&#9632; Stop</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart')">&#8635; Restart</button>
+          <button type="button" class="act-btn docker-stop" title="Остановить" onclick="dockerContainerAction(this,${nm},'stop',${hostArg})">&#9632; Stop</button>
+          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart',${hostArg})">&#8635; Restart</button>
         </div>`;
       } else {
         actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-start" title="Запустить" onclick="dockerContainerAction(this,${nm},'start')">&#9654; Start</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart')">&#8635; Restart</button>
+          <button type="button" class="act-btn docker-start" title="Запустить" onclick="dockerContainerAction(this,${nm},'start',${hostArg})">&#9654; Start</button>
+          <button type="button" class="act-btn docker-btn" title="Перезапустить" onclick="dockerContainerAction(this,${nm},'restart',${hostArg})">&#8635; Restart</button>
         </div>`;
       }
     }

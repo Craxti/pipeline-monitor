@@ -2,18 +2,24 @@ services:
   pipeline-monitor-web:
     build: .
     image: pipeline-monitor-web:local
+    container_name: pipeline-monitor-web
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8020:8020"
     environment:
       # Optional shared token for protected endpoints:
       # CICD_MON_API_TOKEN: "change-me"
       PYTHONUNBUFFERED: "1"
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
-      - ./data:/app/data
+      - pipeline-monitor-runtime:/app/runtime
+      - pipeline-monitor-data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health').read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health').read()"]
       interval: 10s
       timeout: 3s
       retries: 10
+
+volumes:
+  pipeline-monitor-runtime:
+  pipeline-monitor-data:
 

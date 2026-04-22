@@ -5,11 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
+from web.core import runtime as rt
 from web.core.auth import require_shared_token
 from web.core.config import load_yaml_config
-from web.core import runtime as rt
-from web.services import logs_endpoints, logs_api, request_id, runtime_helpers
-
+from web.services import logs_api, logs_endpoints, request_id, runtime_helpers
 
 router = APIRouter(tags=["logs"])
 
@@ -103,12 +102,14 @@ async def api_pipeline_stages(project_id: str, pipeline_id: int, instance_url: s
     response_class=JSONResponse,
     dependencies=[Depends(require_shared_token)],
 )
-async def api_logs_docker(container: str, tail: int = 4000):
+async def api_logs_docker(container: str, tail: int = 1000, docker_host: str = ""):
     """Return docker logs tail."""
     return await logs_endpoints.api_logs_docker(
         container=container,
+        docker_host=docker_host,
         tail=tail,
         check_rate_limit=_check_rate_limit,
+        load_cfg=load_yaml_config,
         docker_logs_tail=logs_api.docker_logs_tail,
     )
 
@@ -120,13 +121,16 @@ async def api_logs_docker(container: str, tail: int = 4000):
 async def api_logs_docker_stream(
     container: str,
     follow: bool = True,
-    tail: int = 200,
+    tail: int = 1000,
+    docker_host: str = "",
 ):
     """Stream docker logs (chunked). Use follow=false for buffered tail only."""
     return await logs_endpoints.api_logs_docker_stream(
         container=container,
+        docker_host=docker_host,
         follow=follow,
         tail=tail,
         check_rate_limit=_check_rate_limit,
+        load_cfg=load_yaml_config,
         docker_logs_stream_response=logs_api.docker_logs_stream_response,
     )

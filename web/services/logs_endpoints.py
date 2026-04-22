@@ -110,8 +110,10 @@ async def api_pipeline_stages(
 async def api_logs_docker(
     *,
     container: str,
+    docker_host: str,
     tail: int,
     check_rate_limit: Callable[..., None],
+    load_cfg: Callable[[], dict],
     docker_logs_tail: Callable[..., Any],
 ) -> Any:
     """Return recent docker logs for a container."""
@@ -120,7 +122,8 @@ async def api_logs_docker(
         raise HTTPException(400, "container is required")
     check_rate_limit(f"log:docker:{container}", window=2)
     try:
-        return docker_logs_tail(container=container, tail=tail)
+        cfg = load_cfg()
+        return docker_logs_tail(cfg=cfg, container=container, tail=tail, docker_host=docker_host)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
     except Exception as exc:
@@ -131,9 +134,11 @@ async def api_logs_docker(
 async def api_logs_docker_stream(
     *,
     container: str,
+    docker_host: str,
     follow: bool,
     tail: int,
     check_rate_limit: Callable[..., None],
+    load_cfg: Callable[[], dict],
     docker_logs_stream_response: Callable[..., Any],
 ) -> Any:
     """Stream docker logs for a container."""
@@ -141,4 +146,5 @@ async def api_logs_docker_stream(
     if not container:
         raise HTTPException(400, "container is required")
     check_rate_limit(f"log:docker:stream:{container}", window=3)
-    return docker_logs_stream_response(container=container, follow=follow, tail=tail)
+    cfg = load_cfg()
+    return docker_logs_stream_response(cfg=cfg, container=container, follow=follow, tail=tail, docker_host=docker_host)

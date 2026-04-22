@@ -52,7 +52,22 @@ def trigger_gitlab_pipeline(*, cfg: dict, project_id: str, ref: str, instance_ur
     return client.trigger_pipeline(project_id, ref=ref)
 
 
-def docker_container_action(*, container_name: str, action: str) -> Any:
+def docker_host_cfg(cfg: dict, docker_host: str) -> dict | None:
+    host = str(docker_host or "").strip()
+    if not host or host in ("local", "localhost", "127.0.0.1"):
+        return None
+    for item in cfg.get("docker_monitor", {}).get("docker_hosts", []) or []:
+        if not isinstance(item, dict):
+            continue
+        cand = str(item.get("host") or "").strip()
+        name = str(item.get("name") or "").strip()
+        if host in (cand, name):
+            return item
+    return {"host": host, "name": host}
+
+
+def docker_container_action(*, cfg: dict, container_name: str, action: str, docker_host: str = "") -> Any:
     from docker_monitor.monitor import DockerMonitor
 
-    return DockerMonitor.container_action(container_name, action)
+    host_cfg = docker_host_cfg(cfg, docker_host)
+    return DockerMonitor.container_action(container_name, action, docker_host=host_cfg)

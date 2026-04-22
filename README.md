@@ -76,23 +76,28 @@ MIT License (2026). See `LICENSE`.
 
 ### Run with Docker (recommended)
 
-The repository includes a `Dockerfile` and a `compose.yml` to run the web dashboard in a container while keeping `config.yaml` and `data/` on your host machine.
+The repository includes a `Dockerfile` and a `compose.yml` for a **one-command start**.
+No local Python setup is required.
 
 ```bash
-# Build and start
-docker compose up --build
+# 1) Build and start in background
+docker compose up -d --build
 
-# Open the dashboard
-# http://127.0.0.1:8000
+# 2) Open the dashboard
+# http://127.0.0.1:8020
 
-# Stop
+# 3) See logs (optional)
+docker compose logs -f
+
+# 4) Stop
 docker compose down
 ```
 
 Notes:
-- **Config**: `./config.yaml` is mounted read-only to `/app/config.yaml` in the container.
-- **Data persistence**: `./data/` is mounted to `/app/data` (SQLite DB, snapshots, trends, exports).
-- **Port**: `8000:8000` (change in `compose.yml` if needed).
+- **Config persistence**: stored in Docker volume `pipeline-monitor-runtime` (`/app/runtime/config.yaml`).
+- **Data persistence**: stored in Docker volume `pipeline-monitor-data` (`/app/data`).
+- **Bootstrap config**: on first start, container auto-copies `config.example.yaml` to runtime config.
+- **Port**: `8020:8020` (change in `compose.yml` if needed).
 - **API token (optional)**: set `CICD_MON_API_TOKEN` in `compose.yml` (or use `web.api_token` in `config.yaml`).
 
 ### Run with Docker (without compose)
@@ -104,7 +109,7 @@ docker build -t pipeline-monitor-web:local .
 PowerShell example:
 
 ```powershell
-docker run --rm -p 8000:8000 `
+docker run --rm -p 8020:8020 `
   -e PYTHONUNBUFFERED=1 `
   -v "${PWD}\config.yaml:/app/config.yaml:ro" `
   -v "${PWD}\data:/app/data" `
@@ -153,7 +158,7 @@ docker_monitor:
 
 web:
   host: "0.0.0.0"
-  port: 8000
+  port: 8020
 ```
 
 ### 3. Collect data and generate reports
@@ -186,7 +191,7 @@ py ci_monitor.py report --format csv
 
 ```bash
 py ci_monitor.py web
-# open http://127.0.0.1:8000 (or whatever web.host/web.port are)
+# open http://127.0.0.1:8020 (or whatever web.host/web.port are)
 ```
 
 If the page never finishes loading while `web.live_reload` is `true`, set it to `false` in `config.yaml`. Uvicorn’s `--reload` restarts the worker when files under `web/` change; rapid restarts (IDE, formatters) can interrupt the browser. Reload mode watches only the `web/` tree, not the whole repo.
@@ -337,7 +342,7 @@ docker_monitor:
 
 web:
   host: "0.0.0.0"
-  port: 8000
+  port: 8020
   live_reload: true
   auto_collect: false
   collect_interval_seconds: 300
@@ -363,7 +368,7 @@ The web server exposes a webhook endpoint so CI systems can push events directly
 py ci_monitor.py web
 
 # Trigger from Jenkins post-build step / GitLab CI job
-curl -X POST http://127.0.0.1:8000/webhook/build-complete \
+curl -X POST http://127.0.0.1:8020/webhook/build-complete \
   -H "Content-Type: application/json" \
   -d '{"source":"jenkins","job":"backend-build","status":"failure","build_number":143,"critical":true}'
 ```
@@ -462,5 +467,5 @@ py ci_monitor.py report --format csv
 
 # Start dashboard
 py ci_monitor.py web
-# open http://127.0.0.1:8000
+# open http://127.0.0.1:8020
 ```

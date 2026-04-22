@@ -69,11 +69,13 @@ async def action_docker_container(
     *,
     rid: str,
     check_rate_limit: Callable[..., None],
+    load_cfg: Callable[[], dict],
     docker_container_action: Callable[..., Any],
 ) -> Any:
     """Execute docker container action (start/stop/restart)."""
     body = await request.json()
     container_name = body.get("container_name", "")
+    docker_host = body.get("docker_host", "")
     action = (body.get("action") or "restart").lower().strip()
     if not container_name:
         raise HTTPException(400, "container_name is required")
@@ -82,7 +84,8 @@ async def action_docker_container(
     check_rate_limit(f"docker:{container_name}:{action}", window=5)
     logger.info("[%s] action docker %s %s", rid, action, container_name)
     try:
-        return docker_container_action(container_name=container_name, action=action)
+        cfg = load_cfg()
+        return docker_container_action(cfg=cfg, container_name=container_name, action=action, docker_host=docker_host)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
@@ -93,15 +96,18 @@ async def action_docker_container(
 async def action_docker_restart(
     request: Request,
     *,
+    load_cfg: Callable[[], dict],
     docker_container_action: Callable[..., Any],
 ) -> Any:
     """Restart docker container (shortcut action)."""
     body = await request.json()
     container_name = body.get("container_name", "")
+    docker_host = body.get("docker_host", "")
     if not container_name:
         raise HTTPException(400, "container_name is required")
     try:
-        return docker_container_action(container_name=container_name, action="restart")
+        cfg = load_cfg()
+        return docker_container_action(cfg=cfg, container_name=container_name, action="restart", docker_host=docker_host)
     except Exception as exc:
         logger.error("Docker restart failed: %s", exc)
         raise HTTPException(500, f"Failed to restart container: {exc}") from exc

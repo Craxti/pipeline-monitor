@@ -15,13 +15,34 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
     t0 = time.monotonic()
     try:
         progress("docker", "Docker / HTTP", "Running checks…")
-        monitor = DockerMonitor(
-            containers=dm_cfg.get("containers", []),
+        hosts = []
+        if dm_cfg.get("include_local_host", True):
+            hosts.append({"name": "local", "host": "local", "enabled": True})
+        for h in dm_cfg.get("docker_hosts", []) or []:
+            if isinstance(h, dict) and h.get("enabled", True):
+                hosts.append(h)
+
+        all_services = []
+        for h in hosts:
+            monitor = DockerMonitor(
+                containers=dm_cfg.get("containers", []),
+                http_checks=[],
+                timeout=dm_cfg.get("timeout_seconds", 5),
+                show_all=dm_cfg.get("show_all_containers", False),
+                docker_host=h,
+            )
+            all_services.extend(monitor.check_all())
+
+        # HTTP checks are collected once (not tied to Docker daemon hosts).
+        http_monitor = DockerMonitor(
+            containers=[],
             http_checks=dm_cfg.get("http_checks", []),
             timeout=dm_cfg.get("timeout_seconds", 5),
-            show_all=dm_cfg.get("show_all_containers", False),
+            show_all=False,
+            docker_host={"name": "local", "host": "local"},
         )
-        snapshot.services = monitor.check_all()
+        all_services.extend(http_monitor._check_http())
+        snapshot.services = all_services
         health.append(
             {
                 "name": "Docker monitor",

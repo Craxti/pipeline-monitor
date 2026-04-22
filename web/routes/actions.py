@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
+from web.core import runtime as rt
 from web.core.auth import require_shared_token
 from web.core.config import load_yaml_config
-from web.core import runtime as rt
 from web.services import actions_endpoints, ops_actions, request_id, runtime_helpers
 
 router = APIRouter(tags=["actions"])
@@ -60,6 +60,7 @@ async def action_docker_container(request: Request):
         request,
         rid=request_id.rid(request),
         check_rate_limit=_check_rate_limit,
+        load_cfg=load_yaml_config,
         docker_container_action=ops_actions.docker_container_action,
     )
 
@@ -73,5 +74,6 @@ async def action_docker_restart(request: Request):
     """Restart a docker container (shortcut action)."""
     return await actions_endpoints.action_docker_restart(
         request,
+        load_cfg=load_yaml_config,
         docker_container_action=ops_actions.docker_container_action,
     )

@@ -474,6 +474,28 @@
               <div class="field-label" data-i18n="st.dm_timeout">Timeout (seconds)</div>
               <input type="number" id="dm-timeout" class="field-input" min="1" max="60">
             </div>
+            <div class="sub-sec">
+              <div class="sub-sec-hdr">
+                <span class="field-label">Docker hosts (local + remote)</span>
+                <button class="btn btn-sm" onclick="addDockerHost()">+ Add host</button>
+              </div>
+              <div class="field-hint" style="margin:.15rem 0 .65rem">
+                Local host is always included. Add remote Docker hosts by IP/DNS. Username/password are optional.
+              </div>
+              <div class="st-table-wrap">
+                <table>
+                  <thead><tr>
+                    <th>Name</th>
+                    <th>Host / IP</th>
+                    <th>User</th>
+                    <th>Password</th>
+                    <th class="c st-col-tight">Enabled</th>
+                    <th class="st-col-actions" aria-label=""></th>
+                  </tr></thead>
+                  <tbody id="docker-hosts-body"></tbody>
+                </table>
+              </div>
+            </div>
             <div class="field-row">
               <label class="toggle">
                 <input type="checkbox" id="dm-show-all" onchange="updateDockerUI()">
@@ -550,7 +572,6 @@
             <div class="field-label" data-i18n="st.ai_api_key">API Key</div>
             <div class="pw-wrap">
               <input type="password" id="ai-api-key" class="field-input sensitive" placeholder="sk-..." data-secret-path="openai.api_key">
-              <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)" data-i18n="st.show">Show</button>
             </div>
             <div class="field-hint" id="ai-key-hint"></div>
           </div>
@@ -687,7 +708,6 @@
                   <div class="field-label">Password</div>
                   <div class="pw-wrap">
                     <input type="password" id="ai-proxy-password" class="field-input sensitive" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
-                    <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">Show</button>
                   </div>
                 </div>
               </div>
@@ -719,6 +739,7 @@ let _gi = [];   // gitlab instances
 let _tgBots = []; // telegram bot rows
 let _hc = [];   // http checks
 let _dc = [];   // docker container names
+let _dh = [];   // docker remote hosts
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 function showSec(name) {
@@ -742,75 +763,6 @@ function apiUrl(path) {
   const p = path.startsWith('/') ? path.slice(1) : path;
   const base = window.location.origin + window.location.pathname;
   return new URL(p, base).href;
-}
-
-let _revealCfg = null;
-let _revealCfgPromise = null;
-const _MASK = '••••••••';
-
-function _pathGet(obj, path) {
-  if (!obj || !path) return undefined;
-  // Supports dotted segments + [index], e.g. jenkins_instances[0].token
-  const segs = String(path).split('.');
-  let cur = obj;
-  for (const seg0 of segs) {
-    if (cur == null) return undefined;
-    const seg = String(seg0);
-    const m = seg.match(/^([^\[]+)\[(\d+)\]$/);
-    if (m) {
-      const key = m[1], idx = parseInt(m[2], 10);
-      cur = (cur && cur[key]) ? cur[key] : undefined;
-      cur = Array.isArray(cur) ? cur[idx] : undefined;
-    } else {
-      cur = cur[seg];
-    }
-  }
-  return cur;
-}
-
-async function _loadRevealCfg() {
-  if (_revealCfg) return _revealCfg;
-  if (_revealCfgPromise) return _revealCfgPromise;
-  _revealCfgPromise = fetch(apiUrl('api/settings/reveal'))
-    .then((r) => (r && r.ok) ? r.json() : null)
-    .catch(() => null)
-    .then((j) => {
-      _revealCfg = j;
-      return j;
-    })
-    .finally(() => { _revealCfgPromise = null; });
-  return _revealCfgPromise;
-}
-
-async function togglePwdEl(btn) {
-  const inp = btn.previousElementSibling || btn.parentElement.querySelector('input');
-  if (!inp) return;
-
-  // If the value is masked, fetch unmasked settings and fill the field.
-  if ((inp.value || '').trim() === _MASK) {
-    const path = inp.dataset && inp.dataset.secretPath;
-    const cfg = await _loadRevealCfg();
-    const v = _pathGet(cfg, path);
-    if (typeof v === 'string' && v.trim()) {
-      inp.value = v;
-      // Also sync in-memory structures so Save sends the revealed value (optional, but keeps UI consistent).
-      if (path && path.startsWith('jenkins_instances[')) {
-        const m = path.match(/^jenkins_instances\[(\d+)\]\.token$/);
-        if (m) _ji[parseInt(m[1], 10)].token = v;
-      }
-      if (path && path.startsWith('gitlab_instances[')) {
-        const m = path.match(/^gitlab_instances\[(\d+)\]\.token$/);
-        if (m) _gi[parseInt(m[1], 10)].token = v;
-      }
-      if (path && path.startsWith('notifications.telegram.bots[')) {
-        const m = path.match(/^notifications\.telegram\.bots\[(\d+)\]\.bot_token$/);
-        if (m) _tgBots[parseInt(m[1], 10)].bot_token = v;
-      }
-    }
-  }
-
-  inp.type  = inp.type === 'password' ? 'text' : 'password';
-  btn.textContent = inp.type === 'password' ? t('st.show') : t('st.hide');
 }
 
 function _applyTheme(theme) {
@@ -837,6 +789,7 @@ function setUILang(code) {
   renderTgBots();
   renderHttpChecks();
   renderContainers();
+  renderDockerHosts();
   updateDockerUI();
   updateProviderUI();
   updateProxyUI();
@@ -1034,7 +987,6 @@ function jInstHtml(ii) {
           <div class="pw-wrap">
             <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="jenkins_instances[${ii}].token"
                    autocomplete="new-password" oninput="_ji[${ii}].token=this.value">
-            <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
         </div>
       </div>
@@ -1219,7 +1171,6 @@ function gInstHtml(gi) {
           <div class="pw-wrap">
             <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="gitlab_instances[${gi}].token"
                    autocomplete="new-password" oninput="_gi[${gi}].token=this.value">
-            <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
           </div>
         </div>
         <div class="field-row">
@@ -1402,7 +1353,6 @@ function tgBotHtml(i) {
         <div class="pw-wrap">
           <input type="password" class="field-input" value="${esc(b.bot_token||'')}" data-secret-path="notifications.telegram.bots[${i}].bot_token"
                  autocomplete="new-password" oninput="_tgBots[${i}].bot_token=this.value">
-          <button class="btn btn-ghost btn-sm" type="button" onclick="togglePwdEl(this)">${esc(t('st.show'))}</button>
         </div>
       </div>
       <div class="field-row">
@@ -1468,6 +1418,35 @@ function updateDockerUI() {
   if (hint) hint.textContent = showAll
     ? t('st.dm_hint_all')
     : t('st.dm_hint_list');
+}
+
+function renderDockerHosts() {
+  const tb = $('docker-hosts-body');
+  if (!tb) return;
+  if (!_dh.length) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="6">No remote hosts. Local docker host is still monitored.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = _dh.map((h, i) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(h.name || '')}" placeholder="prod-docker-1"
+          oninput="_dh[${i}].name=this.value"></td>
+      <td><input class="tbl-input" value="${esc(h.host || '')}" placeholder="10.10.10.15"
+          oninput="_dh[${i}].host=this.value"></td>
+      <td><input class="tbl-input" value="${esc(h.username || '')}" placeholder="root"
+          oninput="_dh[${i}].username=this.value"></td>
+      <td><input type="password" class="tbl-input sensitive" value="${esc(h.password || '')}" placeholder="optional"
+          autocomplete="new-password" oninput="_dh[${i}].password=this.value"></td>
+      <td class="c st-col-tight"><input type="checkbox" ${h.enabled !== false ? 'checked' : ''}
+          onchange="_dh[${i}].enabled=this.checked"></td>
+      <td class="st-col-actions"><button class="btn-icon" onclick="_dh.splice(${i},1);renderDockerHosts()" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function addDockerHost() {
+  _dh.push({ name: '', host: '', username: '', password: '', enabled: true });
+  renderDockerHosts();
+  $('docker-hosts-body')?.querySelector('tr:last-child .tbl-input')?.focus();
 }
 
 function renderContainers() {
@@ -1558,8 +1537,10 @@ function populateForm(cfg) {
   sV('dm-timeout',      dm.timeout_seconds      ?? 5);
   _hc = JSON.parse(JSON.stringify(dm.http_checks || []));
   _dc = JSON.parse(JSON.stringify((dm.containers || []).map(c => String(c))));
+  _dh = JSON.parse(JSON.stringify(dm.docker_hosts || []));
   renderHttpChecks();
   renderContainers();
+  renderDockerHosts();
   updateDockerUI();
 
   const ai = cfg.openai || {};
@@ -1623,8 +1604,18 @@ function collectForm() {
     },
     docker_monitor: {
       enabled:              gC('dm-enabled'),
+      include_local_host:   true,
       show_all_containers:  gC('dm-show-all'),
       containers:           _dc.filter(c => c.trim()),
+      docker_hosts:         _dh
+        .map((h) => ({
+          name: String(h.name || '').trim(),
+          host: String(h.host || '').trim(),
+          username: String(h.username || '').trim(),
+          password: String(h.password || ''),
+          enabled: h.enabled !== false,
+        }))
+        .filter((h) => h.host),
       http_checks:          _hc,
       timeout_seconds:      toInt(gV('dm-timeout')),
     },
@@ -1646,7 +1637,7 @@ function collectForm() {
       },
     },
     web: {
-      host: '0.0.0.0', port: 8000, live_reload: true,
+      host: '0.0.0.0', port: 8020, live_reload: true,
       auto_collect:             gC('w-auto-collect'),
       collect_interval_seconds: toInt(gV('w-interval')),
     },

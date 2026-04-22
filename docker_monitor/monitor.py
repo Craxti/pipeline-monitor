@@ -6,15 +6,13 @@ Falls back gracefully if the docker SDK is not installed.
 
 from __future__ import annotations
 
-import logging
-from datetime import datetime, timezone
-
 import ipaddress
+import logging
 import socket
-from urllib.parse import urlparse
+from datetime import datetime, timezone
+from urllib.parse import quote, urlparse
 
 import requests
-
 from models.models import ServiceStatus
 
 logger = logging.getLogger(__name__)
@@ -60,11 +58,13 @@ class DockerMonitor:
         http_checks: list[dict] | None = None,
         timeout: int = 5,
         show_all: bool = False,
+        docker_host: dict | None = None,
     ) -> None:
         self.containers = containers or []
         self.http_checks = http_checks or []
         self.timeout = timeout
         self.show_all = show_all
+        self.docker_host = docker_host or {}
 
     # ── public ───────────────────────────────────────────────────────────────
 
@@ -81,19 +81,18 @@ class DockerMonitor:
         action: str,
         *,
         timeout: int = 10,
+        docker_host: dict | None = None,
     ) -> dict:
         """
         Start, stop, or restart a container by name.
 
         action: "start" | "stop" | "restart"
         """
-        import docker  # type: ignore
-
         act = action.lower().strip()
         if act not in ("start", "stop", "restart"):
             raise ValueError(f"Invalid action: {action!r}")
 
-        client = docker.from_env()
+        client = DockerMonitor._docker_client(docker_host=docker_host)
         try:
             ctr = _resolve_docker_container(client, container_name)
         except ValueError as exc:
@@ -111,12 +110,13 @@ class DockerMonitor:
             "name": container_name,
             "status": ctr.status,
             "action": act,
+            "docker_host": DockerMonitor._docker_host_label(docker_host),
         }
 
     @staticmethod
-    def restart_container(container_name: str, timeout: int = 10) -> dict:
+    def restart_container(container_name: str, timeout: int = 10, docker_host: dict | None = None) -> dict:
         """Restart a Docker container by name (backward compatible)."""
-        return DockerMonitor.container_action(container_name, "restart", timeout=timeout)
+        return DockerMonitor.container_action(container_name, "restart", timeout=timeout, docker_host=docker_host)
 
     @staticmethod
     def container_logs_tail(
@@ -124,11 +124,10 @@ class DockerMonitor:
         *,
         tail: int = 3000,
         timestamps: bool = True,
+        docker_host: dict | None = None,
     ) -> str:
         """Return recent container stdout/stderr as text (for UI log viewer)."""
-        import docker  # type: ignore
-
-        client = docker.from_env()
+        client = DockerMonitor._docker_client(docker_host=docker_host)
         try:
             ctr = _resolve_docker_container(client, container_name)
         except ValueError as exc:
@@ -143,14 +142,13 @@ class DockerMonitor:
         follow: bool = True,
         tail: int = 200,
         timestamps: bool = True,
+        docker_host: dict | None = None,
     ):
         """
         Yield bytes chunks from docker logs (stream=True).
         Use for StreamingResponse; stops when the stream ends or container is removed.
         """
-        import docker  # type: ignore
-
-        client = docker.from_env()
+        client = DockerMonitor._docker_client(docker_host=docker_host)
         try:
             ctr = _resolve_docker_container(client, container_name)
         except ValueError as exc:
@@ -163,24 +161,23 @@ class DockerMonitor:
                 tail=tail,
                 timestamps=timestamps,
             )
-            for chunk in stream:
-                yield chunk
+            yield from stream
         except Exception as exc:
             logger.error("Docker log stream failed: %s", exc)
-            yield f"\n[stream error: {exc}]\n".encode("utf-8")
+            yield f"\n[stream error: {exc}]\n".encode()
 
     # ── Docker ───────────────────────────────────────────────────────────────
 
     def _check_docker(self) -> list[ServiceStatus]:
         try:
-            import docker  # type: ignore
+            host_label = self._docker_host_label(self.docker_host)
+            client = self._docker_client(docker_host=self.docker_host)
         except ImportError:
             logger.warning("docker SDK not installed; skipping container checks.")
             return []
 
         statuses: list[ServiceStatus] = []
         try:
-            client = docker.from_env()
             running = client.containers.list(all=True)
             for ctr in running:
                 if not self.show_all and self.containers and ctr.name not in self.containers:
@@ -193,8 +190,9 @@ class DockerMonitor:
                     ServiceStatus(
                         name=ctr.name,
                         kind="docker",
+                        source_instance=host_label,
                         status=svc_status,
-                        detail=f"state={state}",
+                        detail=f"host={host_label}; state={state}",
                         checked_at=datetime.now(tz=timezone.utc),
                     )
                 )
@@ -202,6 +200,43 @@ class DockerMonitor:
             logger.error("Docker check failed: %s", exc)
 
         return statuses
+
+    @staticmethod
+    def _docker_host_label(docker_host: dict | None = None) -> str:
+        host = docker_host or {}
+        label = str(host.get("name") or "").strip()
+        if label:
+            return label
+        raw = str(host.get("host") or "").strip()
+        return raw or "local"
+
+    @staticmethod
+    def _docker_client(*, docker_host: dict | None = None):
+        import docker  # type: ignore
+
+        host = docker_host or {}
+        raw_host = str(host.get("host") or "").strip()
+        if not raw_host or raw_host.lower() in ("local", "localhost", "127.0.0.1"):
+            return docker.from_env()
+
+        endpoint = raw_host
+        username = str(host.get("username") or "").strip()
+        password = str(host.get("password") or "")
+        port = int(host.get("port") or 0)
+
+        if "://" not in endpoint:
+            if username:
+                auth = quote(username, safe="")
+                if password:
+                    auth += ":" + quote(password, safe="")
+                endpoint = f"ssh://{auth}@{endpoint}"
+            else:
+                endpoint = f"tcp://{endpoint}"
+            if port > 0:
+                endpoint = f"{endpoint}:{port}"
+
+        timeout = int(host.get("timeout_seconds") or 10)
+        return docker.DockerClient(base_url=endpoint, timeout=max(3, timeout))
 
     # ── HTTP health checks ────────────────────────────────────────────────────
 

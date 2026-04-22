@@ -138,6 +138,10 @@ class ServiceStatus(BaseModel):
 
     name: str
     kind: str = Field(..., description="docker | http")
+    source_instance: Optional[str] = Field(
+        default=None,
+        description="Logical source instance label (e.g. docker host)",
+    )
     status: str  # up | down | degraded
     detail: Optional[str] = None
     checked_at: datetime = Field(default_factory=datetime.utcnow)
