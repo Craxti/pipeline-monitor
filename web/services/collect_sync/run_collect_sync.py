@@ -39,9 +39,15 @@ def run_collect_sync(
     j_enabled = sum(1 for i in cfg.get("jenkins_instances", []) if i.get("enabled", True))
     g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))
     dm_enabled = bool(cfg.get("docker_monitor", {}).get("enabled"))
+    incremental_collect = (
+        (not force_full)
+        and sqlite_available
+        and bool(cfg.get("general", {}).get("incremental_collect", True))
+    )
     logger.info(
-        "Collect cycle started (force_full=%s, lookback_days=%s, jenkins=%d, gitlab=%d, docker=%s)",
+        "Collect cycle started (force_full=%s, incremental=%s, lookback_days=%s, jenkins=%d, gitlab=%d, docker=%s)",
         force_full,
+        incremental_collect,
         cfg.get("general", {}).get("default_lookback_days", 7),
         j_enabled,
         g_enabled,
@@ -79,6 +85,10 @@ def run_collect_sync(
         if collect_state.get("cancel_requested"):
             raise CollectCancelled("Stopped by user")
 
+    def check_cancelled() -> None:
+        if collect_state.get("cancel_requested"):
+            raise CollectCancelled("Stopped by user")
+
     def merge_build_records(new_records: list) -> None:
         return _merge.merge_build_records(snapshot, new_records)
 
@@ -98,8 +108,10 @@ def run_collect_sync(
         sqlite_available=sqlite_available,
         get_collector_state_int=get_collector_state_int,
         set_collector_state_int=set_collector_state_int,
+        incremental_collect=incremental_collect,
         TestRecord=TestRecord,
         append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
+        check_cancelled=check_cancelled,
     )
     logger.info("Jenkins phase completed: builds=%d tests=%d", len(snapshot.builds), len(snapshot.tests))
     _between_phases()
@@ -112,6 +124,11 @@ def run_collect_sync(
         health=health,
         config_instance_label=config_instance_label,
         logger=logger,
+        incremental_collect=incremental_collect,
+        get_collector_state_int=get_collector_state_int,
+        set_collector_state_int=set_collector_state_int,
+        sqlite_available=sqlite_available,
+        check_cancelled=check_cancelled,
     )
     logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
     _between_phases()
@@ -126,6 +143,7 @@ def run_collect_sync(
         progress=progress,
         health=health,
         logger=logger,
+        check_cancelled=check_cancelled,
     )
     logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
 

@@ -135,25 +135,8 @@ async function loadSummary() {
   scheduleSparklineFetch([...new Set(builds.map(b => b.job_name))]);
   // Timeline — persisted state changes + snapshot activity (deduped)
   renderTimeline(builds, svcs, persistedItems);
+  renderFlakyAndCorrelation(builds);
 
-  let dbFlakyItems = [];
-  let flakyErr = null;
-  try {
-    const ds = await fetch(apiUrl('api/db/stats'));
-    const dj = ds.ok ? await ds.json() : {};
-    if (dj.enabled) {
-      const fr = await fetch(apiUrl('api/analytics/flaky'));
-      if (fr.ok) {
-        dbFlakyItems = (await fr.json()).items || [];
-      } else {
-        const d = await fetchApiErrorDetail(fr);
-        flakyErr = d ? `Flaky API: ${d}` : `Flaky API HTTP ${fr.status}`;
-      }
-    }
-  } catch (e) {
-    flakyErr = (e && e.message) ? String(e.message) : 'Network error';
-  }
-  renderFlakyAndCorrelation(builds, dbFlakyItems, flakyErr);
   _renderFavPanel();
   updateExecHealthLine();
   _finalizeStatTrends();

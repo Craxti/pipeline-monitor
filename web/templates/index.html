@@ -28,7 +28,7 @@
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
 <script src="/static/dashboard.timeline.js?v=20260417i" defer></script>
-<script src="/static/dashboard.flaky.js?v=20260417i" defer></script>
+<script src="/static/dashboard.flaky.js?v=20260422z" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
 <script src="/static/dashboard.load-summary.js?v=20260422a" defer></script>
 <script src="/static/dashboard.collect-bar.js?v=20260422h" defer></script>
@@ -149,7 +149,7 @@
   </div>
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-services" aria-selected="false" aria-controls="tab-panel-services" data-tab="services" data-i18n="tabNav.services">Services</button>
-    <span class="dash-tab-sub" data-i18n="tabNav.services_sub">Containers, flaky & timeline</span>
+    <span class="dash-tab-sub" data-i18n="tabNav.services_sub">Containers & timeline</span>
   </div>
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-trends" aria-selected="false" aria-controls="tab-panel-trends" data-tab="trends" data-i18n="tabNav.trends">Trends</button>
@@ -196,10 +196,6 @@
   <div class="stat" data-dash-action="goToServicesDownFromSituation" data-i18n-title="stat.services_down_title" title="" style="cursor:pointer">
     <div class="stat-numrow"><div class="n c-warn" id="s-down">—</div><span class="stat-trend" id="tr-down" aria-hidden="true"></span></div>
     <div class="l" data-i18n="stat.services_down">Services down</div>
-  </div>
-  <div class="stat" data-dash-action="goToInTab" data-dash-args='["services","panel-flaky"]' data-i18n-title="stat.flaky_title" title="Flaky jobs — alternating success/failure" style="cursor:pointer">
-    <div class="stat-numrow"><div class="n" style="color:#a855f7" id="s-flaky">—</div><span class="stat-trend" id="tr-flaky" aria-hidden="true"></span></div>
-    <div class="l" data-i18n="stat.flaky">Flaky jobs</div>
   </div>
   </div>
 
@@ -530,23 +526,17 @@
     <div class="sentinel" id="sentinel-svcs"></div>
   </div>
 </div>
-<!-- ── Flaky Jobs + Failure Correlation ── -->
 <div class="panel" id="panel-flaky" style="display:none">
   <div class="panel-head">
-    <h2>&#128128; <span data-i18n="panel.flaky">Flaky jobs</span>
-      <button type="button" class="glossary-hint" data-i18n-title="glossary.flaky" title="">?</button>
-    </h2>
+    <h2>&#9888; <span data-i18n="incident.correlated_title">Incidents</span></h2>
     <span class="panel-count" id="flaky-count">0</span>
-    <span style="color:var(--muted);font-size:.75rem;margin-left:.25rem" data-i18n="panel.flaky_hint">alternating SUCCESS↔FAILURE</span>
-    <button class="expand-btn" id="expand-flaky-panel" data-dash-action="toggleFlakyPanel" style="margin-left:auto" data-i18n="dash.map_hide">Hide</button>
   </div>
   <div id="flaky-body">
     <div id="flaky-fetch-error" class="panel-inline-error" style="display:none"></div>
-    <div id="flaky-list" style="padding:.5rem 1rem .75rem"></div>
+    <div id="flaky-list" style="display:none"></div>
     <div id="incident-list" style="padding:0 0 .5rem"></div>
   </div>
 </div>
-
 <!-- ── Timeline Panel ── -->
 <div class="panel" id="panel-timeline">
   <div class="panel-head">

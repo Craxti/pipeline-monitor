@@ -23,13 +23,16 @@ def collect_jenkins(
     sqlite_available: bool,
     get_collector_state_int,
     set_collector_state_int,
+    incremental_collect: bool,
     TestRecord,
     append_synth_tests_from_builds,
+    check_cancelled,
 ) -> None:
     """Collect Jenkins builds and (optionally) console/Allure tests."""
     from clients.jenkins_client import JenkinsClient
 
     for inst in cfg.get("jenkins_instances", []):
+        check_cancelled()
         if not inst.get("enabled", True):
             continue
         label = inst.get("name", inst.get("url", "Jenkins"))
@@ -42,6 +45,7 @@ def collect_jenkins(
         try:
             verify_ssl = bool(inst.get("verify_ssl", True))
             progress("jenkins_builds", f"Jenkins: {label}", "Preparing job list…")
+            check_cancelled()
 
             _raw_limit = inst.get("show_all_limit_jobs", 0)
             try:
@@ -71,6 +75,7 @@ def collect_jenkins(
                 source_instance=inst_key,
             )
             if inst.get("show_all_jobs", False):
+                check_cancelled()
                 try:
                     shared_discovered = client.fetch_job_list() or []
                 except Exception as exc:
@@ -102,6 +107,7 @@ def collect_jenkins(
                     effective_max_builds = min(effective_max_builds, cap)
 
             if inst.get("show_all_jobs", False):
+                check_cancelled()
                 limit_jobs = (
                     show_all_limit_jobs if (inst.get("show_all_jobs", False) and not inst.get("jobs")) else None
                 )
@@ -116,6 +122,7 @@ def collect_jenkins(
                     depth=int(inst.get("show_all_depth", 4) or 4),
                 )
                 merge_build_records(bulk_builds)
+                check_cancelled()
 
                 hist_n = int(inst.get("show_all_history_builds", 0) or 0)
                 hist_job_cap = int(inst.get("show_all_history_jobs_cap", 45) or 45)
@@ -133,6 +140,7 @@ def collect_jenkins(
                     seen_hist: set[str] = set()
                     n_hist = 0
                     for b in bulk_builds:
+                        check_cancelled()
                         if n_hist >= max(1, hist_job_cap):
                             break
                         jn = getattr(b, "job_name", None) or ""
@@ -153,6 +161,7 @@ def collect_jenkins(
                             )
                             if extra_hist:
                                 merge_build_records(extra_hist)
+                            check_cancelled()
                         except Exception as exc:
                             logger.debug("Jenkins history fetch for %s: %s", jn, exc)
 
@@ -163,6 +172,7 @@ def collect_jenkins(
                         shared_discovered = []
 
                 for b in bulk_builds:
+                    check_cancelled()
                     try:
                         last_status_by_job[b.job_name] = b.status_normalized
                     except Exception:
@@ -194,12 +204,70 @@ def collect_jenkins(
                     f"Jenkins: {label}",
                     f"Fetching builds… (max_builds={effective_max_builds})",
                 )
-                merge_build_records(
-                    client.fetch_builds(
+                base = str(inst.get("url", "")).rstrip("/")
+                explicit_jobs = list(inst.get("jobs") or [])
+                if incremental_collect and sqlite_available and explicit_jobs:
+                    for job_cfg in explicit_jobs:
+                        check_cancelled()
+                        job_name = (job_cfg.get("name") or "").strip()
+                        if not job_name:
+                            continue
+                        wm_key = f"jenkins|{base}|{job_name}"
+                        prev_bn = int(get_collector_state_int(wm_key, 0) or 0)
+                        jp = client.job_path(job_name)
+                        lb_data = client._get(f"{jp}/api/json?tree=lastBuild[number]")
+                        check_cancelled()
+                        lb_n = 0
+                        try:
+                            lb = (lb_data or {}).get("lastBuild") if isinstance(lb_data, dict) else None
+                            if isinstance(lb, dict) and lb.get("number") is not None:
+                                lb_n = int(lb["number"])
+                        except Exception:
+                            lb_n = 0
+                        if prev_bn > 0 and lb_n > 0 and lb_n <= prev_bn:
+                            continue
+                        critical = bool(job_cfg.get("critical", False))
+                        recs = client.fetch_builds_for_job(
+                            job_name,
+                            since=since,
+                            max_builds=effective_max_builds,
+                            critical=critical,
+                        )
+                        if recs:
+                            merge_build_records(recs)
+                            check_cancelled()
+                            if lb_n > prev_bn:
+                                try:
+                                    set_collector_state_int(wm_key, lb_n)
+                                except Exception:
+                                    pass
+                else:
+                    check_cancelled()
+                    recs = client.fetch_builds(
                         since=since,
                         max_builds=effective_max_builds,
                     )
-                )
+                    merge_build_records(recs)
+                    check_cancelled()
+                    if sqlite_available and explicit_jobs and recs:
+                        by_job: dict[str, int] = {}
+                        for r in recs:
+                            if str(getattr(r, "source", "") or "").lower() != "jenkins":
+                                continue
+                            jn = str(getattr(r, "job_name", "") or "")
+                            bn = getattr(r, "build_number", None)
+                            if not jn or bn is None:
+                                continue
+                            try:
+                                n = int(bn)
+                            except (TypeError, ValueError):
+                                continue
+                            by_job[jn] = max(by_job.get(jn, 0), n)
+                        for jn, n in by_job.items():
+                            try:
+                                set_collector_state_int(f"jenkins|{base}|{jn}", n)
+                            except Exception:
+                                pass
 
             health.append(
                 {
@@ -235,6 +303,7 @@ def collect_jenkins(
             )
 
         if inst.get("parse_console", False):
+            check_cancelled()
             try:
                 from parsers.jenkins_console_parser import JenkinsConsoleParser
 
@@ -282,6 +351,7 @@ def collect_jenkins(
                         )
                 n_console_jobs_parsed = len(jobs_for_console) if jobs_for_console else 0
                 if jobs_for_console:
+                    check_cancelled()
                     progress(
                         "jenkins_console",
                         f"Jenkins: {label}",
@@ -329,6 +399,7 @@ def collect_jenkins(
                     ),
                 )
                 _ = console_parser.fetch_tests()
+                check_cancelled()
             except Exception as exc:
                 logger.error("Jenkins [%s] console parse failed: %s", label, exc)
                 push_collect_log(
@@ -339,6 +410,7 @@ def collect_jenkins(
                 )
 
         if inst.get("parse_allure", False):
+            check_cancelled()
             try:
                 from parsers.jenkins_allure_parser import JenkinsAllureParser
 
@@ -387,6 +459,7 @@ def collect_jenkins(
 
                 n_allure_jobs_parsed = len(jobs_for_allure) if jobs_for_allure else 0
                 if jobs_for_allure:
+                    check_cancelled()
                     progress(
                         "jenkins_allure",
                         f"Jenkins: {label}",
@@ -441,6 +514,7 @@ def collect_jenkins(
                     ),
                 )
                 _ = allure_parser.fetch_tests()
+                check_cancelled()
             except Exception as exc:
                 logger.error("Jenkins [%s] allure parse failed: %s", label, exc)
                 push_collect_log(

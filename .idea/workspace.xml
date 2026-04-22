@@ -4,19 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix actions start restart stop docker/jenkins/git">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/clients/gitlab_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/clients/gitlab_client.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.example.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/routes/collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/meta_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/meta_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/public_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/public_settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_save_endpoint.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.builds.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.builds.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.init.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.init.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.live.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.live.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_endpoints.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.flaky.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.flaky.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,13 +140,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00010" summary="fix visuals">
-      <created>1776434495028</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1776434495028</updated>
     </task>
     <task id="LOCAL-00011" summary="fix moduls">
       <created>1776438293602</created>
@@ -482,7 +477,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776857733136</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="fix life time">
+      <created>1776859054787</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1776859054787</updated>
+    </task>
+    <option name="localTasksCounter" value="60" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -497,7 +499,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="pep8 + docs + unittests" />
     <MESSAGE value="pars fix" />
     <MESSAGE value="pep8" />
     <MESSAGE value="add actions black" />
@@ -522,6 +523,7 @@
     <MESSAGE value="fix docker" />
     <MESSAGE value="fix config.yaml" />
     <MESSAGE value="fix actions start restart stop docker/jenkins/git" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix actions start restart stop docker/jenkins/git" />
+    <MESSAGE value="fix life time" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix life time" />
   </component>
 </project>

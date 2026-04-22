@@ -1,6 +1,9 @@
 general:
   project_name: CI Monitor
   default_lookback_days: 7
+  # When true (default): after the first collect, reuse SQLite watermarks to skip unchanged
+  # Jenkins jobs / GitLab projects (fewer API calls). Ignored on force_full or without SQLite.
+  incremental_collect: true
   data_dir: data
   log_level: INFO
 jenkins_instances:

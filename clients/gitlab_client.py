@@ -137,6 +137,42 @@ class GitLabClient(BaseCIClient):
             page += 1
         return results
 
+    def fetch_pipelines_for_project(
+        self,
+        proj_id: str,
+        resolved_id: str,
+        *,
+        since: datetime | None = None,
+        per_page: int,
+        critical: bool,
+    ) -> list[BuildRecord]:
+        """List recent pipelines for one project (``per_page`` capped server-side)."""
+        path = (
+            f"/api/v4/projects/{resolved_id}/pipelines"
+            f"?per_page={int(per_page)}&order_by=id&sort=desc"
+        )
+        data = self._get(path)
+        if not isinstance(data, list):
+            logger.warning(
+                "GitLab: no pipeline list for project '%s' (id=%s)",
+                proj_id,
+                resolved_id,
+            )
+            return []
+        if not data:
+            logger.info("GitLab: project '%s' has no pipelines.", proj_id)
+            return []
+
+        project_records: list[BuildRecord] = []
+        for i, raw_pipe in enumerate(data):
+            record = self._parse_pipeline(raw_pipe, proj_id, critical)
+            if i > 0 and since and record.started_at and record.started_at < since:
+                break
+            project_records.append(record)
+
+        logger.debug("GitLab: project '%s' -> %d pipelines", proj_id, len(project_records))
+        return project_records
+
     def fetch_builds(
         self,
         since: datetime | None = None,
@@ -161,29 +197,15 @@ class GitLabClient(BaseCIClient):
                 # Try the URL-encoded path directly as fallback
                 resolved_id = quote_plus(proj_id)
 
-            path = f"/api/v4/projects/{resolved_id}/pipelines" f"?per_page={max_builds}&order_by=id&sort=desc"
-            data = self._get(path)
-            if not isinstance(data, list):
-                logger.warning(
-                    "GitLab: no pipeline list for project '%s' (id=%s)",
+            records.extend(
+                self.fetch_pipelines_for_project(
                     proj_id,
                     resolved_id,
+                    since=since,
+                    per_page=max_builds,
+                    critical=critical,
                 )
-                continue
-            if not data:
-                logger.info("GitLab: project '%s' has no pipelines.", proj_id)
-                continue
-
-            project_records: list[BuildRecord] = []
-            for i, raw_pipe in enumerate(data):
-                record = self._parse_pipeline(raw_pipe, proj_id, critical)
-                # Always keep the most-recent pipeline (i==0) even if older than since
-                if i > 0 and since and record.started_at and record.started_at < since:
-                    break  # list is newest-first; everything after is older
-                project_records.append(record)
-
-            records.extend(project_records)
-            logger.debug("GitLab: project '%s' -> %d pipelines", proj_id, len(project_records))
+            )
 
         logger.info("GitLab: fetched %d pipeline records total", len(records))
         return records

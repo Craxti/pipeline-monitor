@@ -1062,7 +1062,6 @@ function _finalizeStatTrends() {
     tfail: _gid('s-tfail'),
     tpass: _gid('s-tpass'),
     down: _gid('s-down'),
-    flaky: _gid('s-flaky'),
   };
   const prev = JSON.parse(sessionStorage.getItem('cimon-stat-snap') || 'null');
   const pairs = [
@@ -1073,7 +1072,6 @@ function _finalizeStatTrends() {
     ['tr-tfail', 'tfail'],
     ['tr-tpass', 'tpass'],
     ['tr-down', 'down'],
-    ['tr-flaky', 'flaky'],
   ];
   pairs.forEach(([tid, k]) => {
     const el = document.getElementById(tid);

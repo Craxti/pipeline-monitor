@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 
-def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logger) -> None:
+def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logger, check_cancelled) -> None:
     """Collect container/service status via Docker monitor."""
     from docker_monitor.monitor import DockerMonitor
 
@@ -15,6 +15,7 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
     t0 = time.monotonic()
     try:
         progress("docker", "Docker / HTTP", "Running checks…")
+        check_cancelled()
         hosts = []
         if dm_cfg.get("include_local_host", True):
             hosts.append({"name": "local", "host": "local", "enabled": True})
@@ -24,6 +25,7 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
 
         all_services = []
         for h in hosts:
+            check_cancelled()
             logger.info("Docker monitor host check started: %s", h.get("name") or h.get("host") or "unknown")
             monitor = DockerMonitor(
                 containers=dm_cfg.get("containers", []),
@@ -33,6 +35,7 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
                 docker_host=h,
             )
             all_services.extend(monitor.check_all())
+            check_cancelled()
 
         # HTTP checks are collected once (not tied to Docker daemon hosts).
         http_monitor = DockerMonitor(
@@ -43,6 +46,7 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
             docker_host={"name": "local", "host": "local"},
         )
         all_services.extend(http_monitor._check_http())
+        check_cancelled()
         snapshot.services = all_services
         logger.info(
             "Docker monitor completed: hosts=%d, http_checks=%d, services=%d",

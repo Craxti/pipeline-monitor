@@ -104,7 +104,7 @@ async def collect_slow_route(limit: int = 10, offset: int = 0):
     dependencies=[Depends(require_shared_token)],
 )
 async def collect_stop_route():
-    """Request cancellation of a running collect (cooperative; may finish current step)."""
+    """Request immediate cancellation of a running collect."""
     from web.core import runtime as rt
     from web.services import collect_endpoints
 
