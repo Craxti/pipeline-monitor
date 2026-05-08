@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from collections import Counter
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from web.core.auth import require_shared_token
@@ -65,6 +68,95 @@ async def api_settings_test_connection_route(request: Request):
         payload = {}
     result = settings_connection_test.check_connection(payload if isinstance(payload, dict) else {})
     return result
+
+
+@router.post(
+    "/api/har/analyze",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def api_har_analyze_route(file: UploadFile = File(...)):
+    """Analyze uploaded HAR and return lightweight diagnostics."""
+    name = (file.filename or "").lower()
+    if name and not name.endswith(".har") and not name.endswith(".json"):
+        return JSONResponse({"detail": "Upload a .har or .json file."}, status_code=400)
+    try:
+        raw = await file.read()
+        payload = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return JSONResponse({"detail": "Could not parse HAR JSON."}, status_code=400)
+    log = payload.get("log") if isinstance(payload, dict) else None
+    entries = log.get("entries") if isinstance(log, dict) else None
+    if not isinstance(entries, list):
+        return JSONResponse({"detail": "Invalid HAR: missing log.entries list."}, status_code=400)
+
+    total = len(entries)
+    failed = []
+    slow = []
+    status_counter = Counter()
+    host_counter = Counter()
+    total_time = 0.0
+    timed_count = 0
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        request = item.get("request") if isinstance(item.get("request"), dict) else {}
+        response = item.get("response") if isinstance(item.get("response"), dict) else {}
+        timings = item.get("timings") if isinstance(item.get("timings"), dict) else {}
+        url = str(request.get("url") or "")
+        method = str(request.get("method") or "GET")
+        status = int(response.get("status") or 0)
+        time_ms = float(item.get("time") or 0)
+        if time_ms > 0:
+            total_time += time_ms
+            timed_count += 1
+        host = urlparse(url).netloc
+        if host:
+            host_counter[host] += 1
+        if status > 0:
+            status_counter[str(status)] += 1
+
+        net_error = str(item.get("_error") or item.get("_errorText") or "").strip()
+        if status >= 400 or net_error:
+            failed.append(
+                {
+                    "method": method,
+                    "url": url,
+                    "status": status or None,
+                    "time_ms": round(time_ms, 2) if time_ms else None,
+                    "error": net_error or None,
+                }
+            )
+        if time_ms >= 2000:
+            wait_ms = float(timings.get("wait") or 0)
+            slow.append(
+                {
+                    "method": method,
+                    "url": url,
+                    "status": status or None,
+                    "time_ms": round(time_ms, 2),
+                    "wait_ms": round(wait_ms, 2) if wait_ms else None,
+                }
+            )
+
+    failed.sort(key=lambda x: (x.get("status") is None, -(x.get("status") or 0)))
+    slow.sort(key=lambda x: x.get("time_ms") or 0, reverse=True)
+    top_statuses = [{"status": k, "count": v} for k, v in status_counter.most_common(10)]
+    top_hosts = [{"host": k, "count": v} for k, v in host_counter.most_common(10)]
+
+    return {
+        "file_name": file.filename,
+        "summary": {
+            "total_requests": total,
+            "failed_requests": len(failed),
+            "slow_requests": len(slow),
+            "avg_time_ms": round((total_time / timed_count), 2) if timed_count else 0,
+        },
+        "top_statuses": top_statuses,
+        "top_hosts": top_hosts,
+        "failed_requests": failed[:200],
+        "slow_requests": slow[:200],
+    }
 
 
 @router.post(

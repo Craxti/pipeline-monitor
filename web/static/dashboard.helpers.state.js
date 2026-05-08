@@ -42,6 +42,7 @@ const DASH_TABS = [
   'trends',
   'incidents',
   'logs',
+  'har',
 ];
 let _dashTab = 'overview';
 let _backTopInit = false;

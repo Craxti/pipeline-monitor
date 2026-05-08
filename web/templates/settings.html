@@ -268,6 +268,7 @@
   }
   .privacy-banner .pmsg{font-size:.82rem;color:var(--text);line-height:1.35}
   .privacy-banner .btn{padding:.35rem .7rem;font-size:.78rem}
+  .mono{font-family:Consolas,'Courier New',monospace}
   @media (max-width: 1100px){
     .wizard-grid{grid-template-columns:1fr}
   }
@@ -400,6 +401,11 @@
               <div class="field-label" data-i18n="st.lookback">Default Lookback (days)</div>
               <input type="number" id="g-lookback" class="field-input" min="1" max="90">
             </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">History retention (days)</div>
+            <input type="number" id="g-history-retention" class="field-input" min="0" max="3650">
+            <div class="field-hint">0 = do not delete historical data automatically.</div>
           </div>
         </div>
       </div>
@@ -921,6 +927,7 @@ function showToast(msg, type = 'ok') {
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.remove('show'), 4500);
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // JENKINS INSTANCES
@@ -1516,6 +1523,7 @@ function populateForm(cfg) {
   const dm = cfg.docker_monitor || {};
 
   sV('g-lookback',      g.default_lookback_days ?? 7);
+  sV('g-history-retention', g.history_retention_days ?? 0);
   sV('g-log-level',     g.log_level             || 'INFO');
   sV('g-top-failures',  p.top_failures           ?? 10);
   sC('w-auto-collect',  w.auto_collect            ?? true);
@@ -1576,6 +1584,7 @@ function collectForm() {
     general: {
       project_name: 'CI/CD Monitor',
       default_lookback_days: toInt(gV('g-lookback')),
+      history_retention_days: toInt(gV('g-history-retention')),
       data_dir: 'data',
       log_level: gV('g-log-level'),
     },

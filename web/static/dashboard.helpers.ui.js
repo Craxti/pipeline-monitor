@@ -558,6 +558,7 @@ function initDashFormControlBindings() {
       }
     });
   }
+  if (typeof initHarPanelBindings === 'function') initHarPanelBindings();
 }
 
 function refreshActivePanel() {
@@ -576,6 +577,7 @@ function refreshActivePanel() {
   if (_dashTab === 'trends') { loadTrends(_trendsViewDays, null); return; }
   if (_dashTab === 'incidents') { loadSummary(); return; }
   if (_dashTab === 'logs') { loadCollectLogs(); loadCollectSlowTop(); return; }
+  if (_dashTab === 'har') { return; }
 }
 
 function initDashboardTabs() {
@@ -1177,6 +1179,7 @@ function setUILang(code) {
   pollCollect();
   try { _refreshChatHelloI18n(); } catch { /* ignore */ }
   try { updateFailuresExportLinks(); } catch { /* ignore */ }
+  try { if (typeof refreshHarI18n === 'function') refreshHarI18n(); } catch { /* ignore */ }
   if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
   else loadTrends(_trendsViewDays, null);
   _renderFavPanel();

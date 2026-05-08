@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="/static/app.css?v=20260422m" />
+<link rel="stylesheet" href="/static/app.css?v=20260508e" />
 </head>
 <body data-page="dashboard">
 {% include 'partials/i18n_core.html' %}
@@ -15,8 +15,8 @@
 <script src="/static/dashboard.helpers.formatters.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
-<script src="/static/dashboard.helpers.state.js?v=20260423a" defer></script>
-<script src="/static/dashboard.helpers.ui.js?v=20260423b" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260508b" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260508b" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
@@ -43,6 +43,7 @@
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
 <script src="/static/dashboard.live.js?v=20260422h" defer></script>
+<script src="/static/dashboard.har.js?v=20260508h" defer></script>
 <script src="/static/dashboard.init.js?v=20260423a" defer></script>
 
 <!-- ── Header ── -->
@@ -171,6 +172,10 @@
   <div class="dash-tab-cell">
     <button type="button" class="dash-tab" role="tab" id="tabbtn-logs" aria-selected="false" aria-controls="tab-panel-logs" data-tab="logs" data-i18n="tabNav.logs">Logs</button>
     <span class="dash-tab-sub" data-i18n="tabNav.logs_sub">Collect / parsers</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-har" aria-selected="false" aria-controls="tab-panel-har" data-tab="har" data-i18n="tabNav.har">HAR</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.har_sub">Request diagnostics</span>
   </div>
 </nav>
 
@@ -961,6 +966,92 @@
     <div id="collectslow-box"></div>
   </div>
 </section>
+</div>
+
+<div id="tab-panel-har" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-har" hidden>
+<section id="sec-har" class="dash-section">
+  <div class="panel" id="panel-har">
+    <div class="panel-head">
+      <h2>&#128202; <span data-i18n="dash.har_title">HAR Analyze</span></h2>
+      <span class="panel-count" data-i18n="dash.har_subtitle">Upload, filter, inspect failed/slow requests</span>
+    </div>
+    <div class="panel-body-har">
+      <div class="dhar-upload">
+        <input type="file" id="har-file" class="f-input" accept=".har,.json" style="width:min(460px,100%)">
+        <button type="button" class="btn" id="har-analyze-btn" data-dash-action="analyzeHar" data-i18n="dash.har_analyze_btn">Analyze</button>
+        <button type="button" class="time-filter-btn" id="har-toggle-raw-btn" data-dash-action="toggleHarRawView" data-i18n="dash.har_show_raw">Show file</button>
+        <span id="har-status" class="mono" style="color:var(--muted);font-size:.75rem"></span>
+      </div>
+      <div class="dhar-filters">
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_status_lbl">Status</div>
+          <select id="har-filter-status" class="f-select">
+          <option value="all" data-i18n="dash.har_filter_status_all">All statuses</option>
+          <option value="4xx" data-i18n="dash.har_filter_status_4xx">4xx</option>
+          <option value="5xx" data-i18n="dash.har_filter_status_5xx">5xx</option>
+          <option value="error" data-i18n="dash.har_filter_status_error">Network errors</option>
+          </select>
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_host_lbl">Host</div>
+          <input type="text" id="har-filter-host" class="f-input" data-i18n-placeholder="dash.har_filter_host_ph" placeholder="Host contains (api.example.com)">
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_url_lbl">URL</div>
+          <input type="text" id="har-filter-url" class="f-input" data-i18n-placeholder="dash.har_filter_url_ph" placeholder="URL contains (/v1/orders)">
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_slow_lbl">Slow threshold</div>
+          <input type="number" id="har-slow-threshold" class="f-input" min="1" value="2000" data-i18n-placeholder="dash.har_filter_slow_ph" placeholder="Slow threshold ms">
+        </div>
+      </div>
+      <div class="dhar-presets">
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('all')" data-i18n="dash.har_preset_all">All</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('5xx')" data-i18n="dash.har_preset_5xx">Only 5xx</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('errors')" data-i18n="dash.har_preset_errors">Network errors</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('slow')" data-i18n="dash.har_preset_slow">Slow only</button>
+        <span id="har-filter-meta" class="panel-count" style="margin-left:auto"></span>
+      </div>
+      <div id="har-summary" class="dhar-summary" style="display:none"></div>
+      <div class="dhar-two-col">
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_statuses">Top HTTP statuses</div>
+          <div id="har-statuses" class="dhar-list"></div>
+        </div>
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_hosts">Top hosts</div>
+          <div id="har-hosts" class="dhar-list"></div>
+        </div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_failed_requests">Requests with errors</div>
+        <div id="har-failed" class="dhar-list"></div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_slow_requests">Slow requests</div>
+        <div id="har-slow" class="dhar-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="modal-overlay" id="har-raw-modal" aria-hidden="true" data-dash-overlay-dismiss="closeHarRawModal">
+  <div class="log-modal-card" style="max-width:min(1060px,96vw)" role="dialog" aria-modal="true" aria-labelledby="har-raw-title">
+    <div class="log-modal-header">
+      <h3 id="har-raw-title" data-i18n="dash.har_raw_title">HAR file preview</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeHarRawModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:flex-start">
+      <select id="har-raw-mode" class="f-select" style="width:auto;min-width:230px">
+        <option value="full" data-i18n="dash.har_raw_mode_full">Full file</option>
+        <option value="filtered" data-i18n="dash.har_raw_mode_filtered">Filtered view (by current HAR filters)</option>
+      </select>
+      <input id="har-raw-search" class="f-input" data-i18n-placeholder="dash.har_raw_search_ph" placeholder="Search in file…" style="width:280px;max-width:100%"/>
+      <span id="har-raw-meta" class="panel-count"></span>
+    </div>
+    <pre id="har-raw-pre" class="dhar-raw-pre" style="max-height:min(68vh,620px)"></pre>
+  </div>
 </div>
 
 <!-- Allure description / screenshots (Jenkins) -->
