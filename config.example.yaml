@@ -80,13 +80,6 @@ web:
   port: 8020
   live_reload: true
   auto_collect: true
-  # Docker self-update loop (safe for DB/data when using named volume in compose).
-  docker_auto_update_enabled: false
-  docker_auto_update_check_interval_seconds: 300
-  docker_auto_update_image: ghcr.io/craxti/pipeline-monitor:latest
-  docker_auto_update_service: pipeline-monitor-web
-  docker_auto_update_container: pipeline-monitor-web
-  docker_auto_update_compose_file: compose.yml
   collect_interval_seconds: 300
   # When dashboard LIVE is on: how often the UI pulls fresh data (seconds, 8–120).
   live_dashboard_poll_seconds: 20

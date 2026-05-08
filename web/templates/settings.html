@@ -391,14 +391,6 @@
               <span data-i18n="st.auto_collect_hint">Automatically fetch data when the web server starts</span>
             </label>
           </div>
-          <div class="field-row">
-            <div class="field-label" data-i18n="st.auto_update_on">Auto Update in Docker</div>
-            <label class="toggle">
-              <input type="checkbox" id="w-docker-auto-update">
-              <div class="toggle-track"><div class="toggle-knob"></div></div>
-              <span data-i18n="st.auto_update_hint">Periodically check container image updates and recreate only app service (named volume keeps DB/data).</span>
-            </label>
-          </div>
           <div class="two-col">
             <div class="field-row">
               <div class="field-label" data-i18n="st.interval">Collect Interval (seconds)</div>
@@ -1535,7 +1527,6 @@ function populateForm(cfg) {
   sV('g-log-level',     g.log_level             || 'INFO');
   sV('g-top-failures',  p.top_failures           ?? 10);
   sC('w-auto-collect',  w.auto_collect            ?? true);
-  sC('w-docker-auto-update',  w.docker_auto_update_enabled ?? false);
   sV('w-interval',      w.collect_interval_seconds ?? 300);
   _tgBots = Array.isArray(tg.bots) ? JSON.parse(JSON.stringify(tg.bots)) : [];
   if (!_tgBots.length && ((tg.bot_token && String(tg.bot_token).trim()) || (tg.chat_id && String(tg.chat_id).trim()))) {
@@ -1658,7 +1649,6 @@ function collectForm() {
     web: {
       host: '0.0.0.0', port: 8020, live_reload: true,
       auto_collect:             gC('w-auto-collect'),
-      docker_auto_update_enabled: gC('w-docker-auto-update'),
       collect_interval_seconds: toInt(gV('w-interval')),
     },
   };

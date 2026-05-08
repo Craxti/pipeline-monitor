@@ -11,7 +11,6 @@ from web.services import (
     app_boot_log,
     collect_task_lifecycle,
     cursor_proxy_lifecycle,
-    docker_self_update,
     lifespan_factory,
     proxy_routes,
     service_logs_bridge,
@@ -40,7 +39,6 @@ def make_app_lifespan(
 
     collect_task: asyncio.Task | None = None
     service_log_handler: logging.Handler | None = None
-    self_update_loop = docker_self_update.DockerSelfUpdateLoop()
 
     def _set_main_loop(loop: asyncio.AbstractEventLoop) -> None:
         rt.main_loop = loop
@@ -94,12 +92,6 @@ def make_app_lifespan(
             logger=logger,
         )
 
-    async def _startup_self_update(_: dict) -> None:
-        self_update_loop.start(load_cfg=load_cfg, logger=logger)
-
-    async def _shutdown_self_update() -> None:
-        await self_update_loop.stop()
-
     return lifespan_factory.make_lifespan(
         load_cfg=load_cfg,
         set_main_loop=_set_main_loop,
@@ -109,7 +101,5 @@ def make_app_lifespan(
         log_boot=_log_boot,
         startup_proxy=_startup_proxy,
         shutdown_proxy=_shutdown_proxy,
-        startup_self_update=_startup_self_update,
-        shutdown_self_update=_shutdown_self_update,
         stop_collect_task=collect_task_lifecycle.cancel_task,
     )

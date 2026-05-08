@@ -18,8 +18,6 @@ def make_lifespan(
     startup_proxy: Callable[[dict], Awaitable[None]],
     shutdown_proxy: Callable[[], Awaitable[None]],
     stop_collect_task: Callable[[asyncio.Task | None], Awaitable[None]],
-    startup_self_update: Callable[[dict], Awaitable[None]] | None = None,
-    shutdown_self_update: Callable[[], Awaitable[None]] | None = None,
 ) -> Callable[[object], Awaitable[None]]:
     """Create a FastAPI lifespan handler wired with injected functions."""
 
@@ -35,14 +33,10 @@ def make_lifespan(
         paths = proxy_paths(app)
         log_boot(paths)
         await startup_proxy(cfg)
-        if startup_self_update is not None:
-            await startup_self_update(cfg)
 
         try:
             yield
         finally:
-            if shutdown_self_update is not None:
-                await shutdown_self_update()
             await shutdown_proxy()
             await stop_collect_task(collect_task)
 
