@@ -18,7 +18,7 @@ async def health() -> HealthResponse:
     """Simple liveness probe."""
     return HealthResponse(
         ts=datetime.now(tz=timezone.utc).isoformat(),
-        version="1.0.0",
+        version="1.0.1",
         app_build=APP_BUILD,
         app_path=str((REPO_ROOT / "web" / "app.py").resolve()),
     )

@@ -87,7 +87,7 @@ lifespan = _app_lifespan_wiring.make_app_lifespan(
 )
 
 
-app = FastAPI(title="CI/CD Monitor", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="CI/CD Monitor", version="1.0.1", lifespan=lifespan)
 app.openapi = _openapi_safe.make_safe_openapi(app, logger=logger)
 
 _static_mount.mount_static_if_present(app=app, base_dir=Path(__file__).resolve().parents[1])
