@@ -10,12 +10,12 @@ router = APIRouter(tags=["tests"])
 
 @router.get("/api/tests", response_class=JSONResponse)
 async def api_tests_route(
-    page: int = 1,
-    per_page: int = 30,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(30, ge=1, le=200),
     status: str = "",
     suite: str = "",
     name: str = "",
-    hours: int = 0,
+    hours: int = Query(0, ge=0),
     source: str = "",
 ):
     """Return paginated tests list (with filtering)."""
@@ -40,14 +40,14 @@ async def api_tests_route(
 
 @router.get("/api/tests/top-failures", response_class=JSONResponse)
 async def api_tests_top_failures_route(
-    n: int = 50,
-    page: int = 1,
-    per_page: int = 20,
+    n: int = Query(50, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=200),
     suite: str = "",
     name: str = "",
     source: str = "",
-    hours: int = 0,
-    days: int = 0,
+    hours: int = Query(0, ge=0),
+    days: int = Query(0, ge=0),
 ):
     """Return top failing tests aggregation."""
     from web.core import runtime as rt

@@ -10,6 +10,17 @@ from fastapi import HTTPException, Request
 logger = logging.getLogger(__name__)
 
 
+async def _json_body_dict(request: Request) -> dict[str, Any]:
+    """Return parsed JSON object body or raise 400."""
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(400, "Invalid JSON body") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(400, "JSON body must be an object")
+    return body
+
+
 async def action_jenkins_build(
     request: Request,
     *,
@@ -19,7 +30,7 @@ async def action_jenkins_build(
     trigger_jenkins_build: Callable[..., Any],
 ) -> Any:
     """Trigger Jenkins build action."""
-    body = await request.json()
+    body = await _json_body_dict(request)
     job_name = body.get("job_name", "")
     instance_url = body.get("instance_url", "")
     client_host = getattr(request.client, "host", "-")
@@ -38,6 +49,8 @@ async def action_jenkins_build(
         result = trigger_jenkins_build(cfg=cfg, job_name=job_name, instance_url=instance_url)
         logger.info("[%s] action jenkins build completed job=%s result=%s", rid, job_name, result)
         return result
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("[%s] Jenkins trigger failed job=%s: %s", rid, job_name, exc)
         raise HTTPException(500, f"Failed to trigger build: {exc}") from exc
@@ -52,7 +65,7 @@ async def action_gitlab_pipeline(
     trigger_gitlab_pipeline: Callable[..., Any],
 ) -> Any:
     """Trigger GitLab pipeline action."""
-    body = await request.json()
+    body = await _json_body_dict(request)
     project_id = body.get("project_id", "")
     ref = body.get("ref", "main")
     instance_url = body.get("instance_url", "")
@@ -68,6 +81,8 @@ async def action_gitlab_pipeline(
             ref=ref,
             instance_url=instance_url,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("GitLab trigger failed: %s", exc)
         raise HTTPException(500, f"Failed to trigger pipeline: {exc}") from exc
@@ -82,7 +97,7 @@ async def action_docker_container(
     docker_container_action: Callable[..., Any],
 ) -> Any:
     """Execute docker container action (start/stop/restart)."""
-    body = await request.json()
+    body = await _json_body_dict(request)
     container_name = body.get("container_name", "")
     docker_host = body.get("docker_host", "")
     action = (body.get("action") or "restart").lower().strip()
@@ -132,7 +147,7 @@ async def action_docker_restart(
     docker_container_action: Callable[..., Any],
 ) -> Any:
     """Restart docker container (shortcut action)."""
-    body = await request.json()
+    body = await _json_body_dict(request)
     container_name = body.get("container_name", "")
     docker_host = body.get("docker_host", "")
     client_host = getattr(request.client, "host", "-")
@@ -151,6 +166,8 @@ async def action_docker_restart(
         )
         logger.info("action docker restart completed container=%s result=%s", container_name, result)
         return result
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Docker restart failed container=%s: %s", container_name, exc)
         raise HTTPException(500, f"Failed to restart container: {exc}") from exc

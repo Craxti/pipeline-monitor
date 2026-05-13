@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
@@ -69,7 +68,7 @@ async def api_tests(
     page_items = items[start:end]
 
     return {
-        "items": [json.loads(t.model_dump_json()) for t in page_items],
+        "items": [t.model_dump(mode="json") for t in page_items],
         "page": page,
         "per_page": per_page,
         "total": total,

@@ -77,6 +77,18 @@ async def api_settings_test_connection_route(request: Request):
 )
 async def api_har_analyze_route(file: UploadFile = File(...)):
     """Analyze uploaded HAR and return lightweight diagnostics."""
+    def _safe_int(value: object, *, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _safe_float(value: object, *, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
     name = (file.filename or "").lower()
     if name and not name.endswith(".har") and not name.endswith(".json"):
         return JSONResponse({"detail": "Upload a .har or .json file."}, status_code=400)
@@ -97,16 +109,26 @@ async def api_har_analyze_route(file: UploadFile = File(...)):
     host_counter = Counter()
     total_time = 0.0
     timed_count = 0
-    for item in entries:
+    warnings: list[str] = []
+    skipped_entries = 0
+    for idx, item in enumerate(entries):
         if not isinstance(item, dict):
+            skipped_entries += 1
+            warnings.append(f"entry[{idx}] skipped: expected object")
             continue
         request = item.get("request") if isinstance(item.get("request"), dict) else {}
         response = item.get("response") if isinstance(item.get("response"), dict) else {}
         timings = item.get("timings") if isinstance(item.get("timings"), dict) else {}
         url = str(request.get("url") or "")
         method = str(request.get("method") or "GET")
-        status = int(response.get("status") or 0)
-        time_ms = float(item.get("time") or 0)
+        raw_status = response.get("status")
+        status = _safe_int(raw_status, default=0)
+        if raw_status not in (None, "") and status == 0:
+            warnings.append(f"entry[{idx}] invalid response.status={raw_status!r}; using 0")
+        raw_time = item.get("time")
+        time_ms = _safe_float(raw_time, default=0.0)
+        if raw_time not in (None, "") and time_ms == 0.0:
+            warnings.append(f"entry[{idx}] invalid time={raw_time!r}; using 0")
         if time_ms > 0:
             total_time += time_ms
             timed_count += 1
@@ -128,7 +150,10 @@ async def api_har_analyze_route(file: UploadFile = File(...)):
                 }
             )
         if time_ms >= 2000:
-            wait_ms = float(timings.get("wait") or 0)
+            raw_wait = timings.get("wait")
+            wait_ms = _safe_float(raw_wait, default=0.0)
+            if raw_wait not in (None, "") and wait_ms == 0.0:
+                warnings.append(f"entry[{idx}] invalid timings.wait={raw_wait!r}; using 0")
             slow.append(
                 {
                     "method": method,
@@ -156,6 +181,8 @@ async def api_har_analyze_route(file: UploadFile = File(...)):
         "top_hosts": top_hosts,
         "failed_requests": failed[:200],
         "slow_requests": slow[:200],
+        "warnings": warnings[:200],
+        "skipped_entries": skipped_entries,
     }
 
 

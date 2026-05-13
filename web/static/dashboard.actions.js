@@ -57,6 +57,7 @@ function openActionConfirm(opts) {
       ov.classList.remove('open');
       ov.setAttribute('aria-hidden', 'true');
       document.removeEventListener('keydown', onKey);
+      branchInput.removeEventListener('keydown', onEnter);
     };
     const finish = (yes) => {
       cleanup();

@@ -395,3 +395,38 @@ class TestBuildMergeHelpers:
         )
         assert len(snap.builds) == 1
         assert snap.builds[0].build_number == 12
+
+
+class TestActionsEndpoints:
+    class _Req:
+        def __init__(self, body):
+            self._body = body
+            self.client = type("C", (), {"host": "127.0.0.1"})()
+
+        async def json(self):
+            if isinstance(self._body, Exception):
+                raise self._body
+            return self._body
+
+    def test_http_exception_is_not_masked_to_500(self) -> None:
+        from fastapi import HTTPException
+        from web.services import actions_endpoints
+
+        async def _run():
+            req = self._Req({"job_name": "job-a", "instance_url": ""})
+
+            def _trigger(**kwargs):
+                raise HTTPException(429, "Rate limit: try again in 1.0s")
+
+            return await actions_endpoints.action_jenkins_build(
+                req,
+                rid="rid-1",
+                check_rate_limit=lambda key: None,
+                load_cfg=lambda: {},
+                trigger_jenkins_build=_trigger,
+            )
+
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(_run())
+        assert exc.value.status_code == 429
+        assert "Rate limit" in str(exc.value.detail)

@@ -6,6 +6,7 @@ there may be no collected snapshot in `monitor.db` yet, which is still a valid r
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -189,3 +190,63 @@ class TestSmoke:
     def test_unknown_route_returns_404(self) -> None:
         resp = client.get("/nonexistent-path-xyz")
         assert resp.status_code == 404
+
+    def test_api_har_analyze_tolerates_dirty_numeric_values(self) -> None:
+        payload = {
+            "log": {
+                "entries": [
+                    {
+                        "request": {"url": "https://example.org/api", "method": "GET"},
+                        "response": {"status": "oops"},
+                        "time": "NaN-ish",
+                        "timings": {"wait": "bad"},
+                    },
+                    {
+                        "request": {"url": "https://example.org/ok", "method": "POST"},
+                        "response": {"status": 502},
+                        "time": 2100,
+                        "timings": {"wait": 1800},
+                        "_errorText": "gateway timeout",
+                    },
+                ]
+            }
+        }
+        files = {
+            "file": (
+                "sample.har",
+                json.dumps(payload),
+                "application/json",
+            )
+        }
+        resp = client.post("/api/har/analyze", files=files)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["summary"]["total_requests"] == 2
+        assert isinstance(body.get("warnings"), list)
+        assert body.get("warnings")
+
+    def test_action_endpoint_rejects_invalid_json_body(self) -> None:
+        resp = client.post(
+            "/api/action/jenkins/build",
+            content="{bad-json",
+            headers={"Content-Type": "application/json"},
+        )
+        assert resp.status_code == 400
+        assert "Invalid JSON body" in str(resp.json().get("detail") or "")
+
+    def test_action_endpoint_rejects_json_array_body(self) -> None:
+        resp = client.post("/api/action/gitlab/pipeline", json=["not-an-object"])
+        assert resp.status_code == 400
+        assert "JSON body must be an object" in str(resp.json().get("detail") or "")
+
+    def test_api_tests_rejects_negative_pagination(self) -> None:
+        resp = client.get("/api/tests?page=-1&per_page=-5")
+        assert resp.status_code == 422
+
+    def test_api_tests_rejects_too_large_per_page(self) -> None:
+        resp = client.get("/api/tests?per_page=100000")
+        assert resp.status_code == 422
+
+    def test_api_top_failures_rejects_invalid_limits(self) -> None:
+        resp = client.get("/api/tests/top-failures?n=0&page=0&per_page=0&hours=-1&days=-2")
+        assert resp.status_code == 422
