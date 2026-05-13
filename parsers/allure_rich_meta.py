@@ -9,6 +9,18 @@ from typing import Any
 _IMG_TYPE_PREFIX = "image/"
 _IMG_EXT_RE = re.compile(r"\.(png|jpe?g|gif|webp|bmp|svg)\s*$", re.I)
 _LOOSE_IMAGE_TYPES = frozenset({"", "application/octet-stream", "binary", "octet-stream"})
+_IMG_TYPE_SUFFIXES = frozenset({"png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "svg+xml", "image"})
+_SCREENSHOT_NAME_RE = re.compile(r"(screenshot|screen[\s_-]?shot|snapshot|скрин)", re.I)
+_NESTED_STAGE_KEYS = (
+    "steps",
+    "beforeStages",
+    "afterStages",
+    "children",
+    "testStage",
+    "stages",
+    "beforeStage",
+    "afterStage",
+)
 
 
 def _html_block_newlines(html: str) -> str:
@@ -61,46 +73,62 @@ def _attachment_is_image_like(att: dict[str, Any]) -> bool:
     typ = str(att.get("type") or "").strip().lower()
     if typ.startswith(_IMG_TYPE_PREFIX):
         return True
+    if "/" in typ:
+        _, sub = typ.split("/", 1)
+        if sub in _IMG_TYPE_SUFFIXES:
+            return True
+    elif typ in _IMG_TYPE_SUFFIXES:
+        return True
     src = str(att.get("source") or "").strip()
     name = str(att.get("name") or "").strip()
     path = src or name
     if not path:
         return False
     if typ in _LOOSE_IMAGE_TYPES or not typ:
-        return bool(_IMG_EXT_RE.search(path))
+        if _IMG_EXT_RE.search(path):
+            return True
+        return bool(_SCREENSHOT_NAME_RE.search(name))
     return False
 
 
-def _collect_attachment_dicts_from_steps(node: dict[str, Any], depth: int) -> list[dict[str, Any]]:
+def _collect_attachment_dicts_from_steps(
+    node: dict[str, Any], depth: int, step_path: tuple[str, ...]
+) -> list[tuple[dict[str, Any], tuple[str, ...]]]:
     if depth > 60 or not isinstance(node, dict):
         return []
-    found: list[dict[str, Any]] = []
+    step_name = str(node.get("name") or "").strip()
+    cur_path = step_path + ((step_name,) if step_name else ())
+    found: list[tuple[dict[str, Any], tuple[str, ...]]] = []
     for att in node.get("attachments") or []:
         if isinstance(att, dict):
-            found.append(att)
-    for key in ("steps", "beforeStages", "afterStages", "children"):
+            found.append((att, cur_path))
+    for key in _NESTED_STAGE_KEYS:
         ch = node.get(key)
-        if not isinstance(ch, list):
+        if isinstance(ch, dict):
+            found.extend(_collect_attachment_dicts_from_steps(ch, depth + 1, cur_path))
             continue
-        for item in ch:
-            if isinstance(item, dict):
-                found.extend(_collect_attachment_dicts_from_steps(item, depth + 1))
+        if isinstance(ch, list):
+            for item in ch:
+                if isinstance(item, dict):
+                    found.extend(_collect_attachment_dicts_from_steps(item, depth + 1, cur_path))
     return found
 
 
-def _iter_all_attachment_dicts(case: dict[str, Any]) -> list[dict[str, Any]]:
+def _iter_all_attachment_dicts(case: dict[str, Any]) -> list[tuple[dict[str, Any], tuple[str, ...]]]:
     """Root + nested step/stage attachments (Allure often stores screenshots only on steps)."""
-    out: list[dict[str, Any]] = []
+    out: list[tuple[dict[str, Any], tuple[str, ...]]] = []
     for att in case.get("attachments") or []:
         if isinstance(att, dict):
-            out.append(att)
-    for key in ("steps", "beforeStages", "afterStages", "children"):
+            out.append((att, ()))
+    for key in _NESTED_STAGE_KEYS:
         ch = case.get(key)
-        if not isinstance(ch, list):
+        if isinstance(ch, dict):
+            out.extend(_collect_attachment_dicts_from_steps(ch, 0, ()))
             continue
-        for item in ch:
-            if isinstance(item, dict):
-                out.extend(_collect_attachment_dicts_from_steps(item, 0))
+        if isinstance(ch, list):
+            for item in ch:
+                if isinstance(item, dict):
+                    out.extend(_collect_attachment_dicts_from_steps(item, 0, ()))
     return out
 
 
@@ -113,16 +141,18 @@ def allure_image_attachments_from_case(case: dict[str, Any] | None) -> list[dict
     if not case:
         return []
     out: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for att in _iter_all_attachment_dicts(case):
+    seen: set[tuple[str, str]] = set()
+    for att, step_path in _iter_all_attachment_dicts(case):
         if not _attachment_is_image_like(att):
             continue
         src = str(att.get("source") or "").strip()
         if not src or ".." in src or src.startswith("/"):
             continue
-        if src in seen:
+        step = " / ".join([x for x in step_path if x]) if step_path else ""
+        dedup_key = (src, step)
+        if dedup_key in seen:
             continue
-        seen.add(src)
+        seen.add(dedup_key)
         raw_typ = str(att.get("type") or "").strip().lower()
         if raw_typ.startswith(_IMG_TYPE_PREFIX):
             typ = raw_typ
@@ -141,7 +171,7 @@ def allure_image_attachments_from_case(case: dict[str, Any] | None) -> list[dict
             else:
                 typ = "image/jpeg"
         name = str(att.get("name") or "").strip() or src
-        out.append({"name": name, "type": typ, "source": src})
+        out.append({"name": name, "type": typ, "source": src, "step": step})
     return out
 
 
