@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.example.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/lifespan_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/lifespan_factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_ci_inplace.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_ci_inplace.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_docker_inplace.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_docker_inplace.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_store.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_store.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
-    </list>
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
