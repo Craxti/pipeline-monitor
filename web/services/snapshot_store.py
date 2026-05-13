@@ -27,7 +27,7 @@ def save_snapshot(
         if not ensure_database_initialized(data_dir=data_dir):
             logger_warning("Snapshot not persisted: SQLite unavailable or init failed")
             return
-        seq = set_latest_snapshot_json(snapshot.model_dump_json(indent=2))
+        seq = set_latest_snapshot_json(snapshot.model_dump_json())
         bump_revision()
         prime_snapshot_cache(snapshot, seq)
     try:
@@ -95,6 +95,6 @@ def save_snapshot_partial(
     with snapshot_write_lock:
         if not ensure_database_initialized(data_dir=data_dir):
             return
-        seq = set_latest_snapshot_json(snapshot_to_save.model_dump_json(indent=2))
+        seq = set_latest_snapshot_json(snapshot_to_save.model_dump_json())
         bump_revision()
         prime_snapshot_cache(snapshot_to_save, seq)

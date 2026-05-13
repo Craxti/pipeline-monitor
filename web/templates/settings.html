@@ -47,6 +47,7 @@
   .btn:hover{opacity:.85}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .btn-ghost{background:var(--surface2)}
+  .btn-danger{background:#b91c1c}
   .btn-sm{padding:.3rem .7rem;font-size:.8rem}
   .btn-icon{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .45rem;border-radius:.25rem;transition:color .15s;line-height:1}
   .btn-icon:hover{color:var(--fail)}
@@ -177,6 +178,14 @@
   .panel-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
   .panel-header h2{font-size:.95rem;font-weight:600}
   .form-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+  .danger-card{border:1px solid rgba(239,68,68,.45);background:rgba(127,29,29,.16)}
+  .danger-text{font-size:.83rem;color:#fecaca;line-height:1.5}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.72);display:none;align-items:center;justify-content:center;z-index:120}
+  .modal-backdrop.show{display:flex}
+  .modal{width:min(560px, calc(100vw - 2rem));background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 18px 42px rgba(0,0,0,.45);overflow:hidden}
+  .modal-hdr{padding:1rem 1.2rem;border-bottom:1px solid var(--border);font-size:1rem;font-weight:700}
+  .modal-body{padding:1rem 1.2rem;color:var(--muted);line-height:1.55}
+  .modal-actions{padding:0 1.2rem 1.2rem;display:flex;justify-content:flex-end;gap:.6rem}
   .wizard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem}
   .wizard-step{background:var(--surface2);border:1px solid var(--border);border-radius:.6rem;padding:.85rem}
   .wizard-step h3{font-size:.82rem;margin-bottom:.35rem}
@@ -391,6 +400,14 @@
               <span data-i18n="st.auto_collect_hint">Automatically fetch data when the web server starts</span>
             </label>
           </div>
+          <div class="field-row">
+            <div class="field-label" data-i18n="st.auto_update_on">Auto Update in Docker</div>
+            <label class="toggle">
+              <input type="checkbox" id="w-docker-auto-update">
+              <div class="toggle-track"><div class="toggle-knob"></div></div>
+              <span data-i18n="st.auto_update_hint">Periodically check container image updates and recreate only app service (named volume keeps DB/data).</span>
+            </label>
+          </div>
           <div class="two-col">
             <div class="field-row">
               <div class="field-label" data-i18n="st.interval">Collect Interval (seconds)</div>
@@ -426,6 +443,18 @@
                 <option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option>
               </select>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="inst-card danger-card">
+        <div class="inst-hdr">
+          <span class="inst-badge" style="background:#b91c1c">DATA</span>
+          <span class="inst-sec-title" data-i18n="st.reset_data_title">Data reset</span>
+        </div>
+        <div class="inst-body">
+          <p class="danger-text" data-i18n="st.reset_data_hint">Delete current collected data (builds, tests, trends, services, events). Saved settings and authorization credentials stay intact.</p>
+          <div>
+            <button type="button" class="btn btn-danger" id="btn-reset-data" onclick="openResetDataModal()" data-i18n="st.reset_data_btn">Reset collected data</button>
           </div>
         </div>
       </div>
@@ -731,6 +760,16 @@
 </a>
 
 <div class="toast" id="toast"></div>
+<div class="modal-backdrop" id="reset-data-modal" role="dialog" aria-modal="true" aria-labelledby="reset-data-modal-title">
+  <div class="modal">
+    <div class="modal-hdr" id="reset-data-modal-title" data-i18n="st.reset_data_modal_title">Delete collected data?</div>
+    <div class="modal-body" data-i18n="st.reset_data_modal_text">This will permanently delete all collected runtime data: builds, tests, trends, services, and event history. Authorization credentials and saved settings will NOT be deleted.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="btn-reset-data-no" onclick="closeResetDataModal()" data-i18n="st.reset_data_no">No</button>
+      <button type="button" class="btn btn-danger" id="btn-reset-data-yes" onclick="performResetData()" data-i18n="st.reset_data_yes">Yes, delete</button>
+    </div>
+  </div>
+</div>
 <div class="privacy-banner" id="privacy-banner" role="status" aria-live="polite">
   <div class="pmsg" id="privacy-msg">Sensitive fields hidden</div>
   <button type="button" class="btn btn-ghost" id="privacy-unmask" onclick="_privacyUnmaskOnce()">Unmask</button>
@@ -1527,6 +1566,7 @@ function populateForm(cfg) {
   sV('g-log-level',     g.log_level             || 'INFO');
   sV('g-top-failures',  p.top_failures           ?? 10);
   sC('w-auto-collect',  w.auto_collect            ?? true);
+  sC('w-docker-auto-update',  w.docker_auto_update_enabled ?? false);
   sV('w-interval',      w.collect_interval_seconds ?? 300);
   _tgBots = Array.isArray(tg.bots) ? JSON.parse(JSON.stringify(tg.bots)) : [];
   if (!_tgBots.length && ((tg.bot_token && String(tg.bot_token).trim()) || (tg.chat_id && String(tg.chat_id).trim()))) {
@@ -1649,6 +1689,7 @@ function collectForm() {
     web: {
       host: '0.0.0.0', port: 8020, live_reload: true,
       auto_collect:             gC('w-auto-collect'),
+      docker_auto_update_enabled: gC('w-docker-auto-update'),
       collect_interval_seconds: toInt(gV('w-interval')),
     },
   };
@@ -1681,6 +1722,37 @@ async function saveSettings() {
     showToast(j.message || t('st.saved_toast'), toastType);
   } else {
     showToast(t('st.save_failed'), 'err');
+  }
+}
+
+function openResetDataModal() {
+  const modal = $('reset-data-modal');
+  if (!modal) return;
+  modal.classList.add('show');
+}
+
+function closeResetDataModal() {
+  const modal = $('reset-data-modal');
+  if (!modal) return;
+  modal.classList.remove('show');
+}
+
+async function performResetData() {
+  const btn = $('btn-reset-data-yes');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch(apiUrl('api/settings/reset-data'), { method: 'POST' }).catch(() => null);
+    const data = (res && await res.json().catch(() => ({}))) || {};
+    if (!res || !res.ok || !data.ok) {
+      const detail = (data && data.detail) ? String(data.detail) : t('st.reset_data_failed');
+      showToast(detail, 'err');
+      return;
+    }
+    showToast(data.message || t('st.reset_data_done'), 'ok');
+    closeResetDataModal();
+    await loadSettings();
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -1795,6 +1867,12 @@ document.addEventListener('DOMContentLoaded', () => {
   applyUITexts();
   _applyTheme(localStorage.getItem('cimon-theme') || 'dark');
   loadSettings();
+  $('reset-data-modal')?.addEventListener('click', (e) => {
+    if (e.target === $('reset-data-modal')) closeResetDataModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeResetDataModal();
+  });
 });
 </script>
 </body>

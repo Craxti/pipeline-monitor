@@ -188,6 +188,28 @@ async def api_settings_save_route(request: Request):
     return out
 
 
+@router.post(
+    "/api/settings/reset-data",
+    response_class=JSONResponse,
+    dependencies=[Depends(require_shared_token)],
+)
+async def api_settings_reset_data_route():
+    """Delete collected runtime data while keeping saved credentials/settings."""
+    try:
+        from web import db as db_store
+
+        if not db_store.ensure_database_initialized():
+            return JSONResponse({"ok": False, "detail": "Database is not initialized."}, status_code=503)
+        cleared = db_store.clear_runtime_data()
+        return {
+            "ok": True,
+            "message": "Collected data has been reset. Credentials and settings were kept.",
+            "cleared": cleared,
+        }
+    except Exception as exc:
+        return JSONResponse({"ok": False, "detail": str(exc)}, status_code=500)
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page_route(request: Request):
     """Render settings page."""

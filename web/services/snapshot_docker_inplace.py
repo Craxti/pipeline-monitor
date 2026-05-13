@@ -77,7 +77,7 @@ def apply_docker_service_to_latest_snapshot(
         if not ensure_database_initialized():
             return False
         try:
-            seq = set_latest_snapshot_json(new_snap.model_dump_json(indent=2))
+            seq = set_latest_snapshot_json(new_snap.model_dump_json())
         except Exception as exc:
             logger.warning("Docker snapshot patch: persist failed: %s", exc)
             return False

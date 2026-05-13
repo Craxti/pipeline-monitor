@@ -43,7 +43,7 @@ def prepend_build_record(build: BuildRecord) -> bool:
         if not ensure_database_initialized():
             return False
         try:
-            seq = set_latest_snapshot_json(new_snap.model_dump_json(indent=2))
+            seq = set_latest_snapshot_json(new_snap.model_dump_json())
         except Exception as exc:
             logger.warning("prepend_build_record: persist failed: %s", exc)
             return False
