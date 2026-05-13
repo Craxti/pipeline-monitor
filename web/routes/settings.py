@@ -77,6 +77,7 @@ async def api_settings_test_connection_route(request: Request):
 )
 async def api_har_analyze_route(file: UploadFile = File(...)):
     """Analyze uploaded HAR and return lightweight diagnostics."""
+
     def _safe_int(value: object, *, default: int = 0) -> int:
         try:
             return int(value)
