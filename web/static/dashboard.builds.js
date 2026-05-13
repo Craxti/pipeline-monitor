@@ -4,6 +4,88 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILDS
 // ─────────────────────────────────────────────────────────────────────────────
+let _buildSort = { key: 'started', dir: 'desc' };
+let _buildSortInit = false;
+
+function _buildSortVal(row, key) {
+  if (key === 'source') return `${String(row.source || '').toLowerCase()}|${String(row.instance || '').toLowerCase()}`;
+  if (key === 'job') return String(row.job_name || '').toLowerCase();
+  if (key === 'num') return Number(row.build_number || 0);
+  if (key === 'status') return String(row.status_normalized || row.status || '').toLowerCase();
+  if (key === 'context') return String(_fmtBuildContext(row.analytics) || '').toLowerCase();
+  if (key === 'branch') return String(row.branch || '').toLowerCase();
+  if (key === 'duration') return Number(row.duration_seconds || 0);
+  return String(row.started_at || '');
+}
+
+function _cmpBuildRows(a, b, key, dir) {
+  const d = dir === 'asc' ? 1 : -1;
+  const va = _buildSortVal(a, key);
+  const vb = _buildSortVal(b, key);
+  if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * d;
+  return String(va).localeCompare(String(vb)) * d;
+}
+
+function _sortBuildRows(rows) {
+  const items = [...rows];
+  // Keep source/instance groups contiguous; sort inside group for other keys.
+  const byGroup = new Map();
+  items.forEach((r) => {
+    const gk = `${String(r.source || '').toLowerCase()}||${String(r.instance || '').toLowerCase()}`;
+    if (!byGroup.has(gk)) byGroup.set(gk, []);
+    byGroup.get(gk).push(r);
+  });
+  let groups = [...byGroup.entries()];
+  if (_buildSort.key === 'source') {
+    groups.sort((a, b) => String(a[0]).localeCompare(String(b[0])) * (_buildSort.dir === 'asc' ? 1 : -1));
+  } else {
+    groups.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+  }
+  const out = [];
+  groups.forEach(([, arr]) => {
+    if (_buildSort.key !== 'source') arr.sort((a, b) => _cmpBuildRows(a, b, _buildSort.key, _buildSort.dir));
+    out.push(...arr);
+  });
+  return out;
+}
+
+function _updateBuildSortHdr() {
+  const row = document.querySelector('#panel-builds thead tr.th-cols');
+  if (!row) return;
+  const ths = row.querySelectorAll('th');
+  const map = [[1, 'source'], [2, 'job'], [3, 'num'], [4, 'status'], [5, 'context'], [6, 'branch'], [7, 'started'], [8, 'duration']];
+  map.forEach(([idx, key]) => {
+    const th = ths[idx];
+    if (!th) return;
+    const base = String(th.getAttribute('data-sort-label') || th.textContent || '').trim();
+    if (!th.getAttribute('data-sort-label')) th.setAttribute('data-sort-label', base);
+    const arrow = _buildSort.key === key ? (_buildSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+    th.textContent = base + arrow;
+  });
+}
+
+function _initBuildSort() {
+  if (_buildSortInit) return;
+  const row = document.querySelector('#panel-builds thead tr.th-cols');
+  if (!row) return;
+  const ths = row.querySelectorAll('th');
+  const map = [[1, 'source'], [2, 'job'], [3, 'num'], [4, 'status'], [5, 'context'], [6, 'branch'], [7, 'started'], [8, 'duration']];
+  map.forEach(([idx, key]) => {
+    const th = ths[idx];
+    if (!th) return;
+    th.style.cursor = 'pointer';
+    th.title = 'Sort';
+    th.addEventListener('click', () => {
+      if (_buildSort.key === key) _buildSort.dir = _buildSort.dir === 'asc' ? 'desc' : 'asc';
+      else { _buildSort.key = key; _buildSort.dir = (key === 'num' || key === 'duration' || key === 'started') ? 'desc' : 'asc'; }
+      _updateBuildSortHdr();
+      resetBuilds();
+    });
+  });
+  _buildSortInit = true;
+  _updateBuildSortHdr();
+}
+
 function resetBuilds(soft=false, force=false) {
   const s = _state.builds; s.page=1; s.done=false;
   if (force) _lastBuildsPageSig = '';
@@ -43,74 +125,74 @@ function filterBuilds(source, status, job, instance) {
 }
 
 async function loadBuilds() {
+  _initBuildSort();
   const s = _state.builds;
   if (s.loading || s.done) return;
   s.loading = true;
+  try {
+    const source  = document.getElementById('f-source').value;
+    const inst    = document.getElementById('f-instance').value;
+    const status  = document.getElementById('f-bstatus').value;
+    const job     = document.getElementById('f-job').value;
+    const url = apiUrl(`api/builds?page=${s.page}&per_page=${s.per_page}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
 
-  const source  = document.getElementById('f-source').value;
-  const inst    = document.getElementById('f-instance').value;
-  const status  = document.getElementById('f-bstatus').value;
-  const job     = document.getElementById('f-job').value;
-  const url = apiUrl(`api/builds?page=${s.page}&per_page=${s.per_page}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
+    const res = await fetchKeyed('builds', url).catch(()=>null);
 
-  const res = await fetchKeyed('builds', url).catch(()=>null);
-  s.loading = false;
+    const tbody = document.getElementById('tbody-builds');
+    if (res === FETCH_ABORTED) return;
+    if (!res || !res.ok) {
+      const detail = await fetchApiErrorDetail(res);
+      srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+      const extra = detail ? ` — ${esc(detail)}` : '';
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="12">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+      _applyGlobalSearch();
+      return;
+    }
+    const data = await res.json();
+    s.total = data.total;
+    document.getElementById('builds-count').textContent = data.total;
 
-  const tbody = document.getElementById('tbody-builds');
-  if (res === FETCH_ABORTED) return;
-  if (!res || !res.ok) {
-    const detail = await fetchApiErrorDetail(res);
-    srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
-    const extra = detail ? ` — ${esc(detail)}` : '';
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="12">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
-    _applyGlobalSearch();
-    return;
-  }
-  const data = await res.json();
-  s.total = data.total;
-  document.getElementById('builds-count').textContent = data.total;
+    const rows = data.items;
+    if (s.page === 1 && !rows.length) {
+      if (keepTableOnTransientEmpty(tbody, rows, s)) return;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="12"><div>${esc(t('dash.table_no_builds'))}</div><div class="empty-hint">${t('dash.empty_builds_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
+      s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
+    }
 
-  const rows = data.items;
-  if (s.page === 1 && !rows.length) {
-    if (keepTableOnTransientEmpty(tbody, rows, s)) return;
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="12"><div>${esc(t('dash.table_no_builds'))}</div><div class="empty-hint">${t('dash.empty_builds_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
-    s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
-  }
-
-  const favKeys = _loadFavKeys();
-  const _srcKey = (x) => String(x || '').trim().toLowerCase();
-  const _instKey = (x) => String(x || '').trim().toLowerCase();
-  const _buildsRowSig = (b) => [
-    _srcKey(b.source),
-    _instKey(b.instance),
-    String(b.job_name ?? ''),
-    String(b.build_number ?? ''),
-    String(b.status_normalized || b.status || ''),
-    String(b.duration_seconds ?? ''),
-    String(b.started_at || ''),
-  ].join('\x1f');
-  const sorted = [...rows].sort((a, b) => (a.source || '').localeCompare(b.source || '') || String(a.instance || '').localeCompare(String(b.instance || '')) || String(a.started_at || '').localeCompare(String(b.started_at || '')));
-  const groupCountsApi = data.group_counts && typeof data.group_counts === 'object' ? data.group_counts : null;
-  // Fallback: per-page counts (if API omits group_counts).
-  const gStats = {};
-  sorted.forEach((b) => {
-    const gk = `${_srcKey(b.source)}||${_instKey(b.instance)}`;
-    const stn = String(b.status_normalized || b.status || '').toLowerCase();
-    if (!gStats[gk]) gStats[gk] = { ok: 0, warn: 0, fail: 0, total: 0 };
-    gStats[gk].total++;
-    if (stn === 'failure' || stn === 'failed') gStats[gk].fail++;
-    else if (stn === 'unstable') gStats[gk].warn++;
-    else if (stn === 'success' || stn === 'passed' || stn === 'ok') gStats[gk].ok++;
-  });
-  let skipHeaderEnc = null;
-  if (s.page > 1 && tbody) {
-    const dataRows = Array.from(tbody.querySelectorAll('tr[data-bgroup]')).filter((tr) => !tr.classList.contains('src-group-row'));
-    const last = dataRows[dataRows.length - 1];
-    if (last) skipHeaderEnc = last.getAttribute('data-bgroup');
-  }
-  let lastGroup = null;
-  const htmlParts = [];
-  sorted.forEach((b) => {
+    const favKeys = _loadFavKeys();
+    const _srcKey = (x) => String(x || '').trim().toLowerCase();
+    const _instKey = (x) => String(x || '').trim().toLowerCase();
+    const _buildsRowSig = (b) => [
+      _srcKey(b.source),
+      _instKey(b.instance),
+      String(b.job_name ?? ''),
+      String(b.build_number ?? ''),
+      String(b.status_normalized || b.status || ''),
+      String(b.duration_seconds ?? ''),
+      String(b.started_at || ''),
+    ].join('\x1f');
+    const sorted = _sortBuildRows(rows || []);
+    const groupCountsApi = data.group_counts && typeof data.group_counts === 'object' ? data.group_counts : null;
+    // Fallback: per-page counts (if API omits group_counts).
+    const gStats = {};
+    sorted.forEach((b) => {
+      const gk = `${_srcKey(b.source)}||${_instKey(b.instance)}`;
+      const stn = String(b.status_normalized || b.status || '').toLowerCase();
+      if (!gStats[gk]) gStats[gk] = { ok: 0, warn: 0, fail: 0, total: 0 };
+      gStats[gk].total++;
+      if (stn === 'failure' || stn === 'failed') gStats[gk].fail++;
+      else if (stn === 'unstable') gStats[gk].warn++;
+      else if (stn === 'success' || stn === 'passed' || stn === 'ok') gStats[gk].ok++;
+    });
+    let skipHeaderEnc = null;
+    if (s.page > 1 && tbody) {
+      const dataRows = Array.from(tbody.querySelectorAll('tr[data-bgroup]')).filter((tr) => !tr.classList.contains('src-group-row'));
+      const last = dataRows[dataRows.length - 1];
+      if (last) skipHeaderEnc = last.getAttribute('data-bgroup');
+    }
+    let lastGroup = null;
+    const htmlParts = [];
+    sorted.forEach((b) => {
     const groupKey = `${_srcKey(b.source)}||${_instKey(b.instance)}`;
     if (groupKey !== lastGroup) {
       const enc = encodeURIComponent(groupKey);
@@ -200,29 +282,35 @@ async function loadBuilds() {
     <td>${_buildLogCell(b)}</td>
     <td>${actionBtn}</td>
   </tr>`);
-  });
-  const html = htmlParts.join('');
-  if (s.page === 1) {
-    const pageSig = sorted.map(_buildsRowSig).join('\x1e');
-    if (_liveMode && pageSig && pageSig === _lastBuildsPageSig) {
-      s.loading = false;
-      updateFilterSummary();
-      _applyGlobalSearch();
-      if (!data.has_more) s.done = true;
-      return;
-    }
-    _lastBuildsPageSig = pageSig;
-    swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
-  } else tbody.insertAdjacentHTML('beforeend', html);
-  // Apply collapsed state for any groups present in this page.
-  try {
-    const keys = new Set(sorted.map((b) => encodeURIComponent(`${_srcKey(b.source)}||${_instKey(b.instance)}`)));
-    keys.forEach((k) => { if (_collapsedBuildGroups.has(k)) applyBuildGroupVisibility(k); });
-  } catch { /* ignore */ }
+    });
+    const html = htmlParts.join('');
+    if (s.page === 1) {
+      const pageSig = sorted.map(_buildsRowSig).join('\x1e');
+      if (_liveMode && pageSig && pageSig === _lastBuildsPageSig) {
+        updateFilterSummary();
+        _applyGlobalSearch();
+        if (!data.has_more) { s.done = true; return; }
+        s.page++;
+        window.requestAnimationFrame(() => { loadBuilds(); });
+        return;
+      }
+      _lastBuildsPageSig = pageSig;
+      swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
+    } else tbody.insertAdjacentHTML('beforeend', html);
+    // Apply collapsed state for any groups present in this page.
+    try {
+      const keys = new Set(sorted.map((b) => encodeURIComponent(`${_srcKey(b.source)}||${_instKey(b.instance)}`)));
+      keys.forEach((k) => { if (_collapsedBuildGroups.has(k)) applyBuildGroupVisibility(k); });
+    } catch { /* ignore */ }
 
-  _applyGlobalSearch();
-  updateFilterSummary();
-  if (!data.has_more) { s.done = true; return; }
-  s.page++;
+    _applyGlobalSearch();
+    updateFilterSummary();
+    if (!data.has_more) { s.done = true; return; }
+    s.page++;
+    // No paging limit in UI: fetch all build pages.
+    window.requestAnimationFrame(() => { loadBuilds(); });
+  } finally {
+    s.loading = false;
+  }
 }
 

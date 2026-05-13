@@ -863,6 +863,21 @@ function _renderLogLines() {
   const ERR_RE = /\b(error|exception|fail(?:ed|ure)?|fatal|critical|traceback)\b/i;
   const WARN_RE = /\b(warn(?:ing)?|deprecated)\b/i;
   const INFO_RE = /\b(info|debug|verbose|trace)\b/i;
+  const LEVEL_TOKEN_RE = /\b(fatal|critical|error|err|warn(?:ing)?|info|debug|trace)\b/i;
+  const classifyLogLevel = (line) => {
+    const m = String(line || '').match(LEVEL_TOKEN_RE);
+    if (m) {
+      const tok = String(m[1] || '').toLowerCase();
+      if (tok === 'fatal' || tok === 'critical' || tok === 'error' || tok === 'err') return 'error';
+      if (tok.startsWith('warn')) return 'warn';
+      if (tok === 'info' || tok === 'debug' || tok === 'trace') return 'info';
+    }
+    // Fallback for lines without explicit level tokens.
+    if (ERR_RE.test(line)) return 'error';
+    if (WARN_RE.test(line)) return 'warn';
+    if (INFO_RE.test(line)) return 'info';
+    return 'other';
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -870,14 +885,8 @@ function _renderLogLines() {
     // Hide noisy internal poll 404s (common when app isn't bound on 127.0.0.1 inside container).
     if (lineLower.includes('http исключение 404') && NOISE_404.some(u => lineLower.includes(u))) continue;
 
-    if (lvl !== 'all') {
-      const isErr = ERR_RE.test(line);
-      const isWarn = WARN_RE.test(line);
-      const isInfo = INFO_RE.test(line);
-      if (lvl === 'error' && !isErr) continue;
-      if (lvl === 'warn' && !isWarn && !isErr) continue;
-      if (lvl === 'info' && !isInfo && !isWarn && !isErr) continue;
-    }
+    const lineLevel = classifyLogLevel(line);
+    if (lvl !== 'all' && lineLevel !== lvl) continue;
 
     if (qRaw) {
       if (_logSearchRegex) {
@@ -889,8 +898,8 @@ function _renderLogLines() {
       }
     }
 
-    const isErr = ERR_RE.test(line);
-    const isWarn = WARN_RE.test(line);
+    const isErr = lineLevel === 'error';
+    const isWarn = lineLevel === 'warn';
     const cls = isErr ? 'log-line-err' : isWarn ? 'log-line-warn' : '';
 
     let escaped = _escHtml(line);

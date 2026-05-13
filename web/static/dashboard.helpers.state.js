@@ -66,6 +66,13 @@ function setDashboardTab(name, opts) {
     if (!skipStore) localStorage.setItem('cimon-dash-tab', name);
   } catch { /* ignore */ }
   if (!skipUrl) _writeURLFilters();
+  // Safety: a stale fullscreen trends chart can cover the whole viewport
+  // (fixed positioned card + large backdrop shadow) and block all clicks.
+  if (name !== 'trends') {
+    document.querySelectorAll('.chart-card.chart-fs').forEach((card) => {
+      card.classList.remove('chart-fs');
+    });
+  }
   if (name === 'trends') {
     requestAnimationFrame(() => { _trendsCharts.forEach((c) => c && c.resize()); });
   }

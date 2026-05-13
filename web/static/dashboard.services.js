@@ -74,63 +74,62 @@ async function loadServices() {
   const s = _state.svcs;
   if (s.loading || s.done) return;
   s.loading = true;
-
-  const rawStatus = document.getElementById('f-svstatus')?.value || '';
-  const status = _svcProblemsOnly ? 'problems' : rawStatus;
-  const url = apiUrl(`api/services?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}`);
-
-  const res = await fetchKeyed('services', url).catch(()=>null);
-  s.loading = false;
-
-  const tbody = document.getElementById('tbody-svcs');
-  if (res === FETCH_ABORTED) return;
-  if (!res || !res.ok) {
-    if (res && res.status === 404) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
-    } else {
-      const detail = await fetchApiErrorDetail(res);
-      srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
-      const extra = detail ? ` — ${esc(detail)}` : '';
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
-    }
-    s.done = true; updateFilterSummary(); return;
-  }
-  const data = await res.json();
-  s.total = data.total;
-  document.getElementById('svcs-count').textContent = data.total;
-
-  const rows = data.items;
-  if (s.page === 1 && !rows.length) {
-    if (keepTableOnTransientEmpty(tbody, rows, s)) return;
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
-    s.done = true; updateFilterSummary(); return;
-  }
-  // Services header summary (Docker/HTTP groups) — computed from current snapshot via persisted events.
   try {
-    const sumEl = document.getElementById('svcs-summary');
-    if (sumEl) {
-      const allSvcs = (_lastSnap && Array.isArray(_lastSnap.services)) ? _lastSnap.services : null;
-      const items = allSvcs || rows;
-      const byKind = {};
-      items.forEach((sv) => {
-        const k = String((sv && sv.kind) || 'unknown');
-        const st = String((sv && sv.status) || '').toLowerCase();
-        if (!byKind[k]) byKind[k] = { up:0, down:0, degraded:0, total:0 };
-        byKind[k].total++;
-        if (st === 'down') byKind[k].down++;
-        else if (st === 'degraded') byKind[k].degraded++;
-        else if (st === 'up') byKind[k].up++;
-      });
-      const parts = Object.keys(byKind).sort().map((k) => {
-        const v = byKind[k];
-        return `${k}: ${v.down}↓ ${v.degraded}~ ${v.up}↑`;
-      });
-      sumEl.textContent = parts.length ? parts.join(' · ') : '—';
-    }
-  } catch { /* ignore */ }
+    const rawStatus = document.getElementById('f-svstatus')?.value || '';
+    const status = _svcProblemsOnly ? 'problems' : rawStatus;
+    const url = apiUrl(`api/services?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}`);
 
-  const lastCh = _svcLastChangeMap();
-  const html = rows.map(sv => {
+    const res = await fetchKeyed('services', url).catch(()=>null);
+
+    const tbody = document.getElementById('tbody-svcs');
+    if (res === FETCH_ABORTED) return;
+    if (!res || !res.ok) {
+      if (res && res.status === 404) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
+      } else {
+        const detail = await fetchApiErrorDetail(res);
+        srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+        const extra = detail ? ` — ${esc(detail)}` : '';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+      }
+      s.done = true; updateFilterSummary(); return;
+    }
+    const data = await res.json();
+    s.total = data.total;
+    document.getElementById('svcs-count').textContent = data.total;
+
+    const rows = data.items;
+    if (s.page === 1 && !rows.length) {
+      if (keepTableOnTransientEmpty(tbody, rows, s)) return;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
+      s.done = true; updateFilterSummary(); return;
+    }
+    // Services header summary (Docker/HTTP groups) — computed from current snapshot via persisted events.
+    try {
+      const sumEl = document.getElementById('svcs-summary');
+      if (sumEl) {
+        const allSvcs = (_lastSnap && Array.isArray(_lastSnap.services)) ? _lastSnap.services : null;
+        const items = allSvcs || rows;
+        const byKind = {};
+        items.forEach((sv) => {
+          const k = String((sv && sv.kind) || 'unknown');
+          const st = String((sv && sv.status) || '').toLowerCase();
+          if (!byKind[k]) byKind[k] = { up:0, down:0, degraded:0, total:0 };
+          byKind[k].total++;
+          if (st === 'down') byKind[k].down++;
+          else if (st === 'degraded') byKind[k].degraded++;
+          else if (st === 'up') byKind[k].up++;
+        });
+        const parts = Object.keys(byKind).sort().map((k) => {
+          const v = byKind[k];
+          return `${k}: ${v.down}↓ ${v.degraded}~ ${v.up}↑`;
+        });
+        sumEl.textContent = parts.length ? parts.join(' · ') : '—';
+      }
+    } catch { /* ignore */ }
+
+    const lastCh = _svcLastChangeMap();
+    const html = rows.map(sv => {
     let actionBtn = '';
     let logCell = '—';
     if (sv.kind === 'docker') {
@@ -167,13 +166,18 @@ async function loadServices() {
     <td>${logCell}</td>
     <td style="text-align:right">${actionBtn}</td>
   </tr>`;
-  }).join('');
+    }).join('');
 
-  if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
-  else tbody.insertAdjacentHTML('beforeend', html);
+    if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
+    else tbody.insertAdjacentHTML('beforeend', html);
 
-  _applyGlobalSearch();
-  updateFilterSummary();
-  if (!data.has_more) { s.done = true; return; }
-  s.page++;
+    _applyGlobalSearch();
+    updateFilterSummary();
+    if (!data.has_more) { s.done = true; return; }
+    s.page++;
+    // No paging limit in UI: fetch all service pages.
+    window.requestAnimationFrame(() => { loadServices(); });
+  } finally {
+    s.loading = false;
+  }
 }

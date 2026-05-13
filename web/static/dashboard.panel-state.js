@@ -5,10 +5,10 @@
 // Panel state (per-panel page cursor & IntersectionObserver)
 // ─────────────────────────────────────────────────────────────────────────────
 const _state = {
-  builds:   { page:1, per_page:60, loading:false, done:false, total:0 },
-  failures: { page:1, per_page:20, loading:false, done:false, total:0 },
-  tests:    { page:1, per_page:30, loading:false, done:false, total:0 },
-  svcs:     { page:1, per_page:50, loading:false, done:false, total:0 },
+  builds:   { page:1, per_page:200, loading:false, done:false, total:0 },
+  failures: { page:1, per_page:200, loading:false, done:false, total:0 },
+  tests:    { page:1, per_page:200, loading:false, done:false, total:0 },
+  svcs:     { page:1, per_page:200, loading:false, done:false, total:0 },
 };
 
 let _collapsedBuildGroups = new Set();
