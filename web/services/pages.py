@@ -36,8 +36,9 @@ async def settings_page(
 ):
     """Render the settings page."""
     resp = templates.TemplateResponse(
+        request,
         "settings.html",
-        {"request": request, "ui_language": ui_language},
+        {"ui_language": ui_language},
     )
     apply_no_cache_headers(resp)
     apply_csp_headers(resp)
@@ -56,7 +57,6 @@ async def index_page(
     snap = await load_snapshot_async()
     _ = load_yaml_config()  # kept for behavior parity (side-effects / validation)
     ctx: dict = {
-        "request": request,
         "snap": snap,
         "ui_language": ui_language,
     }
@@ -66,7 +66,7 @@ async def index_page(
         ctx["tests_fail"] = sum(1 for t in snap.tests if t.status_normalized in ("failed", "error"))
         ctx["svc_down"] = sum(1 for s in snap.services if s.status_normalized == "down")
 
-    resp = templates.TemplateResponse("index.html", ctx)
+    resp = templates.TemplateResponse(request, "index.html", ctx)
     apply_no_cache_headers(resp)
     apply_csp_headers(resp)
     return resp
