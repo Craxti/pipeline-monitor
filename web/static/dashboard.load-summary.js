@@ -135,7 +135,6 @@ async function loadSummary() {
   scheduleSparklineFetch([...new Set(builds.map(b => b.job_name))]);
   // Timeline — persisted state changes + snapshot activity (deduped)
   renderTimeline(builds, svcs, persistedItems);
-  renderServicesIncidentsPanel(builds);
 
   _renderFavPanel();
   updateExecHealthLine();

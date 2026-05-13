@@ -66,8 +66,8 @@ def test_services_tab_required_panels_contract() -> None:
     html = _read("web/templates/index.html")
     assert 'id="tab-panel-services"' in html
     assert 'id="panel-svcs"' in html
-    assert 'id="panel-services-incidents"' in html
     assert 'id="panel-timeline"' in html
+    assert 'id="tab-panel-incidents"' in html
     assert "/static/dashboard.incidents.js" in html
     assert 'id="panel-flaky"' not in html
 
