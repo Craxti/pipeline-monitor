@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status" />
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -18,7 +20,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="my-main-sync" />
+        <entry key="$PROJECT_DIR$" value="fresh-main" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -125,13 +127,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00016" summary="fix dashboard, cache, request_id, api, fresh">
-      <created>1776439110317</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1776439110317</updated>
     </task>
     <task id="LOCAL-00017" summary="fix moduls arch">
       <created>1776445098001</created>
@@ -469,7 +464,14 @@
       <option name="project" value="LOCAL" />
       <updated>1776874802003</updated>
     </task>
-    <option name="localTasksCounter" value="65" />
+    <task id="LOCAL-00065" summary="fix">
+      <created>1779102772574</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1779102772574</updated>
+    </task>
+    <option name="localTasksCounter" value="66" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -484,7 +486,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add actions black" />
     <MESSAGE value="add docker" />
     <MESSAGE value="fix dashboard.js split for moduls" />
     <MESSAGE value="fix  Flaky jobs" />
@@ -509,6 +510,7 @@
     <MESSAGE value="fix life time" />
     <MESSAGE value="fix life time + stop" />
     <MESSAGE value="fix life time + stop + system status" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix life time + stop + system status" />
+    <MESSAGE value="fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix" />
   </component>
 </project>

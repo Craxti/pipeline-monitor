@@ -1,10 +1,5 @@
 # Build and push the app image to GitHub Container Registry (ghcr.io).
 # Required for `docker pull ghcr.io/<owner>/<repo>`.
-#
-# If push fails with `permission_denied: write_package`, also check in GitHub UI:
-# - Repo Settings → Actions → General → Workflow permissions → Read and write
-# - Packages → pipeline-monitor → Package settings → Manage Actions access → this repo (Write)
-# Optional: add repo secret GHCR_TOKEN (classic PAT with write:packages) if org caps GITHUB_TOKEN.
 name: Docker publish
 
 on:
@@ -33,6 +28,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Registry owner (GHCR namespace is lowercase)
+        id: owner
+        shell: bash
+        run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Grant workflow write access to GHCR package
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PKG: pipeline-monitor
+          REPO_ID: ${{ github.repository_id }}
+          OWNER: ${{ steps.owner.outputs.name }}
+        run: |
+          set -euo pipefail
+          body='{"permission":"write"}'
+          for path in \
+            "user/packages/container/${PKG}/repositories/${REPO_ID}" \
+            "orgs/${OWNER}/packages/container/${PKG}/repositories/${REPO_ID}"; do
+            if gh api -X PUT "${path}" --input - <<<"${body}" 2>/dev/null; then
+              echo "Linked repository to package via /${path}"
+              exit 0
+            fi
+          done
+          echo "Package ACL not updated (package may not exist yet, or token lacks package admin)."
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -40,10 +60,9 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
+          username: ${{ steps.owner.outputs.name }}
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
-      # Docker / GHCR require a fully lowercase image name. github.repository may be mixed case.
       - name: Image name (lowercase for ghcr.io)
         id: image
         shell: bash
