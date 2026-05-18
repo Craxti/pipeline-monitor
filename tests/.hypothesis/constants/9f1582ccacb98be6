@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\parsers\allure_parser.py
+# hypothesis_version: 6.141.1
+
+[1000, 4000, 8000, '#', '*-result.json', 'Cannot read %s: %s', 'allure', 'broken', 'error', 'failed', 'feature', 'fullName', 'labels', 'name', 'parentSuite', 'passed', 'pending', 'skipped', 'start', 'status', 'stop', 'suite', 'unknown', 'utf-8', 'value']

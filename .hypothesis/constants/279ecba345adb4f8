@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\pages.py
+# hypothesis_version: 6.141.1
+
+['Cache-Control', 'Pragma', 'builds_fail', 'builds_ok', 'down', 'error', 'failed', 'failure', 'index.html', 'no-cache', 'request', 'settings.html', 'snap', 'success', 'svc_down', 'tests_fail', 'ui_language']

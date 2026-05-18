@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\parsers\jenkins_console_parser.py
+# hypothesis_version: 6.141.1
+
+[0.0, 0.8, 1000.0, 140, 220, 400, 408, 425, 429, 500, 502, 503, 504, 1000, 4000, 5000, ' - ', '/', '::', '=', '===', '?', 'Content-Type', 'E   ', 'ERROR', 'FAILED', '^№\\d+\\s*', '_', 'build', 'builds', 'console', 'duration', 'elapsed_ms', 'error', 'estimatedDuration', 'failed', 'jenkins_console', 'job', 'kind', 'name', 'number', 'parse_console', 'passed', 'propagate: false', 'response', 'status_code', 'timestamp', '—']

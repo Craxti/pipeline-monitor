@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\parsers\pytest_parser.py
+# hypothesis_version: 6.141.1
+
+['*.xml', 'classname', 'error', 'failed', 'failure', 'message', 'name', 'passed', 'pytest', 'skipped', 'testcase', 'testsuite', 'testsuites', 'time', 'timestamp', 'unknown']

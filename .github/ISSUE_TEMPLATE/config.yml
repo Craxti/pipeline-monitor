@@ -1,0 +1,6 @@
+blank_issues_enabled: true
+contact_links:
+  - name: CI/CD Monitor documentation
+    url: https://github.com/Craxti/pipeline-monitor
+    about: Read README and docs before filing an issue.
+

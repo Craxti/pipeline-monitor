@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\clients\jenkins_client.py
+# hypothesis_version: 6.141.1
+
+[1000.0, 1000, '/', '/job/', 'ABORTED', 'FAILURE', 'IN_PROGRESS', 'SUCCESS', 'UNSTABLE', '\\', '_full_name', 'builds', 'critical', 'duration', 'jenkins', 'job', 'jobs', 'lastBuild', 'lastCompletedBuild', 'lastSuccessfulBuild', 'name', 'name,_class', 'name,_class,', 'number', 'ok', 'parse_console', 'result', 'status', 'timestamp', 'url']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\db.py
+# hypothesis_version: 6.141.1
+
+[0.4, 300, 1024, 2000, ' AND ', 'SQLite DB ready: %s', '[]', 'build_number', 'builds', 'd', 'data', 'data_dir', 'date', 'day', 'duration_seconds', 'enabled', 'error', 'event_feed.json', 'event_feed_json', 'flip_rate', 'flips', 'general', 'has_more', 'init_db(%s) failed', 'items', 'job', 'job_name', 'job_name LIKE ?', 'last_status', 'latest_snapshot_json', 'latest_snapshot_seq', 'monitor.db', 'n', 'name', 'oldest_build', 'path', 's', 'services', 'size_mb', 'snapshot.json', 'snapshots', 'source', 'source = ?', 'src', 'started_at >= ?', 'status', 'status = ?', 'total', 'trends.json', 'trends_history_json', 'utf-8', 'value']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\builds.py
+# hypothesis_version: 6.141.1
+
+['/api/builds', '/api/builds/history', '/api/export/builds', '/api/instances', 'builds', 'csv']

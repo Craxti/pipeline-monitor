@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_loop.py
+# hypothesis_version: 6.141.1
+
+[1.0, 300, 'Collect cancelled', 'Collection error: %s', 'Starting collect…', 'Stopped by user', 'builds', 'cancel_requested', 'cancelled', 'collect_done', 'error', 'info', 'is_collecting', 'last_collected_at', 'last_error', 'phase', 'progress_counts', 'progress_main', 'progress_sub', 'revision', 'services', 'started_at', 'starting', 'tests', 'type', 'warn']

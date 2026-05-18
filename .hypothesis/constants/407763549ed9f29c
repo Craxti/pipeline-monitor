@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\trends_uptime_endpoints.py
+# hypothesis_version: 6.141.1
+
+['Cache-Control', 'ETag', 'private, max-age=15']

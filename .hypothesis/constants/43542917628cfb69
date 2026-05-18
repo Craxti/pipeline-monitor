@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\build_filters.py
+# hypothesis_version: 6.141.1
+
+[240, '/', 'GitLab', 'Jenkins', 'enabled', 'gitlab', 'gitlab_instances', 'jenkins', 'jenkins_instances', 'name', 'source_instance', 'url']

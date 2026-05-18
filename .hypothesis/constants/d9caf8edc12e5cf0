@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\build_analytics.py
+# hypothesis_version: 6.141.1
+
+[0.0, 'build_number', 'consecutive_failures', 'failure', 'latest_status', 'started_at', 'success', 'tzinfo', 'unstable', 'value']

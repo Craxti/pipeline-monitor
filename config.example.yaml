@@ -1,0 +1,94 @@
+general:
+  project_name: CI Monitor
+  default_lookback_days: 7
+  # When true (default): after the first collect, reuse SQLite watermarks to skip unchanged
+  # Jenkins jobs / GitLab projects (fewer API calls). Ignored on force_full or without SQLite.
+  incremental_collect: true
+  data_dir: data
+  log_level: INFO
+jenkins_instances:
+- name: Jenkins
+  enabled: false
+  url: https://jenkins.example.com/
+  username: ""
+  token: ""
+  jobs: []
+  max_builds: 10
+  parse_console: true
+  console_builds: 5
+  show_all_jobs: false
+  # If show_all_jobs: true, bulk Jenkins API returns only the latest build per job.
+  # Set show_all_history_builds > 0 to fetch older runs per job (extra API calls; capped by show_all_history_jobs_cap).
+  show_all_history_builds: 0
+  show_all_history_jobs_cap: 45
+  verify_ssl: true
+  parse_allure: false
+  show_all_limit_jobs: 0
+gitlab_instances:
+- name: GitLab
+  enabled: false
+  url: https://gitlab.example.com/
+  token: ""
+  projects: []
+  max_pipelines: 10
+  show_all_projects: false
+parsers:
+  pytest_xml_dirs: []
+  allure_json_dirs: []
+  top_failures: 100
+reports:
+  output_dir: data
+  csv_filename: ci_report.csv
+  html_filename: ci_report.html
+  console_mode: detailed
+notifications:
+  telegram:
+    enabled: false
+    bots: []
+docker_monitor:
+  enabled: true
+  include_local_host: true
+  docker_hosts:
+  - name: prod-docker-1
+    enabled: false
+    host: 10.10.10.15
+    username: ""
+    password: ""
+  show_all_containers: true
+  containers: []
+  http_checks:
+  - name: cicd - Settings
+    url: http://127.0.0.1:8020/
+  timeout_seconds: 5
+openai:
+  provider: ollama
+  api_key: ""
+  model: llama3.1:8b
+  base_url: http://127.0.0.1:11434/v1
+  cursor_proxy_autostart: false
+  cursor_agent_bin: ""
+  proxy:
+    enabled: false
+    type: socks5
+    host: ""
+    port: 0
+    username: ""
+    password: ""
+    url: ""
+web:
+  host: 0.0.0.0
+  port: 8020
+  live_reload: true
+  auto_collect: true
+  # Docker self-update loop (safe for DB/data when using named volume in compose).
+  docker_auto_update_enabled: false
+  docker_auto_update_check_interval_seconds: 300
+  docker_auto_update_image: ghcr.io/craxti/pipeline-monitor:latest
+  docker_auto_update_service: pipeline-monitor-web
+  docker_auto_update_container: pipeline-monitor-web
+  docker_auto_update_compose_file: compose.yml
+  collect_interval_seconds: 300
+  # When dashboard LIVE is on: how often the UI pulls fresh data (seconds, 8–120).
+  live_dashboard_poll_seconds: 20
+  # When LIVE is on: background full collect repeats at most this often (seconds, 20–collect_interval_seconds).
+  live_collect_interval_seconds: 90

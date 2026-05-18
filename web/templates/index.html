@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="{{ ui_language|default('en') }}">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
+<link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
+<title>CI/CD Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/static/app.css?v=20260508e" />
+</head>
+<body data-page="dashboard">
+{% include 'partials/i18n_core.html' %}
+<script src="/static/app.js?v=20260417g" defer></script>
+<script src="/static/dashboard.helpers.formatters.js?v=20260419c" defer></script>
+<script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
+<script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260508b" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260508b" defer></script>
+<script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
+<script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
+<script src="/static/dashboard.build-log-cells.js?v=20260417i" defer></script>
+<script src="/static/dashboard.builds.js?v=20260422n" defer></script>
+<script src="/static/dashboard.tests.js?v=20260423f" defer></script>
+<script src="/static/dashboard.failures.js?v=20260423e" defer></script>
+<script src="/static/dashboard.services.js?v=20260422n" defer></script>
+<script src="/static/dashboard.system.js?v=20260423a" defer></script>
+<script src="/static/dashboard.collect-panel.js?v=20260423a" defer></script>
+<script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
+<script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
+<script src="/static/dashboard.timeline.js?v=20260417i" defer></script>
+<script src="/static/dashboard.incidents.js?v=20260422b" defer></script>
+<script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
+<script src="/static/dashboard.load-summary.js?v=20260422b" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260423b" defer></script>
+<script src="/static/dashboard.js?v=20260417i" defer></script>
+<script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
+<script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
+<script src="/static/dashboard.trends.js?v=20260420h" defer></script>
+<script src="/static/dashboard.actions.js?v=20260513a" defer></script>
+<script src="/static/dashboard.filters.js?v=20260417i" defer></script>
+<script src="/static/dashboard.sources.js?v=20260417i" defer></script>
+<script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
+<script src="/static/dashboard.chat.js?v=20260420a" defer></script>
+<script src="/static/dashboard.live.js?v=20260422h" defer></script>
+<script src="/static/dashboard.har.js?v=20260508h" defer></script>
+<script src="/static/dashboard.init.js?v=20260423a" defer></script>
+
+<!-- ── Header ── -->
+<header>
+  <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
+  <h1 data-i18n="dash.app_title">CI/CD Monitor</h1>
+  <p class="app-tagline" data-i18n="dash.tagline">One panel for CI + tests + services.</p>
+  <div class="collect-bar">
+    <div class="dot" id="cdot"></div>
+    <div class="collect-text" role="status" aria-live="polite" aria-relevant="text">
+      <div id="collect-line-main" class="collect-line-main">Connecting…</div>
+      <div id="collect-line-sub" class="collect-line-sub" style="display:none"></div>
+      <div id="collect-err" role="alert" aria-live="assertive"></div>
+    </div>
+  </div>
+  <div class="collect-actions-stack">
+    <button class="btn" id="btn-collect" data-dash-action="triggerCollect">&#8635; <span data-i18n="dash.collect">Collect</span></button>
+    <button type="button" class="btn btn-collect-stop collect-stop-hidden" id="btn-collect-stop" data-dash-action="stopCollect" disabled data-i18n-title="dash.collect_stop_title" title="">
+      &#9632; <span data-i18n="dash.collect_stop">Stop</span>
+    </button>
+  </div>
+  <button class="btn btn-ghost" data-dash-action="refreshAll">&#8635; <span data-i18n="dash.refresh">Refresh</span></button>
+  <button class="btn btn-ghost" id="btn-theme" data-dash-action="toggleTheme" data-i18n-title="dash.theme" title="">&#9681;</button>
+  <div class="lang-toggle" id="lang-toggle" data-i18n-title="dash.lang_title" title="">
+    <button type="button" data-lang="en" data-dash-action="setUILang" data-dash-args='["en"]'>EN</button>
+    <button type="button" data-lang="ru" data-dash-action="setUILang" data-dash-args='["ru"]'>RU</button>
+  </div>
+  <button class="btn btn-ghost" id="btn-compact" data-dash-action="toggleCompact" data-i18n-title="dash.compact" title="">&#8801;</button>
+  <button class="btn btn-ghost" data-dash-action="exportCSV" data-i18n-title="dash.export_csv_title" title="">&#11015; <span data-i18n="dash.csv">CSV</span></button>
+  <div class="export-wrap" id="ew-incident">
+    <button class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .55rem" data-dash-action="toggleExportMenu" data-dash-args='["ew-incident"]' data-i18n-title="dash.incident_title" title="">&#128203; <span data-i18n="dash.incident">Incident</span></button>
+    <div class="export-menu">
+      <a href="/api/incident.json" target="_blank" rel="noopener">JSON</a>
+      <a href="/api/incident.md" target="_blank" rel="noopener">Markdown</a>
+    </div>
+  </div>
+  <a href="settings" class="btn btn-ghost">&#9881; <span data-i18n="dash.settings">Settings</span></a>
+
+  <!-- Notifications bell -->
+  <button id="notif-btn" data-dash-action="toggleNotifPanel" data-i18n-title="dash.notif_btn" title="">
+    &#128276;
+    <span id="notif-badge"></span>
+  </button>
+</header>
+
+<div id="sr-polite" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="sr-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- Top status bar -->
+<div class="topbar" id="topbar">
+  <div class="topbar-left">
+    <span class="toppill" id="top-collect">
+      <span class="topdot" id="top-collect-dot"></span>
+      <span id="top-collect-txt">Collect: —</span>
+    </span>
+    <span class="toppill" id="top-age">
+      <span class="topdot" id="top-age-dot"></span>
+      <span id="top-age-txt">Age: —</span>
+    </span>
+    <span class="toppill" id="top-red">
+      <span class="topdot err"></span>
+      <span id="top-red-txt">Builds: — · Tests: — · Svcs: —</span>
+    </span>
+    <span class="toppill" id="top-sources">
+      <span class="topdot" id="top-src-dot"></span>
+      <span id="top-src-txt">Sources: —</span>
+    </span>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-legend" data-i18n-aria-label="statusLegend.aria_label" aria-label="Status legend">
+      <span class="lg"><span class="topdot ok"></span><span data-i18n="statusLegend.success">Success / OK</span></span>
+      <span class="lg"><span class="topdot warn"></span><span data-i18n="statusLegend.unstable">Unstable / Degraded</span></span>
+      <span class="lg"><span class="topdot err"></span><span data-i18n="statusLegend.failure">Failure / Down</span></span>
+      <span class="lg"><span class="topdot"></span><span data-i18n="statusLegend.unknown">Unknown / Aborted</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications panel (rendered outside header, anchored to it) -->
+<div id="notif-panel">
+  <div class="notif-head">
+    <span>&#128276; <span data-i18n="notif.title">Notifications</span></span>
+    <span class="notif-sub" id="notif-subtitle" data-i18n="notif.subtitle"></span>
+    <button class="notif-head-clear" data-dash-action="clearNotifications" data-i18n="notif.clear">Clear all</button>
+  </div>
+  <div id="notif-list"><div class="notif-empty" data-i18n="dash.notif_empty">No state-change events yet</div></div>
+</div>
+
+<main>
+
+<div id="no-data-banner" class="no-data-banner" role="status"></div>
+
+<nav class="dash-page-tabs" id="dash-page-tabs" role="tablist" data-i18n-aria-label="tabNav.aria_label" aria-label="Dashboard sections">
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab active" role="tab" id="tabbtn-overview" aria-selected="true" aria-controls="tab-panel-overview" data-tab="overview" data-i18n="tabNav.overview">Overview</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.overview_sub">Metrics, map & situation</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-builds" aria-selected="false" aria-controls="tab-panel-builds" data-tab="builds" data-i18n="tabNav.builds">Builds</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.builds_sub">Pipelines, filters & starred</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-test-failures" aria-selected="false" aria-controls="tab-panel-test-failures" data-tab="test-failures" data-i18n="tabNav.test_failures">Top failures</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.test_failures_sub">Aggregated failing tests</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-test-runs" aria-selected="false" aria-controls="tab-panel-test-runs" data-tab="test-runs" data-i18n="tabNav.test_runs">Test runs</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.test_runs_sub">All runs, filters & export</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-services" aria-selected="false" aria-controls="tab-panel-services" data-tab="services" data-i18n="tabNav.services">Services</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.services_sub">Containers & timeline</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-system" aria-selected="false" aria-controls="tab-panel-system" data-tab="system" data-i18n="tabNav.system">System</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.system_sub">Host CPU, memory & processes</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-trends" aria-selected="false" aria-controls="tab-panel-trends" data-tab="trends" data-i18n="tabNav.trends">Trends</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.trends_sub">Charts over time</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-incidents" aria-selected="false" aria-controls="tab-panel-incidents" data-tab="incidents" data-i18n="tabNav.incidents">Incidents</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.incidents_sub">Summary & correlated failures</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-logs" aria-selected="false" aria-controls="tab-panel-logs" data-tab="logs" data-i18n="tabNav.logs">Logs</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.logs_sub">Collect / parsers</span>
+  </div>
+  <div class="dash-tab-cell">
+    <button type="button" class="dash-tab" role="tab" id="tabbtn-har" aria-selected="false" aria-controls="tab-panel-har" data-tab="har" data-i18n="tabNav.har">HAR</button>
+    <span class="dash-tab-sub" data-i18n="tabNav.har_sub">Request diagnostics</span>
+  </div>
+</nav>
+
+<div id="tab-panel-overview" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-overview">
+<section id="sec-overview" class="dash-section">
+<!-- ── Stats ── -->
+  <div class="stats" id="stats">
+  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["",""]'>
+    <div class="stat-numrow"><div class="n c-info" id="s-builds">—</div><span class="stat-trend" id="tr-builds" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.total_builds">Total builds</div>
+  </div>
+  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["","success"]'>
+    <div class="stat-numrow"><div class="n c-ok" id="s-ok">—</div><span class="stat-trend" id="tr-ok" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.successful">Successful</div>
+  </div>
+  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["","failure"]'>
+    <div class="stat-numrow"><div class="n c-fail" id="s-fail">—</div><span class="stat-trend" id="tr-fail" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.failed_builds">Failed builds</div>
+  </div>
+  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["","running"]'>
+    <div class="stat-numrow"><div class="n c-info" id="s-run">—</div><span class="stat-trend" id="tr-run" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.running">Running</div>
+  </div>
+  <div class="stat" data-dash-action="filterTests" data-dash-args='["failed"]'>
+    <div class="stat-numrow"><div class="n c-fail" id="s-tfail">—</div><span class="stat-trend" id="tr-tfail" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.test_failures">Failed tests</div>
+  </div>
+  <div class="stat" data-dash-action="filterTests" data-dash-args='["passed"]'>
+    <div class="stat-numrow"><div class="n c-ok" id="s-tpass">—</div><span class="stat-trend" id="tr-tpass" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.tests_passed">Tests passed</div>
+  </div>
+  <div class="stat" data-dash-action="goToServicesDownFromSituation" data-i18n-title="stat.services_down_title" title="" style="cursor:pointer">
+    <div class="stat-numrow"><div class="n c-warn" id="s-down">—</div><span class="stat-trend" id="tr-down" aria-hidden="true"></span></div>
+    <div class="l" data-i18n="stat.services_down">Services down</div>
+  </div>
+  </div>
+
+<div id="status-legend-inline" class="status-legend-inline" role="region" data-i18n-aria-label="statusLegend.aria_label" aria-label="Status colors">
+  <span class="sl-title" data-i18n="statusLegend.title">Status colors</span>
+  <span class="sl-item"><span class="st-dot sd-succ" aria-hidden="true"></span><span data-i18n="statusLegend.success">Success / OK</span></span>
+  <span class="sl-item"><span class="st-dot sd-fail" aria-hidden="true"></span><span data-i18n="statusLegend.failure">Failure / Down</span></span>
+  <span class="sl-item"><span class="st-dot sd-run" aria-hidden="true"></span><span data-i18n="statusLegend.running">Running</span></span>
+  <span class="sl-item"><span class="st-dot sd-warn" aria-hidden="true"></span><span data-i18n="statusLegend.unstable">Unstable / Degraded</span></span>
+  <span class="sl-item"><span class="st-dot sd-unk" aria-hidden="true"></span><span data-i18n="statusLegend.unknown">Unknown / Aborted</span></span>
+</div>
+
+<div id="situation-strip" class="situation-strip" style="display:none" aria-live="polite"></div>
+<div id="correlation-hint" class="correlation-line" style="display:none" role="note"></div>
+<div id="exec-health-line" class="exec-health-line" aria-live="polite"></div>
+
+<!-- ── Anomalies ── -->
+<div id="anomalies" style="margin-bottom:1rem"></div>
+
+<!-- ── Status Map Panel ── -->
+<div class="panel" id="panel-status-map" style="margin-bottom:1.25rem;display:none">
+  <div class="panel-head">
+    <h2>&#128202; <span data-i18n="panel.status_map">Status Map</span>
+      <button type="button" class="glossary-hint" data-i18n-title="glossary.status_map" title="">?</button>
+    </h2>
+    <span class="panel-count" id="map-count">—</span>
+    <span style="color:var(--muted);font-size:.75rem;margin-left:.25rem">&#9632; <span data-i18n="dash.map_legend_ci">CI job</span> &nbsp; &#11044; <span data-i18n="dash.map_legend_svc">service</span></span>
+    <button class="btn btn-ghost" style="margin-left:auto;font-size:.75rem;padding:.2rem .55rem" data-dash-action="toggleMapPanel" id="map-toggle-btn" data-i18n="dash.map_hide">Hide</button>
+  </div>
+  <div id="map-body">
+    <div class="filters" style="padding:.55rem 1rem .15rem;gap:.5rem;flex-wrap:wrap">
+      <input class="f-input" id="map-q" data-i18n-placeholder="dash.filter_map_ph" placeholder="Filter map…" style="width:220px"/>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-only-critical"/>
+        <span data-i18n="dash.critical_only">critical only</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-st-failure" checked/> <span data-i18n="dash.map_filter_failure">failed</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-st-running" checked/> <span data-i18n="dash.map_filter_running">running</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-st-unstable" checked/> <span data-i18n="dash.map_filter_unstable">unstable</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-st-success" checked/> <span data-i18n="dash.map_filter_success">success</span>
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--muted)">
+        <input type="checkbox" id="map-st-unknown" checked/> <span data-i18n="dash.map_filter_unknown">unknown</span>
+      </label>
+      <button type="button" class="btn btn-ghost btn-sm" data-dash-action="clearMapFilters" data-i18n="dash.reset">reset</button>
+    </div>
+    <div class="map-grid" id="map-grid"></div>
+    <div class="map-legend">
+      <span><span class="map-leg-dot sd-succ"></span><span data-i18n="dash.map_legend_ok">OK</span></span>
+      <span><span class="map-leg-dot sd-fail"></span><span data-i18n="dash.map_legend_failed">Failed</span></span>
+      <span><span class="map-leg-dot sd-run"></span><span data-i18n="dash.map_legend_running">Running</span></span>
+      <span><span class="map-leg-dot sd-warn"></span><span data-i18n="dash.map_legend_unstable">Unstable</span></span>
+      <span><span class="map-leg-dot sd-unk"></span><span data-i18n="dash.map_legend_unknown">Unknown</span></span>
+    </div>
+  </div>
+</div>
+<div id="map-tooltip" class="map-tooltip"></div>
+</section>
+</div>
+
+<div id="tab-panel-builds" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-builds" hidden>
+<section id="sec-ci" class="dash-section">
+<!-- ── Favourites Panel ── -->
+<div class="panel" id="panel-favourites" style="margin-bottom:1.25rem">
+  <div class="panel-head">
+    <h2>&#11088; <span data-i18n="dash.starred_title">Starred Builds</span></h2>
+    <span class="panel-count" id="fav-count">0</span>
+    <span class="fav-pinned-badge" data-i18n="dash.fav_pinned">PINNED</span>
+    <button class="expand-btn" id="expand-fav" data-dash-action="toggleExpand" data-dash-args='["fav"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="tbl-wrap tbl-scroll-x" id="wrap-fav">
+      <table class="tbl-grouped tbl-sticky-lead">
+        <thead>
+          <tr class="th-groups">
+            <th colspan="4" data-i18n="dash.tg_build">Build</th>
+            <th colspan="3" data-i18n="dash.tg_outcome">Outcome</th>
+            <th colspan="2" data-i18n="dash.tg_time">Time</th>
+            <th colspan="3" data-i18n="dash.tg_actions">Actions</th>
+          </tr>
+          <tr class="th-cols">
+          <th class="col-pin-star" style="width:28px"></th><th class="col-pin-src" data-i18n="dash.th_source">Source</th><th class="col-pin-job" data-i18n="dash.th_job">Job / Project</th><th class="col-pin-num" data-i18n="dash.th_num">#</th>
+          <th class="col-pin-st" data-i18n="dash.th_status">Status</th><th class="col-compact-hide" data-i18n="context.col" data-i18n-title="context.hint" title="">Context</th><th class="col-compact-hide" data-i18n="dash.th_branch">Branch</th><th data-i18n="dash.th_started">Started</th><th data-i18n="dash.th_duration">Duration</th><th>&#128279;</th><th style="width:52px" data-i18n="dash.build_log_title">Log</th><th style="width:70px" data-i18n="dash.th_action">Action</th>
+          </tr>
+        </thead>
+      <tbody id="tbody-fav"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Builds Panel ── -->
+<div class="panel" id="panel-builds">
+  <div class="panel-head">
+    <h2>&#128296; <span data-i18n="dash.builds_title">Builds / Pipelines</span></h2>
+    <span class="panel-count" id="builds-count">0</span>
+    <div class="filters">
+      <select class="f-select" id="f-source">
+        <option value="" data-i18n="dash.opt_all_sources">All sources</option>
+      </select>
+      <select class="f-select" id="f-instance" style="min-width:190px">
+        <option value="">All instances</option>
+      </select>
+      <select class="f-select" id="f-bstatus">
+        <option value="" data-i18n="dash.opt_all_status">All statuses</option>
+        <option value="success" data-i18n="dash.st_success">Success</option>
+        <option value="failure" data-i18n="dash.st_failure">Failure</option>
+        <option value="running" data-i18n="dash.st_running">Running</option>
+        <option value="unstable" data-i18n="dash.st_unstable">Unstable</option>
+        <option value="aborted" data-i18n="dash.st_aborted">Aborted</option>
+      </select>
+      <input class="f-input" id="f-job" data-i18n-placeholder="dash.filter_job_ph" placeholder="" style="width:160px"/>
+      <button class="time-filter-btn" id="tf-24h" data-dash-action="toggleTimeFilter" data-dash-args="[24]" data-i18n-title="dash.tf_24h" title="">24h</button>
+      <button class="time-filter-btn" id="tf-7d"  data-dash-action="toggleTimeFilter" data-dash-args="[168]" data-i18n-title="dash.tf_7d" title="">7d</button>
+      <button class="f-clear" data-dash-action="clearBuildFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
+      <span class="filter-presets" role="group" data-i18n-aria-label="dash.presets_aria" aria-label="Quick presets">
+        <button type="button" class="preset-btn" data-dash-action="applyBuildPreset" data-dash-args='["failed24"]' data-i18n="dash.preset_failed">Failed · 24h</button>
+        <button type="button" class="preset-btn" data-dash-action="applyBuildPreset" data-dash-args='["starred"]' data-i18n="dash.preset_starred">Starred</button>
+      </span>
+    </div>
+    <div class="filter-active-line" id="filter-active-builds" style="display:none;flex-basis:100%">
+      <span id="filter-active-builds-txt"></span>
+      <button type="button" class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.35rem" data-dash-action="clearBuildFilters">Reset</button>
+    </div>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetBuilds" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <button class="expand-btn" id="expand-builds" data-dash-action="toggleExpand" data-dash-args='["builds"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="tbl-wrap tbl-scroll-x" id="wrap-builds">
+    <table class="tbl-grouped tbl-sticky-lead">
+      <thead>
+        <tr class="th-groups">
+          <th colspan="4" data-i18n="dash.tg_build">Build</th>
+          <th colspan="3" data-i18n="dash.tg_outcome">Outcome</th>
+          <th colspan="2" data-i18n="dash.tg_time">Time</th>
+          <th colspan="3" data-i18n="dash.tg_actions">Actions</th>
+        </tr>
+        <tr class="th-cols">
+          <th class="col-pin-star" style="width:28px"></th><th class="col-pin-src" data-i18n="dash.th_source">Source</th><th class="col-pin-job" data-i18n="dash.th_job">Job / Project</th><th class="col-pin-num" data-i18n="dash.th_num">#</th>
+          <th class="col-pin-st" data-i18n="dash.th_status">Status</th><th class="col-compact-hide" data-i18n="context.col" data-i18n-title="context.hint" title="">Context</th><th class="col-compact-hide" data-i18n="dash.th_branch">Branch</th><th data-i18n="dash.th_started">Started</th><th data-i18n="dash.th_duration">Duration</th><th>&#128279;</th><th style="width:52px" data-i18n="dash.build_log_title">Log</th><th style="width:70px" data-i18n="dash.th_action">Action</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-builds">
+        <tr class="empty-row"><td colspan="12" data-i18n="dash.table_loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    <div class="sentinel" id="sentinel-builds"></div>
+    </div>
+  </div>
+</section>
+  </div>
+
+<div id="tab-panel-test-failures" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-failures" hidden>
+<section id="sec-test-failures" class="dash-section">
+<!-- ── Top Failures Panel ── -->
+<div class="panel" id="panel-failures">
+  <div class="panel-head">
+    <h2>&#128308; <span data-i18n="dash.top_fail_title">Top Failing Tests</span></h2>
+    <span class="panel-count" id="failures-count">0</span>
+    <div class="filters">
+      <button type="button" class="time-filter-btn" id="tf-f-1d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[1]" data-i18n-title="dash.tf_1d" title="">1d</button>
+      <button type="button" class="time-filter-btn" id="tf-f-3d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[3]" data-i18n-title="dash.tf_3d" title="">3d</button>
+      <button type="button" class="time-filter-btn" id="tf-f-7d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[7]" data-i18n-title="dash.tf_7d" title="">7d</button>
+      <button type="button" class="time-filter-btn" id="tf-f-30d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[30]" data-i18n-title="dash.tf_30d" title="">30d</button>
+      <select class="f-select" id="f-fsource" title="Test source">
+        <option value="real" selected>Real (no raw Jenkins parsers)</option>
+        <option value="jenkins">Jenkins (merged: build+Allure+console)</option>
+        <option value="gitlab">GitLab</option>
+        <option value="synthetic">Synthetic (build as test)</option>
+        <option value="">All sources</option>
+        <optgroup label="Raw / debug">
+        <option value="jenkins_allure">jenkins_allure</option>
+        <option value="jenkins_console">jenkins_console</option>
+        <option value="jenkins_build">jenkins_build</option>
+        <option value="jenkins_unified">jenkins_unified</option>
+        </optgroup>
+      </select>
+      <input class="f-input" id="f-fname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
+      <input class="f-input" id="f-fsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
+      <button class="f-clear" data-dash-action="clearFailureFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
+    </div>
+    <div class="panel-subhint" data-i18n="dash.top_fail_data_scope" style="flex-basis:100%;font-size:.68rem;color:var(--muted);line-height:1.35;margin:-.15rem 0 .15rem;font-style:italic"></div>
+    <div class="filter-active-line" id="filter-active-failures" style="display:none;flex-basis:100%"></div>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetFailures" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <div class="export-wrap" id="ew-failures">
+      <button class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .65rem" data-dash-action="toggleExportMenu" data-dash-args='["ew-failures"]'>&#11015; <span data-i18n="dash.export_label">Export</span></button>
+      <div class="export-menu">
+        <a href="api/export/failures?fmt=csv" id="exp-failures-csv" target="_blank" rel="noopener">&#128196; CSV</a>
+        <a href="api/export/failures?fmt=xlsx" id="exp-failures-xlsx" target="_blank" rel="noopener">&#128202; XLSX</a>
+      </div>
+    </div>
+    <button class="expand-btn" id="expand-failures" data-dash-action="toggleExpand" data-dash-args='["failures"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="tbl-wrap" id="wrap-failures">
+      <table class="tbl-grouped">
+        <thead>
+        <tr class="th-groups">
+          <th colspan="1" data-i18n="dash.tg_rank">Rank</th>
+          <th colspan="2" data-i18n="dash.tg_test_id">Test</th>
+          <th colspan="2" data-i18n="dash.tg_detail">Details</th>
+        </tr>
+        <tr class="th-cols">
+        <th data-i18n="dash.th_num">#</th><th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_failures">Failures</th><th data-i18n="dash.th_last_err">Last Error</th></tr>
+        </thead>
+      <tbody id="tbody-failures">
+        <tr class="empty-row"><td colspan="5" data-i18n="dash.table_loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    <div class="sentinel" id="sentinel-failures"></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="tab-panel-test-runs" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-runs" hidden>
+<section id="sec-test-runs" class="dash-section">
+<!-- ── Test Runs Panel ── -->
+<div class="panel" id="panel-tests">
+  <div class="panel-head">
+    <h2>&#9989; <span data-i18n="dash.tests_runs_title">All Test Runs</span></h2>
+    <span class="panel-count" id="tests-count">0</span>
+    <span class="panel-count" style="border-color:transparent;padding:.05rem .15rem">
+      <button type="button" class="log-lvl-btn" id="tsrc-real" data-dash-action="setTestSourceQuick" data-dash-args='["real"]' title="Real: merged Jenkins + other parsers (no raw Allure/console rows)">Real</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-jenkins" data-dash-action="setTestSourceQuick" data-dash-args='["jenkins"]' title="Jenkins only: one row per test (build time + Allure + console)">Jenkins</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-synth" data-dash-action="setTestSourceQuick" data-dash-args='["synthetic"]' title="Job-as-tests (synthetic)">Jobs</button>
+    </span>
+    <span class="panel-count" id="tests-breakdown" style="border-color:transparent;color:var(--muted);font-size:.72rem">—</span>
+    <div class="filters">
+      <select class="f-select" id="f-tsource">
+        <option value="real" selected>Real (no raw Jenkins parsers)</option>
+        <option value="jenkins">Jenkins (merged: build+Allure+console)</option>
+        <option value="gitlab">GitLab</option>
+        <option value="synthetic">Synthetic (build as test)</option>
+        <option value="">All sources</option>
+        <optgroup label="Raw / debug">
+        <option value="jenkins_allure">jenkins_allure</option>
+        <option value="jenkins_console">jenkins_console</option>
+        <option value="jenkins_build">jenkins_build</option>
+        <option value="jenkins_unified">jenkins_unified</option>
+        </optgroup>
+      </select>
+      <select class="f-select" id="f-tstatus">
+        <option value="" data-i18n="dash.opt_all_tstatus">All statuses</option>
+        <option value="failed" data-i18n="dash.t_failed">Failed</option>
+        <option value="passed" data-i18n="dash.t_passed">Passed</option>
+        <option value="skipped" data-i18n="dash.t_skipped">Skipped</option>
+        <option value="error" data-i18n="dash.t_error">Error</option>
+      </select>
+      <input class="f-input" id="f-tname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
+      <input class="f-input" id="f-tsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
+      <button class="time-filter-btn" id="tf-t-6h"  data-dash-action="toggleTestsTimeFilter" data-dash-args="[6]"  title="Last 6 hours">6h</button>
+      <button class="time-filter-btn" id="tf-t-24h" data-dash-action="toggleTestsTimeFilter" data-dash-args="[24]" title="Last 24 hours">24h</button>
+      <button class="time-filter-btn" id="tf-t-7d"  data-dash-action="toggleTestsTimeFilter" data-dash-args="[168]" title="Last 7 days">7d</button>
+      <button class="f-clear" data-dash-action="clearTestFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
+    </div>
+    <div class="filter-active-line" id="filter-active-tests" style="display:none;flex-basis:100%">
+      <span id="filter-active-tests-txt"></span>
+      <button type="button" class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.35rem" data-dash-action="clearTestFilters">Reset</button>
+    </div>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetTests" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <div class="export-wrap" id="ew-tests">
+      <button class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .65rem" data-dash-action="toggleExportMenu" data-dash-args='["ew-tests"]'>&#11015; <span data-i18n="dash.export_label">Export</span></button>
+      <div class="export-menu">
+        <a id="exp-tests-csv" href="api/export/tests?fmt=csv" target="_blank">&#128196; CSV</a>
+        <a id="exp-tests-xlsx" href="api/export/tests?fmt=xlsx" target="_blank">&#128202; XLSX</a>
+        <a id="exp-tests-failed-csv" href="api/export/tests?fmt=csv&status=failed" target="_blank">&#128196; <span data-i18n="dash.export_csv_failed_only">CSV (failed only)</span></a>
+      </div>
+    </div>
+    <button class="expand-btn" id="expand-tests" data-dash-action="toggleExpand" data-dash-args='["tests"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="panel-note muted" id="tests-parse-note" style="display:none;font-size:.72rem;padding:0 1rem .4rem;color:var(--muted)"></div>
+  <div class="tbl-wrap" id="wrap-tests">
+      <table class="tbl-grouped">
+        <thead>
+        <tr class="th-groups">
+          <th colspan="2" data-i18n="dash.tg_test_id">Test</th>
+          <th colspan="1" data-i18n="dash.tg_result">Result</th>
+          <th colspan="2" data-i18n="dash.tg_timing">Timing</th>
+          <th colspan="2" data-i18n="dash.tg_detail">Details</th>
+        </tr>
+        <tr class="th-cols">
+        <th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_status">Status</th><th data-i18n="dash.th_duration">Duration</th><th data-i18n="dash.th_timestamp">Timestamp</th><th class="col-compact-hide" data-i18n="dash.th_allure">Allure</th><th class="col-compact-hide" data-i18n="dash.th_error">Error</th></tr>
+        </thead>
+      <tbody id="tbody-tests">
+        <tr class="empty-row"><td colspan="7" data-i18n="dash.table_loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    <div class="sentinel" id="sentinel-tests"></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="tab-panel-services" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-services" hidden>
+<section id="sec-infra" class="dash-section">
+<!-- ── Services Panel ── -->
+<div class="panel" id="panel-svcs">
+  <div class="panel-head">
+    <h2>&#128051; <span data-i18n="dash.svcs_title">Services / Containers</span></h2>
+    <span class="panel-count" id="svcs-count">0</span>
+    <span class="panel-count" id="svcs-summary" style="border-color:transparent;color:var(--muted);font-size:.72rem">—</span>
+    <div class="filters">
+      <select class="f-select" id="f-svstatus">
+        <option value="" data-i18n="dash.svc_all">All statuses</option>
+        <option value="problems" data-i18n="dash.svc_problems">Problems (Down+Degraded)</option>
+        <option value="up" data-i18n="dash.svc_up">Up</option>
+        <option value="down" data-i18n="dash.svc_down">Down</option>
+        <option value="degraded" data-i18n="dash.svc_degraded">Degraded</option>
+      </select>
+      <label class="live-toggle" style="margin-left:.25rem" data-i18n-title="dash.svc_problems_only_hint" title="">
+        <input type="checkbox" id="sv-problems-only">
+        <span class="pill" style="font-size:.72rem" data-i18n="dash.svc_problems_only">Problems</span>
+      </label>
+      <button class="f-clear" data-dash-action="clearSvcFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
+    </div>
+    <div class="filter-active-line" id="filter-active-svcs" style="display:none;flex-basis:100%">
+      <span id="filter-active-svcs-txt"></span>
+      <button type="button" class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.35rem" data-dash-action="clearSvcFilters">Reset</button>
+    </div>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetServices" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <button class="expand-btn" id="expand-svcs" data-dash-action="toggleExpand" data-dash-args='["svcs"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="tbl-wrap" id="wrap-svcs">
+    <table class="tbl-grouped">
+      <thead>
+        <tr class="th-groups">
+          <th colspan="2" data-i18n="dash.tg_target">Target</th>
+          <th colspan="2" data-i18n="dash.tg_health">Health</th>
+          <th colspan="2" data-i18n="dash.tg_timing">Timing</th>
+          <th colspan="2" data-i18n="dash.tg_ops">Operations</th>
+        </tr>
+        <tr class="th-cols">
+        <th data-i18n="dash.th_name">Name</th><th data-i18n="dash.th_kind">Kind</th><th data-i18n="dash.th_status">Status</th><th class="col-compact-hide" data-i18n="dash.th_detail">Detail</th><th data-i18n="dash.th_checked">Checked</th><th class="col-compact-hide" data-i18n="dash.th_uptime">30d Uptime</th><th style="min-width:72px" data-i18n="dash.build_log_title">Log</th><th style="min-width:200px;text-align:right" data-i18n="dash.th_actions">Actions</th></tr>
+      </thead>
+      <tbody id="tbody-svcs">
+        <tr class="empty-row"><td colspan="8" data-i18n="dash.table_loading">Loading…</td></tr>
+      </tbody>
+    </table>
+    <div class="sentinel" id="sentinel-svcs"></div>
+  </div>
+</div>
+<!-- ── Timeline Panel ── -->
+<div class="panel" id="panel-timeline">
+  <div class="panel-head">
+    <h2>&#9201; <span data-i18n="panel.timeline">Event Timeline</span></h2>
+    <span class="panel-count" id="tl-count">—</span>
+    <span class="tl-sub" id="tl-subtitle" data-i18n="timeline.subtitle"></span>
+    <button class="expand-btn" id="expand-tl" data-dash-action="toggleExpand" data-dash-args='["tl"]' style="margin-left:auto" data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div id="wrap-tl" class="tl-list"></div>
+</div>
+
+</section>
+</div>
+
+<div id="tab-panel-system" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-system" hidden>
+<section id="sec-system" class="dash-section">
+<div class="panel" id="panel-system" style="margin-bottom:1rem">
+  <div class="panel-head">
+    <h2>&#128421; <span data-i18n="dash.system_title">System monitor</span></h2>
+    <span class="panel-count" id="system-updated-at">—</span>
+    <button class="expand-btn" id="expand-system" data-dash-action="loadSystemStats" style="margin-left:auto" data-i18n="dash.panel_refresh">Refresh this table</button>
+  </div>
+  <div class="stats" id="system-stats" style="margin:0 1rem 1rem">
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-cpu">—</div></div><div class="l" data-i18n="dash.system_cpu">CPU load</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-mem">—</div></div><div class="l" data-i18n="dash.system_memory">Memory used</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-disk">—</div></div><div class="l" data-i18n="dash.system_disk">Disk used</div></div>
+    <div class="stat"><div class="stat-numrow"><div class="n c-info" id="sys-proc">—</div></div><div class="l" data-i18n="dash.system_processes">Processes</div></div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-grouped">
+      <thead>
+      <tr class="th-cols">
+        <th data-i18n="dash.th_name">Name</th>
+        <th>PID</th>
+        <th data-i18n="dash.system_cpu">CPU</th>
+        <th data-i18n="dash.system_memory">Memory</th>
+      </tr>
+      </thead>
+      <tbody id="tbody-system-procs">
+        <tr class="empty-row"><td colspan="4" data-i18n="dash.table_loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</section>
+</div>
+
+<div id="tab-panel-trends" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-trends" hidden>
+<section id="sec-trends" class="dash-section">
+<!-- ── Trends Panel ── -->
+<div class="panel" id="panel-trends" style="margin-top:1rem">
+  <div class="panel-head">
+    <h2>&#128200; <span data-i18n="dash.trends_title">Trends</span></h2>
+    <div class="trends-days" style="margin-bottom:0;margin-left:.75rem">
+      <button type="button" class="trend-day-btn trend-period-btn" data-dash-action="loadTrends" data-dash-args="[3]" data-i18n-title="dash.trends_preset_3d" title="">3d</button>
+      <button type="button" class="trend-day-btn trend-period-btn" data-dash-action="loadTrends" data-dash-args="[7]" data-i18n-title="dash.trends_preset_7d" title="">7d</button>
+      <button type="button" class="trend-day-btn trend-period-btn active" data-dash-action="loadTrends" data-dash-args="[14]" data-i18n-title="dash.trends_preset_14d" title="">14d</button>
+      <button type="button" class="trend-day-btn trend-period-btn" data-dash-action="loadTrends" data-dash-args="[21]" data-i18n-title="dash.trends_preset_21d" title="">21d</button>
+      <button type="button" class="trend-day-btn trend-period-btn" data-dash-action="loadTrends" data-dash-args="[30]" data-i18n-title="dash.trends_preset_30d" title="">30d</button>
+    </div>
+    <div class="trends-toolbar">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_charts">Charts:</span>
+      <button type="button" class="trend-day-btn trends-size-btn" data-size="s" data-dash-action="setTrendsSize" data-dash-args='["s"]' data-i18n-title="dash.trend_sz_s" title="">S</button>
+      <button type="button" class="trend-day-btn trends-size-btn active" data-size="m" data-dash-action="setTrendsSize" data-dash-args='["m"]' data-i18n-title="dash.trend_sz_m" title="">M</button>
+      <button type="button" class="trend-day-btn trends-size-btn" data-size="l" data-dash-action="setTrendsSize" data-dash-args='["l"]' data-i18n-title="dash.trend_sz_l" title="">L</button>
+      <button type="button" class="trend-day-btn trends-size-btn" data-size="xl" data-dash-action="setTrendsSize" data-dash-args='["xl"]' data-i18n-title="dash.trend_sz_xl" title="">XL</button>
+    </div>
+    <button type="button" class="btn btn-ghost" id="btn-trends-chart-open" data-dash-action="openTrendsChartModal" style="font-size:.8rem;margin-left:auto">&#128295; <span data-i18n="dash.trend_custom_open_modal">New chart…</span></button>
+  </div>
+  <div class="trends-filters-bar" id="trends-filters-bar">
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.group_source">Source</span>
+      <select id="trends-source" style="background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .5rem;font-size:.78rem;cursor:pointer;max-width:11rem">
+        <option value="" data-i18n="dash.opt_all_sources">All</option>
+        <option value="jenkins">jenkins</option>
+        <option value="gitlab">gitlab</option>
+        <option value="docker">docker</option>
+        <option value="http">http</option>
+      </select>
+    </div>
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+      <select id="trends-instance-all" class="f-select" style="width:auto;min-width:220px">
+        <option value="" data-i18n="dash.collect_logs_all_instances">All instances</option>
+      </select>
+    </div>
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_smooth">Smoothing</span>
+      <select id="trends-smooth" class="trends-smooth-select" style="background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .5rem;font-size:.78rem;cursor:pointer;max-width:11rem">
+        <option value="none" data-i18n="dash.trends_smooth_none">Off</option>
+        <option value="ma3" data-i18n="dash.trends_smooth_ma3">3-day average</option>
+        <option value="ma7" data-i18n="dash.trends_smooth_ma7">7-day average</option>
+      </select>
+    </div>
+    <div class="trends-filter-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_topn">Top failures bar</span>
+      <input type="number" id="trends-topn" min="3" max="100" step="1" value="10" title="" data-i18n-title="dash.trends_topn_hint"
+        style="width:4.25rem;background:var(--surface2);border:1px solid var(--border);border-radius:.4rem;color:var(--text);padding:.28rem .45rem;font-size:.78rem" />
+    </div>
+    <div class="trends-filter-group trends-range-group">
+      <span class="trends-toolbar-label" data-i18n="dash.trends_range">Dates</span>
+      <input type="date" id="trends-d-from" aria-label="from" />
+      <span style="color:var(--muted);font-size:.8rem">—</span>
+      <input type="date" id="trends-d-to" aria-label="to" />
+      <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="applyTrendsDateRange" data-i18n="dash.trends_range_apply">Apply</button>
+      <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="clearTrendsDateRange" data-i18n="dash.trends_range_clear">Clear</button>
+    </div>
+    <div class="trends-filter-group">
+      <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" data-dash-action="resetTrendsFilters" data-i18n="dash.trends_filters_reset">Reset filters</button>
+    </div>
+    <label class="trends-filter-group" style="display:inline-flex;align-items:center;gap:.35rem">
+      <input type="checkbox" id="trends-scope-global" />
+      <span class="trends-toolbar-label" data-i18n="dash.trends_scope_global">Apply Source/Instance to all tabs</span>
+    </label>
+  </div>
+  <div class="tbl-wrap" id="wrap-trends" data-size="m" style="padding:1rem;max-height:none">
+    <div id="trends-error" class="panel-inline-error" style="display:none;margin:0 0 .75rem"></div>
+    <div class="tr-kpi-health" id="tr-kpi-health">
+      <span id="tr-kpi-scope" class="tr-kpi-sub" data-i18n="dash.trend_kpi_scope_default">Scope: all sources</span>
+      <span id="tr-kpi-coverage" class="tr-kpi-sub" data-i18n="dash.trend_kpi_coverage_default">Coverage: —</span>
+    </div>
+    <div class="trends-history-kpis" id="trends-history-kpis">
+      <div class="tr-kpi-card">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_crash_title">Crash frequency</div>
+        <div class="tr-kpi-value" id="tr-kpi-crash">—</div>
+        <div class="tr-kpi-sub" data-i18n="dash.trend_kpi_crash_sub">failed build records per day</div>
+      </div>
+      <div class="tr-kpi-card">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_recovery_title">Average recovery</div>
+        <div class="tr-kpi-value" id="tr-kpi-recovery">—</div>
+        <div class="tr-kpi-sub" id="tr-kpi-recovery-sub" data-i18n="dash.trend_kpi_recovery_sub">from fail to recovered</div>
+      </div>
+      <div class="tr-kpi-card tr-kpi-wide">
+        <div class="tr-kpi-title" data-i18n="dash.trend_kpi_problem_jobs_title">Most problematic jobs</div>
+        <div class="tr-kpi-jobs" id="tr-kpi-jobs">—</div>
+      </div>
+    </div>
+    <div class="trends-grid" id="trends-default-grid">
+      <div class="chart-card" id="chart-card-builds">
+        <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-builds",0]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
+        <h3 data-i18n="dash.chart_builds">Builds: Failed vs Total</h3>
+        <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+          <select class="f-select" id="trends-inst-builds" style="width:auto;min-width:220px"></select>
+        </div>
+        <canvas id="chart-builds"></canvas>
+      </div>
+      <div class="chart-card" id="chart-card-tests">
+        <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-tests",1]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
+        <h3 data-i18n="dash.chart_tests">Tests: Failed vs Total</h3>
+        <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+          <select class="f-select" id="trends-inst-tests" style="width:auto;min-width:220px"></select>
+        </div>
+        <canvas id="chart-tests"></canvas>
+      </div>
+      <div class="chart-card" id="chart-card-svcs">
+        <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-svcs",2]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
+        <h3
+          class="chart-title-link"
+          data-i18n="dash.chart_svcs"
+          data-i18n-title="dash.chart_svcs_click_title"
+          title=""
+          tabindex="0"
+          role="button"
+          data-dash-action="goToServicesDownFromSituation"
+        >Services Down</h3>
+        <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span class="trends-toolbar-label" data-i18n="dash.trends_svcs_kind">Check type</span>
+          <select class="f-select" id="trends-inst-svcs" style="width:auto;min-width:200px">
+            <option value="" data-i18n="dash.trends_svcs_kind_all">All</option>
+            <option value="docker" data-i18n="dash.trends_svcs_kind_docker">Docker</option>
+            <option value="http" data-i18n="dash.trends_svcs_kind_http">HTTP</option>
+            <option value="other" data-i18n="dash.trends_svcs_kind_other">Other</option>
+          </select>
+        </div>
+        <canvas id="chart-svcs"></canvas>
+      </div>
+      <div class="chart-card" id="chart-card-top">
+        <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-top",3]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
+        <h3 data-i18n="dash.chart_top">Top Failing Tests (last period)</h3>
+        <div style="margin:-.15rem 0 .35rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+          <span class="trends-toolbar-label" data-i18n="dash.group_source">Source</span>
+          <select class="f-select" id="trends-top-test-source" style="width:auto;min-width:140px">
+            <option value="" data-i18n="dash.opt_all_sources">All</option>
+            <option value="jenkins">jenkins</option>
+            <option value="gitlab">gitlab</option>
+          </select>
+          <span class="trends-toolbar-label" data-i18n="dash.trends_instance_label">Instance</span>
+          <select class="f-select" id="trends-inst-top" style="width:auto;min-width:220px"></select>
+        </div>
+        <canvas id="chart-top-tests"></canvas>
+      </div>
+    </div>
+    <h3 id="trends-custom-heading" class="trends-custom-heading" style="display:none;margin-top:1.25rem" data-i18n="dash.trend_custom_heading">Your charts</h3>
+    <div class="trends-grid" id="trends-custom-grid"></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="tab-panel-incidents" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-incidents" hidden>
+<section id="incident-center" class="incident-center" style="display:none" role="region" aria-labelledby="ic-title">
+  <div class="ic-row1">
+    <div class="ic-left">
+      <span id="ic-sev" class="ic-sev ok" aria-hidden="true"></span>
+      <h2 id="ic-title" class="ic-title" data-i18n="icenter.title">Incident center</h2>
+    </div>
+    <div class="ic-cta">
+      <a class="btn btn-ghost" href="/api/incident.json" target="_blank" rel="noopener" id="ic-export" data-i18n="icenter.export_json">Export incident (JSON)</a>
+      <button type="button" class="btn" id="ic-open-logs" data-i18n="icenter.open_logs">Open logs</button>
+      <button type="button" class="btn btn-ghost" id="ic-runbook" data-dash-action="openRunbook" data-i18n-title="runbook.checklist_title" data-i18n="runbook.title" title="">Runbook</button>
+    </div>
+  </div>
+  <p class="ic-meta" id="ic-meta"></p>
+  <p class="ic-reasons" id="ic-reasons" style="display:none"></p>
+  <div class="ic-affected" id="ic-affected"></div>
+  <div class="ic-cards" id="ic-cards" style="display:none"></div>
+  <div class="ic-timeline" id="ic-timeline" style="display:none"></div>
+</section>
+  </div>
+
+</main>
+<a href="/" class="app-watermark" aria-label="CI/CD Monitor">
+  <img src="/static/logo-mark.png?v=20260417i" alt="" width="16" height="16" />
+  <span data-i18n="dash.app_title">CI/CD Monitor</span>
+</a>
+<button type="button" id="btn-back-top" class="btn-back-top" data-i18n-title="common.back_top" title="">&uarr;</button>
+<div class="toast" id="toast"></div>
+
+<!-- Runbook modal -->
+<div class="modal-overlay" id="runbook-modal" aria-hidden="true" data-dash-overlay-dismiss="closeRunbook">
+  <div class="runbook-modal-card" role="dialog" aria-modal="true" aria-labelledby="runbook-title">
+    <div class="runbook-hdr">
+      <div class="runbook-title" id="runbook-title" data-i18n="runbook.title">Runbook</div>
+      <button type="button" class="btn btn-ghost" data-dash-action="closeRunbook" data-i18n-title="common.close" title="" style="font-size:1.15rem;line-height:1;padding:.25rem .45rem">&times;</button>
+    </div>
+    <div class="runbook-body">
+      <div id="runbook-sub" style="color:var(--muted);font-size:.8rem;margin-bottom:.65rem"></div>
+      <div class="runbook-grid">
+        <div class="runbook-box">
+          <h3 data-i18n="runbook.first_actions">First actions</h3>
+          <ul class="runbook-list">
+            <li data-i18n="runbook.step_age">Confirm data age and collect status</li>
+            <li data-i18n="runbook.step_log">Open first failing job log</li>
+            <li data-i18n="runbook.step_svcs">Check affected services and restart if safe</li>
+          </ul>
+          <div class="runbook-actions">
+            <button type="button" class="btn" data-dash-action="triggerCollect" data-i18n="dash.collect">Collect</button>
+            <button type="button" class="btn btn-ghost" data-dash-action="icOpenFirstFailureLog" data-i18n="icenter.open_logs">Open logs</button>
+          </div>
+        </div>
+        <div class="runbook-box">
+          <h3 data-i18n="runbook.focus">Focus</h3>
+          <ul class="runbook-list" id="runbook-reasons"></ul>
+          <div class="runbook-actions">
+            <button type="button" class="btn btn-ghost" data-dash-action="runbookFocusBuildFailures" data-i18n="runbook.build_failures">Build failures</button>
+            <button type="button" class="btn btn-ghost" data-dash-action="runbookFocusTestFailures" data-i18n="runbook.test_failures">Test failures</button>
+            <button type="button" class="btn btn-ghost" data-dash-action="runbookFocusServicesProblems" data-i18n="runbook.services">Services</button>
+          </div>
+        </div>
+      </div>
+      <div class="runbook-box" style="margin-top:.75rem">
+        <h3 data-i18n="runbook.notes">Notes</h3>
+        <div style="font-size:.84rem;color:var(--muted);line-height:1.5" data-i18n="runbook.notes_body">
+          If you suspect stale data, run Collect (or FULL). Use the Logs tab to spot retries/429/503 and slow jobs.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trends: custom chart builder modal -->
+<div class="modal-overlay" id="trends-chart-modal" aria-hidden="true">
+  <div class="trends-modal-card" role="dialog" aria-modal="true" aria-labelledby="trends-modal-title">
+    <div class="trends-modal-header">
+      <h2 id="trends-modal-title" data-i18n="dash.trend_custom_modal_title">Chart builder</h2>
+      <button type="button" class="btn btn-ghost" id="trends-modal-close" data-i18n-title="dash.trend_custom_modal_close" data-i18n-aria-label="dash.trend_custom_modal_close" title="" style="font-size:1.15rem;line-height:1;padding:.25rem .45rem">&times;</button>
+    </div>
+    <div class="trends-modal-body">
+      <div class="trends-modal-field">
+        <div class="trends-modal-field-label" data-i18n="dash.trend_custom_title_lbl">Title</div>
+        <input type="text" id="tc-title" data-i18n-placeholder="dash.trend_custom_title_ph" placeholder="" maxlength="120" autocomplete="off"/>
+      </div>
+      <div class="trends-modal-grid">
+        <div class="trends-modal-field">
+          <div class="trends-modal-field-label" data-i18n="dash.trend_custom_format">Display</div>
+          <select id="tc-kind">
+            <option value="line" data-i18n="dash.trend_custom_kind_line">Line</option>
+            <option value="bar" data-i18n="dash.trend_custom_kind_bar">Bars</option>
+          </select>
+        </div>
+      </div>
+      <div id="tc-line-opts" class="tc-opt-block">
+        <div class="tc-opt-block-title" data-i18n="dash.trend_custom_line_opts">Line appearance</div>
+        <div class="tc-opt-row" style="margin-bottom:.5rem">
+          <label class="toggle" style="cursor:pointer"><input type="checkbox" id="tc-line-fill" checked /> <span data-i18n="dash.trend_custom_line_fill">Fill area</span></label>
+        </div>
+        <div class="trends-modal-field-label" data-i18n="dash.trend_custom_line_points">Points</div>
+        <select id="tc-line-points">
+          <option value="none" data-i18n="dash.trend_custom_points_none">None</option>
+          <option value="sm" data-i18n="dash.trend_custom_points_sm">Small</option>
+          <option value="md" data-i18n="dash.trend_custom_points_md">Large</option>
+        </select>
+        <div class="trends-modal-field-label" style="margin-top:.5rem" data-i18n="dash.trend_custom_curve">Curve</div>
+        <select id="tc-line-tension">
+          <option value="0.15" data-i18n="dash.trend_custom_curve_sharp">Sharp</option>
+          <option value="0.3" selected data-i18n="dash.trend_custom_curve_normal">Normal</option>
+          <option value="0.5" data-i18n="dash.trend_custom_curve_smooth">Smooth</option>
+        </select>
+      </div>
+      <div id="tc-bar-opts" class="tc-opt-block" style="display:none">
+        <div class="tc-opt-block-title" data-i18n="dash.trend_custom_bar_opts">Bar layout</div>
+        <div class="tc-radio-row">
+          <label><input type="radio" name="tc-bar-mode" value="grouped" checked /> <span data-i18n="dash.trend_custom_bar_grouped">Grouped</span></label>
+        </div>
+        <div class="tc-radio-row" style="margin-top:.35rem">
+          <label><input type="radio" name="tc-bar-mode" value="stacked" /> <span data-i18n="dash.trend_custom_bar_stacked">Stacked</span></label>
+        </div>
+      </div>
+      <div id="tc-chart-adv" class="tc-opt-block">
+        <div class="tc-opt-block-title" data-i18n="dash.trend_custom_adv_opts">More options</div>
+        <div class="trends-modal-grid">
+          <div class="trends-modal-field">
+            <div class="trends-modal-field-label" data-i18n="dash.trend_custom_chart_smooth">Series smoothing</div>
+            <select id="tc-chart-smooth">
+              <option value="none" data-i18n="dash.trends_smooth_none">Off</option>
+              <option value="ma3" data-i18n="dash.trends_smooth_ma3">3-day average</option>
+              <option value="ma7" data-i18n="dash.trends_smooth_ma7">7-day average</option>
+            </select>
+          </div>
+          <div class="trends-modal-field">
+            <div class="trends-modal-field-label" data-i18n="dash.trend_custom_y_max">Y-axis max (optional)</div>
+            <input type="number" id="tc-y-max" min="0" step="any" placeholder="" data-i18n-placeholder="dash.trend_custom_y_max_ph" style="width:100%;max-width:100%"/>
+          </div>
+        </div>
+        <label class="tc-opt-row" style="margin-top:.5rem;cursor:pointer"><input type="checkbox" id="tc-hide-grid" /> <span data-i18n="dash.trend_custom_hide_grid">Hide chart grid</span></label>
+      </div>
+      <datalist id="tc-job-datalist"></datalist>
+      <datalist id="tc-svc-datalist"></datalist>
+      <div class="trends-modal-field-label" data-i18n="dash.trend_custom_metrics_lbl">Metrics</div>
+      <p class="trends-modal-subtle" data-i18n="dash.trend_custom_metrics_hint">Add one or more series. Derived metrics are computed from daily totals.</p>
+      <div id="tc-series-rows"></div>
+      <button type="button" class="btn btn-ghost" style="font-size:.78rem;margin-top:.25rem" data-dash-action="tcAddSeriesRow" data-i18n="dash.trend_custom_add_series">+ Series</button>
+    </div>
+    <div class="trends-modal-footer">
+      <button type="button" class="btn btn-ghost" id="trends-modal-cancel" data-i18n="dash.action_cancel">Cancel</button>
+      <button type="button" class="btn" id="trends-modal-save" style="background:#16a34a" data-i18n="dash.trend_custom_add_btn">Add chart</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-panel-logs" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-logs" hidden>
+<section id="sec-logs" class="dash-section">
+  <div class="panel" id="panel-collect-logs">
+    <div class="panel-head">
+      <h2>&#128221; <span data-i18n="dash.collect_logs_title">Collect logs</span></h2>
+      <span class="panel-count" id="collectlog-count">0</span>
+      <span class="panel-count" id="collectlog-warn" style="color:#eab308;border-color:#eab308">0 warn</span>
+      <span class="panel-count" id="collectlog-err" style="color:#ef4444;border-color:#ef4444">0 err</span>
+      <div class="filters">
+        <button type="button" class="btn btn-ghost" style="font-size:.76rem;padding:.3rem .55rem" data-dash-action="collectLogsErrorsOnly" data-i18n="dash.collect_logs_errors_btn">Errors</button>
+        <select class="f-select" id="f-cl-level">
+          <option value="" data-i18n="dash.collect_logs_all_levels">All levels</option>
+          <option value="error">error</option>
+          <option value="warn">warn</option>
+          <option value="info">info</option>
+        </select>
+        <select class="f-select" id="f-cl-inst">
+          <option value="" data-i18n="dash.collect_logs_all_instances">All instances</option>
+        </select>
+        <select class="f-select" id="f-cl-phase">
+          <option value="" data-i18n="dash.collect_logs_all_phases">All phases</option>
+          <option value="jenkins_builds">jenkins_builds</option>
+          <option value="jenkins_console">jenkins_console</option>
+          <option value="jenkins_allure">jenkins_allure</option>
+          <option value="gitlab">gitlab</option>
+          <option value="docker">docker</option>
+        </select>
+        <input class="f-input" id="f-cl-job" data-i18n-placeholder="dash.collect_logs_job_filter_ph" placeholder="Job filter…" />
+        <input class="f-input" id="f-cl-q" data-i18n-placeholder="dash.collect_logs_filter_ph" placeholder="Filter…" />
+        <label style="display:flex;align-items:center;gap:.35rem;font-size:.75rem;color:var(--muted);user-select:none">
+          <input type="checkbox" id="cl-follow" checked />
+          <span data-i18n="dash.collect_logs_follow">follow</span>
+        </label>
+        <button class="f-clear" data-dash-action="clearCollectLogs">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
+      </div>
+      <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetCollectLogs" title="Refresh">&#8635;</button>
+      <button class="expand-btn" id="expand-collect-logs" data-dash-action="toggleExpand" data-dash-args='["collect-logs"]' data-i18n="dash.expand_panel">Expand</button>
+    </div>
+    <div class="tbl-wrap" id="wrap-collect-logs" style="padding:0">
+      <div id="collectlog-pre" style="margin:0;padding:.85rem 1rem;max-height:520px;overflow:auto;font-size:.74rem;line-height:1.45;border-top:1px solid var(--border);background:#0b1220;color:#cbd5e1;font-family:ui-monospace,SFMono-Regular,Consolas,monospace"></div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:.75rem" id="panel-collect-slow">
+    <div class="panel-head">
+      <h2 style="font-size:.95rem">&#9201; <span data-i18n="dash.collect_slow_title">Slow ops</span></h2>
+      <span class="panel-count" style="border-color:transparent"></span>
+    </div>
+    <div id="collectslow-box"></div>
+  </div>
+</section>
+</div>
+
+<div id="tab-panel-har" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-har" hidden>
+<section id="sec-har" class="dash-section">
+  <div class="panel" id="panel-har">
+    <div class="panel-head">
+      <h2>&#128202; <span data-i18n="dash.har_title">HAR Analyze</span></h2>
+      <span class="panel-count" data-i18n="dash.har_subtitle">Upload, filter, inspect failed/slow requests</span>
+    </div>
+    <div class="panel-body-har">
+      <div class="dhar-upload">
+        <input type="file" id="har-file" class="f-input" accept=".har,.json" style="width:min(460px,100%)">
+        <button type="button" class="btn" id="har-analyze-btn" data-dash-action="analyzeHar" data-i18n="dash.har_analyze_btn">Analyze</button>
+        <button type="button" class="time-filter-btn" id="har-toggle-raw-btn" data-dash-action="toggleHarRawView" data-i18n="dash.har_show_raw">Show file</button>
+        <span id="har-status" class="mono" style="color:var(--muted);font-size:.75rem"></span>
+      </div>
+      <div class="dhar-filters">
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_status_lbl">Status</div>
+          <select id="har-filter-status" class="f-select">
+          <option value="all" data-i18n="dash.har_filter_status_all">All statuses</option>
+          <option value="4xx" data-i18n="dash.har_filter_status_4xx">4xx</option>
+          <option value="5xx" data-i18n="dash.har_filter_status_5xx">5xx</option>
+          <option value="error" data-i18n="dash.har_filter_status_error">Network errors</option>
+          </select>
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_host_lbl">Host</div>
+          <input type="text" id="har-filter-host" class="f-input" data-i18n-placeholder="dash.har_filter_host_ph" placeholder="Host contains (api.example.com)">
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_url_lbl">URL</div>
+          <input type="text" id="har-filter-url" class="f-input" data-i18n-placeholder="dash.har_filter_url_ph" placeholder="URL contains (/v1/orders)">
+        </div>
+        <div class="dhar-filter-col">
+          <div class="dhar-filter-lbl" data-i18n="dash.har_filter_slow_lbl">Slow threshold</div>
+          <input type="number" id="har-slow-threshold" class="f-input" min="1" value="2000" data-i18n-placeholder="dash.har_filter_slow_ph" placeholder="Slow threshold ms">
+        </div>
+      </div>
+      <div class="dhar-presets">
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('all')" data-i18n="dash.har_preset_all">All</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('5xx')" data-i18n="dash.har_preset_5xx">Only 5xx</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('errors')" data-i18n="dash.har_preset_errors">Network errors</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.24rem .55rem" onclick="setHarPreset('slow')" data-i18n="dash.har_preset_slow">Slow only</button>
+        <span id="har-filter-meta" class="panel-count" style="margin-left:auto"></span>
+      </div>
+      <div id="har-summary" class="dhar-summary" style="display:none"></div>
+      <div class="dhar-two-col">
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_statuses">Top HTTP statuses</div>
+          <div id="har-statuses" class="dhar-list"></div>
+        </div>
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_hosts">Top hosts</div>
+          <div id="har-hosts" class="dhar-list"></div>
+        </div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_failed_requests">Requests with errors</div>
+        <div id="har-failed" class="dhar-list"></div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_slow_requests">Slow requests</div>
+        <div id="har-slow" class="dhar-list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<div class="modal-overlay" id="har-raw-modal" aria-hidden="true" data-dash-overlay-dismiss="closeHarRawModal">
+  <div class="log-modal-card" style="max-width:min(1060px,96vw)" role="dialog" aria-modal="true" aria-labelledby="har-raw-title">
+    <div class="log-modal-header">
+      <h3 id="har-raw-title" data-i18n="dash.har_raw_title">HAR file preview</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeHarRawModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:flex-start">
+      <select id="har-raw-mode" class="f-select" style="width:auto;min-width:230px">
+        <option value="full" data-i18n="dash.har_raw_mode_full">Full file</option>
+        <option value="filtered" data-i18n="dash.har_raw_mode_filtered">Filtered view (by current HAR filters)</option>
+      </select>
+      <input id="har-raw-search" class="f-input" data-i18n-placeholder="dash.har_raw_search_ph" placeholder="Search in file…" style="width:280px;max-width:100%"/>
+      <span id="har-raw-meta" class="panel-count"></span>
+    </div>
+    <pre id="har-raw-pre" class="dhar-raw-pre" style="max-height:min(68vh,620px)"></pre>
+  </div>
+</div>
+
+<!-- Allure description / screenshots (Jenkins) -->
+<div class="modal-overlay" id="allure-meta-modal" aria-hidden="true" data-dash-overlay-dismiss="closeAllureMetaModal">
+  <div class="log-modal-card" style="max-width:min(920px,96vw)" role="dialog" aria-modal="true" aria-labelledby="allure-meta-title">
+    <div class="log-modal-header">
+      <h3 id="allure-meta-title">Allure</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeAllureMetaModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:flex-start">
+      <div id="allure-meta-sub" style="color:var(--muted);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></div>
+    </div>
+    <div id="allure-meta-body" style="padding:0 1rem 1rem;font-size:.85rem;line-height:1.45;max-height:min(62vh,520px);overflow:auto"></div>
+  </div>
+</div>
+
+<!-- Slow op details modal -->
+<div class="modal-overlay" id="slowop-modal" aria-hidden="true" data-dash-overlay-dismiss="closeSlowOpModal">
+  <div class="log-modal-card" style="max-width:min(980px,96vw)" role="dialog" aria-modal="true" aria-labelledby="slowop-modal-title">
+    <div class="log-modal-header">
+      <h3 id="slowop-modal-title" data-i18n="dash.collect_slow_details_title">Slow op details</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeSlowOpModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar" style="justify-content:space-between">
+      <div id="slowop-modal-sub" style="color:var(--muted);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0"></div>
+      <button type="button" class="btn btn-ghost log-btn" data-dash-action="copySlowOpDetails" data-i18n="common.copy">Copy</button>
+    </div>
+    <pre class="log-modal-pre" id="slowop-modal-pre"></pre>
+  </div>
+</div>
+
+<!-- Confirm modal for Run / Restart actions -->
+<div class="modal-overlay" id="action-modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card-hdr">
+      <div class="modal-icon" id="modal-icon">&#9654;</div>
+      <div class="modal-card-txt">
+        <div class="modal-title" id="modal-title" data-i18n="dash.action_confirm">Confirm</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+    </div>
+    <div class="modal-target" id="modal-target-wrap" style="display:none">
+      <strong id="modal-target-label" data-i18n="dash.modal_target">Target</strong>
+      <div class="mono-target" id="modal-target-text"></div>
+      <div class="modal-meta" id="modal-meta"></div>
+    </div>
+    <div id="modal-branch-wrap" style="display:none;margin:0 1.35rem .5rem">
+      <label style="font-size:.74rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em" data-i18n="dash.branch_ref">Branch / Ref</label>
+      <input id="modal-branch-input" type="text" style="width:100%;margin-top:.35rem;background:var(--surface2);border:1px solid var(--border);border-radius:.5rem;color:var(--text);padding:.45rem .75rem;font-size:.875rem;font-family:monospace;outline:none">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-cancel" id="modal-cancel" data-i18n="dash.action_cancel">Cancel</button>
+      <button type="button" class="modal-btn modal-btn-ok" id="modal-ok" data-i18n="dash.action_confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log Diff modal -->
+<div class="modal-overlay" id="diff-modal" aria-hidden="true" data-dash-overlay-dismiss="closeDiffModal">
+  <div class="log-modal-card" style="max-width:min(1000px,97vw)" role="dialog" aria-modal="true">
+    <div class="log-modal-header">
+      <h3 id="diff-modal-title" data-i18n="dash.log_diff_title">Log diff</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeDiffModal" data-i18n="common.close">Close</button>
+    </div>
+    <pre class="diff-pre" id="diff-pre">Loading…</pre>
+  </div>
+</div>
+
+<!-- Pipeline Stages modal -->
+<div class="modal-overlay" id="stages-modal" aria-hidden="true" data-dash-overlay-dismiss="closeStagesModal">
+  <div class="stages-modal-card" role="dialog" aria-modal="true">
+    <div class="stages-header">
+      <h3 id="stages-modal-title" data-i18n="dash.stages_title">Pipeline Stages</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeStagesModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="stages-body" id="stages-body">
+      <div style="color:var(--muted)" data-i18n="dash.table_loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Log viewer modal -->
+<div class="modal-overlay" id="log-modal" aria-hidden="true" data-dash-overlay-dismiss="closeLogModal">
+  <div class="log-modal-card" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
+    <div class="log-modal-header">
+      <h3 id="log-modal-title" data-i18n="dash.log_title">Logs</h3>
+      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeLogModal" data-i18n="common.close">Close</button>
+    </div>
+    <div class="log-modal-toolbar">
+      <button type="button" class="btn btn-ghost" id="log-btn-refresh" style="font-size:.8rem">&#8635; <span data-i18n="dash.log_refresh">Refresh</span></button>
+      <span id="log-tail-controls" style="display:none;align-items:center;gap:.45rem">
+        <label id="log-tail-wrap" style="display:inline-flex;align-items:center;gap:.35rem">
+          <input type="checkbox" id="log-tail-enabled" checked />
+          <span>Tail</span>
+        </label>
+        <label id="log-tail-lines-wrap" style="display:inline-flex;align-items:center;gap:.3rem">
+          <input type="number" id="log-tail-lines" min="100" max="50000" step="100" value="1000" style="width:88px" />
+          <span>lines</span>
+        </label>
+      </span>
+      <label id="log-follow-wrap">
+        <input type="checkbox" id="log-follow" />
+        <span data-i18n="dash.log_follow">Follow live (docker logs -f)</span>
+      </label>
+      <button type="button" class="btn btn-ghost" id="log-btn-copy" style="font-size:.8rem" data-dash-action="copyLogToClipboard" data-i18n-title="dash.log_copy_title" title="">&#128203; <span data-i18n="common.copy">Copy</span></button>
+    </div>
+    <div class="log-toolbar-search">
+      <input type="search" id="log-search-input" class="log-search-inp" data-i18n-placeholder="dash.log_search_ph" placeholder="">
+      <span id="log-search-count"></span>
+      <label class="log-regex-lbl" data-i18n-title="log.regex_title">
+        <input type="checkbox" id="log-search-regex"> <span data-i18n="dash.log_regex_lbl">Regex</span>
+      </label>
+      <div style="display:flex;gap:.25rem;margin-left:auto">
+        <button class="log-lvl-btn lv-active" data-level="all" data-dash-action="setLogLevel" data-dash-args='["all"]' data-i18n="common.all">All</button>
+        <button class="log-lvl-btn" data-level="error" data-dash-action="setLogLevel" data-dash-args='["error"]'>ERR</button>
+        <button class="log-lvl-btn" data-level="warn" data-dash-action="setLogLevel" data-dash-args='["warn"]'>WARN</button>
+        <button class="log-lvl-btn" data-level="info" data-dash-action="setLogLevel" data-dash-args='["info"]'>INFO</button>
+      </div>
+    </div>
+    <pre class="log-modal-pre" id="log-modal-pre"></pre>
+  </div>
+</div>
+
+
+{% include 'partials/chat_widget.html' %}
+
+</body>
+</html>

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\ops_actions.py
+# hypothesis_version: 6.141.1
+
+[404, '/', 'gitlab_instances', 'https://gitlab.com', 'jenkins_instances', 'token', 'url', 'username', 'verify_ssl']

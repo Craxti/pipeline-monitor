@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_state.py
+# hypothesis_version: 6.141.1
+
+[100, 300, 400, 800, 2000, 2500, ' #', 'Allure: ', 'Builds: ', 'Console: ', 'GitLab: ', 'Jenkins: ', 'cancel_requested', 'counts', 'elapsed_ms', 'error', 'has_more', 'info', 'instance', 'interval_seconds', 'is_collecting', 'items', 'job', 'last_collected_at', 'last_error', 'level', 'limit', 'main', 'offset', 'phase', 'progress_counts', 'progress_main', 'progress_sub', 'started_at', 'sub', 'total', 'ts', 'warn']

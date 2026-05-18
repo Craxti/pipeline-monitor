@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\run_collect_sync.py
+# hypothesis_version: 6.141.1
+
+['Collect finished', 'Stopped by user', 'cancel_requested', 'collect_meta', 'collected_at', 'done', 'general', 'tests']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\ops.py
+# hypothesis_version: 6.141.1
+
+[503, '/health', '/ready', '1.0.0', 'app.py', 'ops', 'web']

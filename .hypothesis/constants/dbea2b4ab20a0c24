@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_task_lifecycle.py
+# hypothesis_version: 6.141.1
+
+[300, 'asyncio.Future[None]', 'auto_collect', 'interval_seconds']

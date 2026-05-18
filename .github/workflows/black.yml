@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install black
+        run: python -m pip install --upgrade pip black
+
+      - name: Check formatting
+        run: black --check .
+
+  ruff-strict:
+    name: Ruff strict (critical modules)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install ruff
+        run: python -m pip install --upgrade pip ruff
+
+      - name: Strict lint critical modules
+        run: |
+          ruff check \
+            parsers/pytest_parser.py \
+            web/services/webhooks.py \
+            web/services/webhook_endpoints.py \
+            web/services/chat_prompts.py \
+            --select E,F,UP,B \
+            --ignore UP045
+
+  # Unit / contract tests that do not need a running server, real CI APIs, or a
+  # pre-existing DB. (Full-app smoke tests live in tests/test_smoke.py — they
+  # start the FastAPI lifespan: SQLite under data/, background collect, etc.)
+  unit-tests:
+    name: Unit tests (no live service / no external DB)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest pytest-cov pytest-httpserver
+
+      - name: Run tests with coverage gate
+        run: |
+          python -m pytest -q \
+            tests/test_auth_and_config.py \
+            tests/test_clients.py \
+            tests/test_chat_prompts.py \
+            tests/test_contracts.py \
+            tests/test_parsers.py \
+            tests/test_snapshot_trends_cache.py \
+            tests/test_trends_kpi_service.py \
+            tests/test_sqlite_history.py \
+            tests/test_web_services_utils.py \
+            tests/test_property_parsers_and_webhook.py \
+            tests/test_e2e_mocked_ci_collect_and_app.py \
+            --cov=parsers.pytest_parser \
+            --cov=web.services.webhooks \
+            --cov=web.services.webhook_endpoints \
+            --cov-fail-under=90
+

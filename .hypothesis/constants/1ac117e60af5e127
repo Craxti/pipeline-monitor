@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\incident_bundle.py
+# hypothesis_version: 6.141.1
+
+['## Failed builds', '## Services down', '## Summary', 'down', 'error', 'failed', 'failure', 'no_snapshot_yet', 'unstable', 'value']

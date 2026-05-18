@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\dashboard_summary.py
+# hypothesis_version: 6.141.1
+
+[300, 'builds', 'collect', 'collect_meta', 'counts', 'data_revision', 'down', 'error', 'failed', 'failed_builds', 'failed_tests', 'failure', 'instance_health', 'interval_seconds', 'is_collecting', 'kind', 'last_collected_at', 'last_error', 'message', 'name', 'ok', 'parse_coverage', 'partial_errors', 'services', 'services_down', 'snapshot', 'source', 'status_normalized', 'tests', 'tests_total', 'unstable', 'web']

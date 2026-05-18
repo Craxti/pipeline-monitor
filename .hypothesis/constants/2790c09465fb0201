@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\notifications_endpoints.py
+# hypothesis_version: 6.141.1
+
+['id', 'items', 'max_id', 'total']

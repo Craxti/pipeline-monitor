@@ -1,0 +1,514 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix life time + stop + system status" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ChangesViewManager">
+    <option name="groupingKeys">
+      <option value="directory" />
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="my-main-sync" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="3CRO9zhD6KeHmYALFRGf06abyBz" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/prooftech/proj/pipeline-monitor&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\prooftech\proj\pipeline-monitor" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python tests.pytest in tests">
+    <configuration name="pytest for test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_e2e_mocked_ci_collect_and_app.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in test_property_parsers_and_webhook.py" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests/test_property_parsers_and_webhook.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pytest in tests" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
+      <module name="pipeline-monitor" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/tests&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.pytest in tests" />
+        <item itemvalue="Python tests.pytest for test_e2e_mocked_ci_collect_and_app.test_fastapi_dashboard_html_and_public_api" />
+        <item itemvalue="Python tests.pytest in test_property_parsers_and_webhook.py" />
+        <item itemvalue="Python tests.pytest in test_e2e_mocked_ci_collect_and_app.py" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="" />
+      <created>1776344768766</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1776344768766</updated>
+    </task>
+    <task id="LOCAL-00016" summary="fix dashboard, cache, request_id, api, fresh">
+      <created>1776439110317</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1776439110317</updated>
+    </task>
+    <task id="LOCAL-00017" summary="fix moduls arch">
+      <created>1776445098001</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1776445098001</updated>
+    </task>
+    <task id="LOCAL-00018" summary="pep8 + docs + unittests">
+      <created>1776449581222</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1776449581222</updated>
+    </task>
+    <task id="LOCAL-00019" summary="pep8">
+      <created>1776450535354</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1776450535354</updated>
+    </task>
+    <task id="LOCAL-00020" summary="pep8">
+      <created>1776450842516</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1776450842516</updated>
+    </task>
+    <task id="LOCAL-00021" summary="pars fix">
+      <created>1776450932702</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1776450932702</updated>
+    </task>
+    <task id="LOCAL-00022" summary="pep8">
+      <created>1776451061434</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451061434</updated>
+    </task>
+    <task id="LOCAL-00023" summary="pep8">
+      <created>1776451201561</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451201561</updated>
+    </task>
+    <task id="LOCAL-00024" summary="add actions black">
+      <created>1776451242969</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451242969</updated>
+    </task>
+    <task id="LOCAL-00025" summary="add docker">
+      <created>1776451463203</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451463203</updated>
+    </task>
+    <task id="LOCAL-00026" summary="add docker">
+      <created>1776451502377</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451502377</updated>
+    </task>
+    <task id="LOCAL-00027" summary="add docker">
+      <created>1776451527951</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1776451527951</updated>
+    </task>
+    <task id="LOCAL-00028" summary="fix dashboard.js split for moduls">
+      <created>1776454118050</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1776454118050</updated>
+    </task>
+    <task id="LOCAL-00029" summary="fix dashboard.js split for moduls">
+      <created>1776454744519</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1776454744519</updated>
+    </task>
+    <task id="LOCAL-00030" summary="fix  Flaky jobs">
+      <created>1776454933720</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1776454933720</updated>
+    </task>
+    <task id="LOCAL-00031" summary="fix  filters">
+      <created>1776455107613</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1776455107613</updated>
+    </task>
+    <task id="LOCAL-00032" summary="fix docker logs">
+      <created>1776455316494</created>
+      <option name="number" value="00032" />
+      <option name="presentableId" value="LOCAL-00032" />
+      <option name="project" value="LOCAL" />
+      <updated>1776455316494</updated>
+    </task>
+    <task id="LOCAL-00033" summary="fix live/reload">
+      <created>1776455585828</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1776455585828</updated>
+    </task>
+    <task id="LOCAL-00034" summary="fix ai chat">
+      <created>1776455761473</created>
+      <option name="number" value="00034" />
+      <option name="presentableId" value="LOCAL-00034" />
+      <option name="project" value="LOCAL" />
+      <updated>1776455761473</updated>
+    </task>
+    <task id="LOCAL-00035" summary="add button stop&#10;add tests in actions">
+      <created>1776456200578</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1776456200578</updated>
+    </task>
+    <task id="LOCAL-00036" summary="fix settings UI">
+      <created>1776456618792</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1776456618792</updated>
+    </task>
+    <task id="LOCAL-00037" summary="fix settings UI">
+      <created>1776457213367</created>
+      <option name="number" value="00037" />
+      <option name="presentableId" value="LOCAL-00037" />
+      <option name="project" value="LOCAL" />
+      <updated>1776457213367</updated>
+    </task>
+    <task id="LOCAL-00038" summary="fix settings UI">
+      <created>1776591796563</created>
+      <option name="number" value="00038" />
+      <option name="presentableId" value="LOCAL-00038" />
+      <option name="project" value="LOCAL" />
+      <updated>1776591796563</updated>
+    </task>
+    <task id="LOCAL-00039" summary="fix json files&#10;fix filters&#10;fix slow requests&#10;fix tap settings">
+      <created>1776613166890</created>
+      <option name="number" value="00039" />
+      <option name="presentableId" value="LOCAL-00039" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613166890</updated>
+    </task>
+    <task id="LOCAL-00040" summary="fix json files&#10;fix filters&#10;fix slow requests&#10;fix tap settings">
+      <created>1776613175052</created>
+      <option name="number" value="00040" />
+      <option name="presentableId" value="LOCAL-00040" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613175052</updated>
+    </task>
+    <task id="LOCAL-00041" summary="fix git">
+      <created>1776613184518</created>
+      <option name="number" value="00041" />
+      <option name="presentableId" value="LOCAL-00041" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613184518</updated>
+    </task>
+    <task id="LOCAL-00042" summary="fix filter for service">
+      <created>1776613351968</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613351968</updated>
+    </task>
+    <task id="LOCAL-00043" summary="fix setting + safety">
+      <created>1776613742469</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613742469</updated>
+    </task>
+    <task id="LOCAL-00044" summary="fix setting + safety">
+      <created>1776613844135</created>
+      <option name="number" value="00044" />
+      <option name="presentableId" value="LOCAL-00044" />
+      <option name="project" value="LOCAL" />
+      <updated>1776613844135</updated>
+    </task>
+    <task id="LOCAL-00045" summary="fix failed tests whith ai assist chat">
+      <created>1776614117134</created>
+      <option name="number" value="00045" />
+      <option name="presentableId" value="LOCAL-00045" />
+      <option name="project" value="LOCAL" />
+      <updated>1776614117134</updated>
+    </task>
+    <task id="LOCAL-00046" summary="add test_connections&#10;add fast start ui">
+      <created>1776617497135</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1776617497135</updated>
+    </task>
+    <task id="LOCAL-00047" summary="add test_connections&#10;add fast start ui">
+      <created>1776619231928</created>
+      <option name="number" value="00047" />
+      <option name="presentableId" value="LOCAL-00047" />
+      <option name="project" value="LOCAL" />
+      <updated>1776619231928</updated>
+    </task>
+    <task id="LOCAL-00048" summary="fix ui">
+      <created>1776619939021</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1776619939021</updated>
+    </task>
+    <task id="LOCAL-00049" summary="add docs">
+      <created>1776623843643</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1776623843643</updated>
+    </task>
+    <task id="LOCAL-00050" summary="add docs">
+      <created>1776666321549</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1776666321549</updated>
+    </task>
+    <task id="LOCAL-00051" summary="fix port 8020">
+      <created>1776850507696</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850507696</updated>
+    </task>
+    <task id="LOCAL-00052" summary="fix docker">
+      <created>1776850636628</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850636628</updated>
+    </task>
+    <task id="LOCAL-00053" summary="fix docker">
+      <created>1776850676536</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850676536</updated>
+    </task>
+    <task id="LOCAL-00054" summary="fix docker">
+      <created>1776850749422</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1776850749422</updated>
+    </task>
+    <task id="LOCAL-00055" summary="fix docker">
+      <created>1776851335869</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1776851335869</updated>
+    </task>
+    <task id="LOCAL-00056" summary="fix config.yaml">
+      <created>1776853902632</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1776853902632</updated>
+    </task>
+    <task id="LOCAL-00057" summary="fix config.yaml">
+      <created>1776854064338</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1776854064338</updated>
+    </task>
+    <task id="LOCAL-00058" summary="fix actions start restart stop docker/jenkins/git">
+      <created>1776857733136</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1776857733136</updated>
+    </task>
+    <task id="LOCAL-00059" summary="fix life time">
+      <created>1776859054787</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1776859054787</updated>
+    </task>
+    <task id="LOCAL-00060" summary="fix life time + stop">
+      <created>1776860713615</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1776860713615</updated>
+    </task>
+    <task id="LOCAL-00061" summary="fix life time + stop + system status">
+      <created>1776862180724</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1776862180724</updated>
+    </task>
+    <task id="LOCAL-00062" summary="fix life time + stop + system status">
+      <created>1776862447243</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1776862447243</updated>
+    </task>
+    <task id="LOCAL-00063" summary="fix life time + stop + system status">
+      <created>1776874765575</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1776874765575</updated>
+    </task>
+    <task id="LOCAL-00064" summary="fix life time + stop + system status">
+      <created>1776874802003</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1776874802003</updated>
+    </task>
+    <option name="localTasksCounter" value="65" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="add actions black" />
+    <MESSAGE value="add docker" />
+    <MESSAGE value="fix dashboard.js split for moduls" />
+    <MESSAGE value="fix  Flaky jobs" />
+    <MESSAGE value="fix  filters" />
+    <MESSAGE value="fix docker logs" />
+    <MESSAGE value="fix live/reload" />
+    <MESSAGE value="fix ai chat" />
+    <MESSAGE value="add button stop&#10;add tests in actions" />
+    <MESSAGE value="fix settings UI" />
+    <MESSAGE value="fix json files&#10;fix filters&#10;fix slow requests&#10;fix tap settings" />
+    <MESSAGE value="fix git" />
+    <MESSAGE value="fix filter for service" />
+    <MESSAGE value="fix setting + safety" />
+    <MESSAGE value="fix failed tests whith ai assist chat" />
+    <MESSAGE value="add test_connections&#10;add fast start ui" />
+    <MESSAGE value="fix ui" />
+    <MESSAGE value="add docs" />
+    <MESSAGE value="fix port 8020" />
+    <MESSAGE value="fix docker" />
+    <MESSAGE value="fix config.yaml" />
+    <MESSAGE value="fix actions start restart stop docker/jenkins/git" />
+    <MESSAGE value="fix life time" />
+    <MESSAGE value="fix life time + stop" />
+    <MESSAGE value="fix life time + stop + system status" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix life time + stop + system status" />
+  </component>
+</project>

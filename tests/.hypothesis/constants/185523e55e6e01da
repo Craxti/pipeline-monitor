@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\parsers\allure_failure_text.py
+# hypothesis_version: 6.141.1
+
+[400, 4000, ' | ', 'actual', 'afterStages', 'beforeStages', 'broken', 'children', 'description', 'detail', 'expected', 'failed', 'message', 'name', 'reason', 'status', 'statusDetails', 'statusMessage', 'statusTrace', 'steps', 'trace']

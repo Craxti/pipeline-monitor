@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\dashboard.py
+# hypothesis_version: 6.141.1
+
+[0.4, 25.0, 250, 300, 500, '/', '/api/analytics/flaky', '/api/db/stats', '/api/meta', '/api/notifications', '/api/sources', '/api/status', '/api/stream/events', '/api/trends', '/api/uptime', 'dashboard', 'hello', 'revision', 'type']

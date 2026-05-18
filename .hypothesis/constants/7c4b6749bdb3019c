@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\gitlab_collect.py
+# hypothesis_version: 6.141.1
+
+[1000, 'Fetching pipelines…', 'GitLab', 'enabled', 'error', 'gitlab', 'gitlab_instances', 'https://gitlab.com', 'kind', 'latency_ms', 'max_pipelines', 'name', 'ok', 'projects', 'show_all_projects', 'token', 'url', 'verify_ssl']

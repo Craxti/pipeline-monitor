@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\config_migrations.py
+# hypothesis_version: 6.141.1
+
+['Default', 'api_base_url', 'bot_token', 'bots', 'chat_id', 'critical_only', 'enabled', 'name', 'notifications', 'telegram']

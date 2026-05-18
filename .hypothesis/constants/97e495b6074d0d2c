@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\progress.py
+# hypothesis_version: 6.141.1
+
+[' error', 'Stopped by user', 'builds', 'cancel_requested', 'exception', 'failed', 'info', 'phase', 'progress_counts', 'progress_main', 'progress_sub', 'retry', 'services', 'tests', 'traceback', 'warn']

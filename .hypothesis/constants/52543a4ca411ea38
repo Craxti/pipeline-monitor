@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\core\config.py
+# hypothesis_version: 6.141.1
+
+['GitLab', 'Jenkins', 'config.yaml', 'gitlab', 'gitlab_instances', 'jenkins', 'jenkins_instances', 'name', 'utf-8']

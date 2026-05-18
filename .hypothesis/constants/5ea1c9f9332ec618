@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\logs.py
+# hypothesis_version: 6.141.1
+
+[200, 4000, '/api/logs/diff', '/api/logs/docker', '/api/logs/gitlab', '/api/logs/jenkins', '/api/pipeline/stages', 'logs']

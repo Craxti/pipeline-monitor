@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\meta_api.py
+# hypothesis_version: 6.141.1
+
+[300, 'collect', 'collect_meta', 'correlation', 'data_revision', 'interval_seconds', 'is_collecting', 'job_analytics', 'last_collected_at', 'last_error', 'parse_coverage', 'snapshot', 'web']

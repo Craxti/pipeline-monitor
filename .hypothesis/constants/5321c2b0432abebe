@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\sse_endpoint.py
+# hypothesis_version: 6.141.1
+
+[25.0, 'Cache-Control', 'Connection', 'X-Accel-Buffering', 'keep-alive', 'no', 'no-cache', 'text/event-stream']

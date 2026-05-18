@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\collect_sync\jenkins_collect.py
+# hypothesis_version: 6.141.1
+
+[0.8, 1000, '/', 'Jenkins', 'Preparing job list…', 'all', 'allure_builds', 'allure_jobs_limit', 'allure_jobs_parsed', 'allure_retries', 'allure_workers', 'build', 'build_number', 'console_builds', 'console_jobs_limit', 'console_jobs_parsed', 'console_retries', 'console_workers', 'critical', 'elapsed_ms', 'enabled', 'error', 'failure', 'info', 'instance', 'jenkins', 'jenkins_allure', 'jenkins_builds', 'jenkins_console', 'jenkins_instances', 'job', 'job_name', 'jobs', 'jobs_indexed', 'kind', 'latency_ms', 'level', 'max_builds', 'name', 'ok', 'parse_allure', 'parse_console', 'show_all_depth', 'show_all_jobs', 'show_all_limit_jobs', 'show_all_max_builds', 'source_instance', 'success', 'token', 'ts', 'unstable', 'url', 'username', 'verify_ssl']

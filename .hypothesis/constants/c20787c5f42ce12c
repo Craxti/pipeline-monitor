@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\routes\incident.py
+# hypothesis_version: 6.141.1
+
+['*/*', ',', '/api/export/incident', '/api/incident', '/api/incident.json', '/api/incident.md', '/export/', '1', ';', 'accept', 'extra', 'incident', 'json', 'markdown', 'md', 'nl2br', 'raw', 'sane_lists', 'text/html', 'utf-8']

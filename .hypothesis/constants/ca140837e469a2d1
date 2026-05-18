@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\builds_endpoints.py
+# hypothesis_version: 6.141.1
+
+[200, 404, 'analytics', 'fail', 'failure', 'group_counts', 'has_more', 'instance', 'items', 'ok', 'page', 'per_page', 'success', 'total', 'unstable', 'warn']

@@ -1,0 +1,4 @@
+# file: D:\prooftech\proj\pipeline-monitor\web\services\openapi_safe.py
+# hypothesis_version: 6.141.1
+
+['0', '3.0.0', 'API', 'SpecialForm', 'info', 'openapi', 'openapi_schema', 'paths', 'replace', 'routes', 'title', 'version']
