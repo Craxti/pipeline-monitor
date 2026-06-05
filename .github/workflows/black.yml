@@ -20,7 +20,7 @@ jobs:
           cache: "pip"
 
       - name: Install black
-        run: python -m pip install --upgrade pip black
+        run: python -m pip install --upgrade pip "black==25.1.0"
 
       - name: Check formatting
         run: black --check .

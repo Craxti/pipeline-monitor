@@ -18,9 +18,6 @@ from parsers.allure_failure_text import (
 from unittest.mock import MagicMock, patch
 
 from parsers.jenkins_allure_parser import JenkinsAllureParser
-from unittest.mock import MagicMock, patch
-
-from parsers.jenkins_allure_parser import JenkinsAllureParser
 from parsers.jenkins_console_parser import JenkinsConsoleParser
 from parsers.pytest_parser import PytestXMLParser
 
@@ -92,28 +89,6 @@ class _FakeParser(JenkinsConsoleParser):
     def _fetch_build_timing(self, job_name: str, build_number: int) -> tuple[datetime | None, float | None]:
         # 285 s = 4m 45s — same as Jenkins duration field (ms) / 1000
         return datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc), 285.0
-
-
-class TestJenkinsAllureParserHttp:
-    def test_auth_failure_skips_without_retry(self) -> None:
-        parser = JenkinsAllureParser(url="http://jenkins", username="u", token="t", jobs=[], retries=3)
-        resp = MagicMock()
-        resp.status_code = 401
-        resp.json.side_effect = AssertionError("should not parse body")
-        with patch("parsers.jenkins_allure_parser.requests.get", return_value=resp) as mock_get:
-            assert parser._get_json("/job/x/1/allure/data/suites.json") is None
-        assert mock_get.call_count == 1
-
-    def test_connection_error_retries_once_then_skips(self) -> None:
-        import requests
-
-        parser = JenkinsAllureParser(url="http://jenkins", username="u", token="t", jobs=[], retries=3)
-        with patch(
-            "parsers.jenkins_allure_parser.requests.get",
-            side_effect=requests.ConnectionError("timeout"),
-        ) as mock_get:
-            assert parser._get_json("/job/x/1/allure/data/suites.json") is None
-        assert mock_get.call_count == 2
 
 
 class TestJenkinsAllureParserHttp:
