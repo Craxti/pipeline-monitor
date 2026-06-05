@@ -43,8 +43,7 @@ async def do_collect(
     collect_state["_phase_timing_phase"] = None
     collect_state["_phase_timing_started"] = None
     try:
-        # Keep runtime logs history between collect sessions so UI logs tab
-        # remains useful as a service activity journal.
+        # Clear slow-op timings for the new collect session (logs go to stdout).
         try:
             collect_slow.clear()
         except Exception:

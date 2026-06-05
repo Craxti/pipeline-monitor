@@ -18,7 +18,6 @@ from parsers.jenkins_console_parser import extract_pytest_failure_messages
 from parsers.pytest_parser import PytestXMLParser
 from web.services import webhook_endpoints, webhooks
 
-
 BUILD_STATUSES = ("success", "failure", "running", "aborted", "unstable", "unknown")
 
 webhook_core = st.fixed_dictionaries(

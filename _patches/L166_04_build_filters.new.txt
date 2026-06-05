@@ -1,0 +1,7 @@
+    if src == "gitlab":
+        bases = enabled_ci_bases(cfg, "gitlab")
+        return build_url_matches_ci_bases(b, bases)
+    if src == "github":
+        bases = enabled_ci_bases(cfg, "github")
+        return build_url_matches_ci_bases(b, bases)
+    return True

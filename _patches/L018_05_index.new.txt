@@ -1,0 +1,13 @@
+  <p class="ic-reasons" id="ic-reasons" style="display:none"></p>
+  <div class="ic-cta">
+    <a class="btn btn-ghost ic-btn" href="/api/incident.json" target="_blank" rel="noopener" id="ic-export"><span data-i18n="icenter.export_json">Export incident</span></a>
+    <button type="button" class="btn ic-btn" id="ic-open-logs"><span data-i18n="icenter.open_logs">Open logs</span></button>
+    <button type="button" class="btn btn-ghost ic-btn" id="ic-runbook" data-dash-action="openRunbook" data-i18n-title="runbook.checklist_title" title=""><span data-i18n="runbook.title">Runbook</span></button>
+  </div>
+  <div class="ic-summary" id="ic-summary" style="display:none">
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.failed_builds">Failed builds</span><span class="ic-kpi-val c-fail" id="ic-kpi-builds">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.test_failures">Failed tests</span><span class="ic-kpi-val c-fail" id="ic-kpi-tests">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.services_down">Services down</span><span class="ic-kpi-val c-fail" id="ic-kpi-svcs">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="fresh.age">Age</span><span class="ic-kpi-val c-info" id="ic-kpi-age">—</span></div>
+  </div>
+  <p class="ic-meta" id="ic-meta"></p>

@@ -1,0 +1,46 @@
+@media (max-width: 900px) {
+  body.settings-app {
+    overflow: auto;
+  }
+
+  .settings-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .settings-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .settings-sidebar-brand,
+  .snav-group-label {
+    display: none;
+  }
+
+  .snav-link {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .snav-item {
+    width: auto;
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.76rem;
+  }
+
+  .snav-divider {
+    display: none;
+  }
+
+  .settings-content {
+    padding: 1rem;
+  }
+}

@@ -1,0 +1,4 @@
+      _lastBuildsPageSig = pageSig;
+      swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
+      cacheStaleTableHtml('builds', tbody);
+    } else tbody.insertAdjacentHTML('beforeend', html);

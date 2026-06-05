@@ -1,0 +1,29 @@
+        assert out == ["gitlab", "jenkins"]
+
+    def test_api_sources_includes_configured_github(self) -> None:
+        from models.models import CISnapshot, BuildRecord, BuildStatus
+        from web.services import sources_endpoints
+        from web.services.build_filters import is_snapshot_build_enabled
+
+        cfg = {
+            "github_instances": [{"enabled": True, "name": "GH1", "url": "https://github.com"}],
+        }
+        snap = CISnapshot(builds=[])
+        out = sources_endpoints.api_sources(
+            load_snapshot=lambda: snap,
+            load_yaml_config=lambda: cfg,
+            is_snapshot_build_enabled=is_snapshot_build_enabled,
+        )
+        assert out == ["github"]
+
+
+class TestSettingsConnectionTest:
+    def test_github_requires_token(self) -> None:
+        from web.services.settings_connection_test import test_connection
+
+        out = test_connection({"kind": "github", "url": "https://github.com", "token": ""})
+        assert out["ok"] is False
+        assert "token" in str(out.get("message", "")).lower()
+
+
+class TestBuildsEndpoints:

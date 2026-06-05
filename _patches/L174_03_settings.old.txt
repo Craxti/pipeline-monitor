@@ -1,0 +1,2 @@
+    jenkins_instances: _ji,
+    gitlab_instances:  _gi,

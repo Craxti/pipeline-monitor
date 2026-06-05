@@ -17,6 +17,7 @@ from web.services import (
     service_logs_bridge,
     sqlite_boot,
 )
+from web.services.log_intel_loop import LogIntelLoop
 
 
 def make_app_lifespan(
@@ -41,6 +42,7 @@ def make_app_lifespan(
     collect_task: asyncio.Task | None = None
     service_log_handler: logging.Handler | None = None
     self_update_loop = docker_self_update.DockerSelfUpdateLoop()
+    log_intel_loop = LogIntelLoop()
 
     def _set_main_loop(loop: asyncio.AbstractEventLoop) -> None:
         rt.main_loop = loop
@@ -100,6 +102,30 @@ def make_app_lifespan(
     async def _shutdown_self_update() -> None:
         await self_update_loop.stop()
 
+    def _append_log_intel_event(entries: list[dict]) -> None:
+        from web.services import event_feed_api
+
+        return event_feed_api.append(
+            entries,
+            path=None,
+            max_entries=rt.EVENT_FEED_MAX,
+        )
+
+    async def _startup_log_intel(_: dict) -> None:
+        from web.services.log_intelligence.store import log_intel_store
+
+        log_intel_store.load_persisted()
+        log_intel_loop.start(
+            load_cfg=load_cfg,
+            load_snapshot=rt.load_snapshot,
+            append_event=_append_log_intel_event,
+            get_notify_id_seq=lambda: rt.notify_state.notify_id_seq,
+            set_notify_id_seq=lambda v: setattr(rt.notify_state, "notify_id_seq", v),
+        )
+
+    async def _shutdown_log_intel() -> None:
+        await log_intel_loop.stop()
+
     return lifespan_factory.make_lifespan(
         load_cfg=load_cfg,
         set_main_loop=_set_main_loop,
@@ -111,5 +137,7 @@ def make_app_lifespan(
         shutdown_proxy=_shutdown_proxy,
         startup_self_update=_startup_self_update,
         shutdown_self_update=_shutdown_self_update,
+        startup_log_intel=_startup_log_intel,
+        shutdown_log_intel=_shutdown_log_intel,
         stop_collect_task=collect_task_lifecycle.cancel_task,
     )

@@ -38,7 +38,13 @@ function updateFilterSummary() {
   const fi = document.getElementById('f-instance');
   const st = document.getElementById('f-bstatus');
   const fj = document.getElementById('f-job');
-  if (fs && fs.value) fb.push(`${t('dash.th_source')}: ${fs.value}`);
+  if (fs && fs.value) {
+    const src = String(fs.value).toLowerCase();
+    const label = src === 'gitlab' ? t('dash.builds_source_gitlab')
+      : src === 'github' ? t('dash.builds_source_github')
+      : fs.value;
+    fb.push(`${t('dash.th_source')}: ${label}`);
+  }
   if (fi && fi.value) fb.push(`Instance: ${fi.value}`);
   if (st && st.value) fb.push(`${t('dash.th_status')}: ${st.value}`);
   if (fj && fj.value) fb.push(`${t('dash.th_job')}: ${fj.value}`);

@@ -1,0 +1,14 @@
+                if "console_max_builds" in inst:
+                    console_max_builds = int(inst.get("console_max_builds") or 0)
+                else:
+                    console_max_builds = 3
+                console_parser = JenkinsConsoleParser(
+                    url=inst["url"],
+                    username=inst.get("username", ""),
+                    token=inst.get("token", ""),
+                    jobs=jobs_for_console,
+                    max_builds=console_max_builds,
+                    workers=int(inst.get("console_workers", 8) or 8),
+                    timeout=int(inst.get("console_timeout", 20) or 20),
+                    verify_ssl=bool(inst.get("verify_ssl", True)),
+                    retries=int(inst.get("console_retries", 2) or 2),

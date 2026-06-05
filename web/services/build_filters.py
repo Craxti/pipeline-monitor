@@ -21,7 +21,11 @@ def config_instance_label(inst: dict[str, Any], *, kind: str) -> str:
             return (net or u.rstrip("/"))[:240]
         except Exception:
             return u[:240]
-    return "Jenkins" if kind == "jenkins" else "GitLab"
+    if kind == "jenkins":
+        return "Jenkins"
+    if kind == "github":
+        return "GitHub"
+    return "GitLab"
 
 
 def enabled_ci_bases(cfg: dict[str, Any], kind: str) -> list[str]:
@@ -77,6 +81,9 @@ def is_snapshot_build_enabled(b: Any, cfg: dict[str, Any]) -> bool:
     if src == "gitlab":
         bases = enabled_ci_bases(cfg, "gitlab")
         return build_url_matches_ci_bases(b, bases)
+    if src == "github":
+        bases = enabled_ci_bases(cfg, "github")
+        return build_url_matches_ci_bases(b, bases)
     return True
 
 
@@ -125,5 +132,25 @@ def inst_label_for_build_with_cfg(b: Any, cfg: dict[str, Any]) -> str | None:
                         return config_instance_label(inst, kind="gitlab")
                 except Exception:
                     pass
+        return None
+    if src == "github":
+        for inst in cfg.get("github_instances", []) or []:
+            if not inst.get("enabled", True):
+                continue
+            base = str(inst.get("url", "") or "").rstrip("/")
+            web = base.replace("/api/v3", "").rstrip("/") if base else ""
+            for root in (web, base):
+                if root and bu.startswith(root):
+                    return config_instance_label(inst, kind="github")
+        return None
+    if src == "github":
+        for inst in cfg.get("github_instances", []) or []:
+            if not inst.get("enabled", True):
+                continue
+            base = str(inst.get("url", "") or "").rstrip("/")
+            web = base.replace("/api/v3", "").rstrip("/") if base else ""
+            for root in (web, base):
+                if root and bu.startswith(root):
+                    return config_instance_label(inst, kind="github")
         return None
     return None

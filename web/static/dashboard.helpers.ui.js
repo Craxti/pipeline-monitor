@@ -61,28 +61,131 @@ let _lastCollectFinishedAt = 0;
 /** Grace after collect ends: snapshot/API may briefly return 0 rows before new data is readable. */
 const _KEEP_TABLE_AFTER_COLLECT_MS = 45000;
 
+/** Last rendered tbody HTML per table — restored when collect briefly returns empty/API errors. */
+const _staleTableHtml = { builds: '', tests: '', failures: '', svcs: '' };
+const _STALE_SS_KEY = 'cimon-stale-tbody-v1';
+const _STALE_SS_TTL_MS = 30 * 60 * 1000;
+
+function _buildsFilterSig() {
+  try {
+    const source = document.getElementById('f-source')?.value || '';
+    const inst = document.getElementById('f-instance')?.value || '';
+    const status = document.getElementById('f-bstatus')?.value || '';
+    const job = document.getElementById('f-job')?.value || '';
+    const hours = String(typeof _buildsHours !== 'undefined' ? _buildsHours : 0);
+    return [source, inst, status, job, hours].join('\x1f');
+  } catch {
+    return '';
+  }
+}
+
+function _readStaleSessionEntry(key) {
+  try {
+    const raw = sessionStorage.getItem(_STALE_SS_KEY);
+    if (!raw) return null;
+    const bag = JSON.parse(raw);
+    const ent = bag[key];
+    if (!ent || !ent.html) return null;
+    if (Date.now() - Number(ent.ts || 0) > _STALE_SS_TTL_MS) return null;
+    return ent;
+  } catch {
+    return null;
+  }
+}
+
+function _writeStaleSessionEntry(key, html, filterSig) {
+  try {
+    if (!key || !html) return;
+    const bag = JSON.parse(sessionStorage.getItem(_STALE_SS_KEY) || '{}');
+    bag[key] = { html, filters: filterSig || '', ts: Date.now() };
+    sessionStorage.setItem(_STALE_SS_KEY, JSON.stringify(bag));
+  } catch { /* ignore */ }
+}
+
+function _staleEntryMatchesFilters(ent, key) {
+  if (!ent) return false;
+  if (key === 'builds') return ent.filters === _buildsFilterSig();
+  return true;
+}
+
+function _tryRestoreStaleTable(key, tbody, state) {
+  if (!tbody) return false;
+  if (tbodyHasDataRows(tbody)) {
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  if (_restoreStaleTableHtml(key, tbody)) {
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  const ent = _readStaleSessionEntry(key);
+  if (ent && _staleEntryMatchesFilters(ent, key)) {
+    tbody.innerHTML = ent.html;
+    _staleTableHtml[key] = ent.html;
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  return false;
+}
+
+/** Show last good builds table immediately after F5 while the API reloads. */
+function _primeBuildsTableFromSession() {
+  if (typeof _dashTab !== 'undefined' && _dashTab !== 'builds') return;
+  const tbody = document.getElementById('tbody-builds');
+  if (!tbody || tbodyHasDataRows(tbody)) return;
+  const ent = _readStaleSessionEntry('builds');
+  if (!ent || !_staleEntryMatchesFilters(ent, 'builds')) return;
+  tbody.innerHTML = ent.html;
+  _staleTableHtml.builds = ent.html;
+}
+
+function _collectGraceActive() {
+  const now = Date.now();
+  const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+  const sinceFinish =
+    typeof _lastCollectFinishedAt !== 'undefined' &&
+    _lastCollectFinishedAt > 0 &&
+    now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
+  return inCollect || sinceFinish;
+}
+
+/** Remember last good table markup (call after a successful page-1 render). */
+function cacheStaleTableHtml(key, tbody) {
+  try {
+    if (!key || !tbody || !tbodyHasDataRows(tbody)) return;
+    const html = tbody.innerHTML;
+    _staleTableHtml[key] = html;
+    if (key === 'builds') _writeStaleSessionEntry('builds', html, _buildsFilterSig());
+  } catch { /* ignore */ }
+}
+
+function _restoreStaleTableHtml(key, tbody) {
+  const html = _staleTableHtml[key];
+  if (!html || !tbody) return false;
+  tbody.innerHTML = html;
+  return true;
+}
+
+function _finishKeepTableState(state) {
+  if (!state) return;
+  state.done = true;
+  state.loading = false;
+  try { updateFilterSummary(); } catch { /* ignore */ }
+  try { _applyGlobalSearch(); } catch { /* ignore */ }
+}
+
 /**
  * In LIVE mode, keep the previous table when page-1 API returns zero rows (transient during/after collect).
  * Returns true if the caller should skip blanking the tbody.
  */
-function keepTableOnTransientEmpty(tbody, rows, state) {
+function keepTableOnTransientEmpty(tbody, rows, state, cacheKey) {
   try {
     if (!tbody || !state || state.page !== 1) return false;
     if (!Array.isArray(rows) || rows.length) return false;
     if (typeof _liveMode === 'undefined' || !_liveMode) return false;
-    if (!tbodyHasDataRows(tbody)) return false;
-    const now = Date.now();
-    const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
-    const sinceFinish =
-      typeof _lastCollectFinishedAt !== 'undefined' &&
-      _lastCollectFinishedAt > 0 &&
-      now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
-    if (!inCollect && !sinceFinish) return false;
-    state.done = true;
-    state.loading = false;
-    try { updateFilterSummary(); } catch { /* ignore */ }
-    try { _applyGlobalSearch(); } catch { /* ignore */ }
-    return true;
+    if (_collectGraceActive() && cacheKey && _tryRestoreStaleTable(cacheKey, tbody, state)) return true;
+    if (cacheKey === 'builds' && _tryRestoreStaleTable('builds', tbody, state)) return true;
+    return false;
   } catch {
     return false;
   }
@@ -92,23 +195,26 @@ function keepTableOnTransientEmpty(tbody, rows, state) {
  * In LIVE mode, avoid replacing a populated table with the generic API error row during/shortly after collect
  * (transient 5xx / network while snapshot is being rewritten).
  */
-function keepTableOnTransientApiError(tbody, res, state) {
+function keepTableOnTransientApiError(tbody, res, state, cacheKey) {
   try {
     if (!tbody || !state || state.page !== 1) return false;
     if (typeof _liveMode === 'undefined' || !_liveMode) return false;
-    if (!tbodyHasDataRows(tbody)) return false;
-    const now = Date.now();
-    const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
-    const sinceFinish =
-      typeof _lastCollectFinishedAt !== 'undefined' &&
-      _lastCollectFinishedAt > 0 &&
-      now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
-    if (!inCollect && !sinceFinish) return false;
-    state.done = true;
-    state.loading = false;
-    try { updateFilterSummary(); } catch { /* ignore */ }
-    try { _applyGlobalSearch(); } catch { /* ignore */ }
-    return true;
+    if (_collectGraceActive() && cacheKey && _tryRestoreStaleTable(cacheKey, tbody, state)) return true;
+    if (cacheKey === 'builds' && _tryRestoreStaleTable('builds', tbody, state)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Skip LIVE refreshAll reload for a tab that already shows data while collect is running. */
+function shouldSkipTableReloadDuringCollect(tableKey, tbody) {
+  try {
+    if (!_collectGraceActive()) return false;
+    if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
+    const tabFor = { builds: 'builds', tests: 'test-runs', failures: 'test-failures', svcs: 'services' };
+    if (typeof _dashTab !== 'undefined' && _dashTab !== tabFor[tableKey]) return false;
+    return tbodyHasDataRows(tbody) || !!_staleTableHtml[tableKey];
   } catch {
     return false;
   }
@@ -406,8 +512,6 @@ function runbookFocusServicesProblems() {
 }
 
 const _DASH_ACTION_PASS_EL = new Set([
-  'loadTrends',
-  'setTrendsSize',
   'triggerJenkinsBuild',
   'triggerGitlabPipeline',
   'dockerContainerAction',
@@ -422,6 +526,7 @@ function initDashDelegatedActions() {
     const name = el.getAttribute('data-dash-action');
     const fn = window[name];
     if (typeof fn !== 'function') return;
+    ev.preventDefault();
     const raw = el.getAttribute('data-dash-args');
     if (raw != null && raw !== '') {
       let args;
@@ -514,36 +619,6 @@ function initDashFormControlBindings() {
     });
   }
 
-  const trSrc = byId('trends-source');
-  if (trSrc) trSrc.addEventListener('change', () => { onTrendsSourceChange(trSrc); });
-  const trTopSrc = byId('trends-top-test-source');
-  if (trTopSrc) trTopSrc.addEventListener('change', () => { onTrendsTopTestSourceChange(trTopSrc); });
-  const trSm = byId('trends-smooth');
-  if (trSm) trSm.addEventListener('change', () => { onTrendsSmoothChange(trSm); });
-  const trTop = byId('trends-topn');
-  if (trTop) {
-    trTop.addEventListener('change', () => { onTrendsTopNChange(trTop); });
-    trTop.addEventListener('blur', () => { onTrendsTopNChange(trTop); });
-  }
-  ['trends-inst-builds', 'trends-inst-tests', 'trends-inst-top', 'trends-inst-svcs'].forEach((id) => {
-    const el = byId(id);
-    if (el) el.addEventListener('change', () => {
-      try {
-        if (id === 'trends-inst-svcs') localStorage.setItem('cimon-trends-inst-svcs', el.value || '');
-      } catch { /* ignore */ }
-      renderTrendsFromCache();
-    });
-  });
-
-  ['f-cl-level', 'f-cl-inst', 'f-cl-phase'].forEach((id) => {
-    const el = byId(id);
-    if (el) el.addEventListener('change', resetCollectLogs);
-  });
-  const clJob = byId('f-cl-job');
-  if (clJob) clJob.addEventListener('input', () => { debounce(resetCollectLogs, 300)(); });
-  const clQ = byId('f-cl-q');
-  if (clQ) clQ.addEventListener('input', () => { debounce(resetCollectLogs, 300)(); });
-
   const logS = byId('log-search-input');
   if (logS) logS.addEventListener('input', (e) => { _onLogSearch(e.target && 'value' in e.target ? e.target.value : ''); });
   const logRx = byId('log-search-regex');
@@ -559,11 +634,12 @@ function initDashFormControlBindings() {
     });
   }
   if (typeof initHarPanelBindings === 'function') initHarPanelBindings();
+  if (typeof initLogIntelBindings === 'function') initLogIntelBindings();
 }
 
 function refreshActivePanel() {
   if (_dashTab === 'overview') { loadSummary(); return; }
-  if (_dashTab === 'builds') { resetBuilds(); return; }
+  if (_dashTab === 'builds') { resetBuilds(true); return; }
   if (_dashTab === 'test-failures') {
     resetFailures();
     return;
@@ -574,9 +650,16 @@ function refreshActivePanel() {
   }
   if (_dashTab === 'services') { resetServices(); return; }
   if (_dashTab === 'system') { loadSystemStats(); return; }
-  if (_dashTab === 'trends') { loadTrends(_trendsViewDays, null); return; }
+  if (_dashTab === 'trends') {
+    if (typeof loadTrends === 'function') loadTrends(_trendsViewDays || 14, null);
+    return;
+  }
   if (_dashTab === 'incidents') { loadSummary(); return; }
-  if (_dashTab === 'logs') { loadCollectLogs(); loadCollectSlowTop(); return; }
+  if (_dashTab === 'log-intel') {
+    if (_logIntelSelectedKey) return;
+    if (typeof loadLogIntelList === 'function') loadLogIntelList();
+    return;
+  }
   if (_dashTab === 'har') { return; }
 }
 
@@ -584,9 +667,126 @@ function initDashboardTabs() {
   const root = document.getElementById('dash-page-tabs');
   if (!root) return;
   root.addEventListener('click', (e) => {
-    const btn = e.target.closest('.dash-tab[data-tab]');
+    const btn = e.target.closest('.dash-nav-item[data-tab]');
     if (!btn) return;
     setDashboardTab(btn.dataset.tab);
+    refreshActivePanel();
+  });
+}
+
+function syncDashNavTips() {
+  document.querySelectorAll('.dash-nav-item[data-tab], .dash-nav-link').forEach((el) => {
+    const titleEl = el.querySelector('.dash-nav-title');
+    const tip = titleEl ? titleEl.textContent.trim() : '';
+    if (tip) el.setAttribute('data-nav-tip', tip);
+  });
+}
+
+function initDashSidebarNav() {
+  const sidebar = document.querySelector('.dash-sidebar');
+  const toggle = document.getElementById('dash-nav-toggle');
+  const pinBtn = document.getElementById('dash-sidebar-pin');
+  const backdrop = document.getElementById('dash-sidebar-backdrop');
+  let flyoutTimer = null;
+
+  const isMobile = () => window.matchMedia('(max-width: 900px)').matches;
+
+  const syncNavTips = () => syncDashNavTips();
+
+  const closeMobile = () => {
+    document.body.classList.remove('dash-nav-open');
+    if (backdrop) backdrop.hidden = true;
+  };
+
+  const closeFlyout = () => {
+    document.body.classList.remove('dash-sidebar-flyout');
+  };
+
+  const syncPinUi = () => {
+    const pinned = document.body.classList.contains('dash-sidebar-pinned');
+    if (pinBtn) {
+      pinBtn.setAttribute('title', t(pinned ? 'dash.sidebar_unpin' : 'dash.sidebar_pin'));
+      pinBtn.setAttribute('aria-label', t(pinned ? 'dash.sidebar_unpin' : 'dash.sidebar_pin'));
+    }
+    if (toggle) {
+      toggle.setAttribute('title', t(pinned ? 'dash.sidebar_unpin' : 'dash.sidebar_menu'));
+      toggle.setAttribute('aria-label', t(pinned ? 'dash.sidebar_unpin' : 'dash.sidebar_menu'));
+    }
+  };
+
+  try {
+    const stored = localStorage.getItem('cimon-dash-sidebar-pinned');
+    if (stored === '1') {
+      document.body.classList.add('dash-sidebar-pinned');
+    } else if (stored === null && window.matchMedia('(min-width: 901px)').matches) {
+      document.body.classList.add('dash-sidebar-pinned');
+    }
+  } catch { /* ignore */ }
+
+  syncNavTips();
+  syncPinUi();
+
+  sidebar?.addEventListener('mouseenter', () => {
+    if (isMobile() || document.body.classList.contains('dash-sidebar-pinned')) return;
+    clearTimeout(flyoutTimer);
+    document.body.classList.add('dash-sidebar-flyout');
+  });
+
+  sidebar?.addEventListener('mouseleave', () => {
+    if (isMobile() || document.body.classList.contains('dash-sidebar-pinned')) return;
+    flyoutTimer = setTimeout(closeFlyout, 160);
+  });
+
+  pinBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isMobile()) return;
+    const pinned = !document.body.classList.contains('dash-sidebar-pinned');
+    document.body.classList.toggle('dash-sidebar-pinned', pinned);
+    closeFlyout();
+    try {
+      localStorage.setItem('cimon-dash-sidebar-pinned', pinned ? '1' : '0');
+    } catch { /* ignore */ }
+    syncPinUi();
+  });
+
+  toggle?.addEventListener('click', () => {
+    if (isMobile()) {
+      const open = !document.body.classList.contains('dash-nav-open');
+      document.body.classList.toggle('dash-nav-open', open);
+      if (backdrop) backdrop.hidden = !open;
+      return;
+    }
+    if (document.body.classList.contains('dash-sidebar-pinned')) {
+      document.body.classList.remove('dash-sidebar-pinned');
+      try { localStorage.setItem('cimon-dash-sidebar-pinned', '0'); } catch { /* ignore */ }
+      syncPinUi();
+      return;
+    }
+    const open = !document.body.classList.contains('dash-sidebar-flyout');
+    document.body.classList.toggle('dash-sidebar-flyout', open);
+  });
+
+  backdrop?.addEventListener('click', () => {
+    closeMobile();
+    closeFlyout();
+  });
+
+  document.getElementById('dash-page-tabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.dash-nav-item[data-tab]');
+    if (!btn) return;
+    if (isMobile()) closeMobile();
+    else if (!document.body.classList.contains('dash-sidebar-pinned')) closeFlyout();
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isMobile()) closeMobile();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (isMobile() || document.body.classList.contains('dash-sidebar-pinned')) return;
+    if (!document.body.classList.contains('dash-sidebar-flyout')) return;
+    if (sidebar?.contains(e.target) || toggle?.contains(e.target)) return;
+    closeFlyout();
   });
 }
 
@@ -737,41 +937,72 @@ function _flashSvcRowByName(name) {
   }, 160);
 }
 
+function _icShortTestName(nm) {
+  let s = String(nm || '').trim();
+  if (!s) return '—';
+  if (s.includes('::')) s = s.split('::').pop();
+  if (s.includes('/')) s = s.split('/').pop();
+  if (s.includes('\\')) s = s.split('\\').pop();
+  return s.replace(/\.py$/i, '') || '—';
+}
+
+function _icChipIconSvg(cls) {
+  if (cls === 'ic-test') {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 3h6v7l5 9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2l5-9V3z"/><path d="M10 3v4h4V3"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>';
+}
+
 function _icAppendEventRow(wrap, ev) {
   if (!wrap || !ev) return;
-  const row = document.createElement('div');
-  row.className = `ic-ev ${ev.cls || ''}`.trim();
+  const row = document.createElement('article');
+  row.className = `ic-ev ic-feed-item ${ev.cls || ''}`.trim();
+  row.tabIndex = 0;
+  row.setAttribute('role', 'button');
 
-  const time = document.createElement('div');
-  time.className = 'ic-ev-time';
-  time.textContent = fmt(ev.tsIso || '');
+  const timeCol = document.createElement('div');
+  timeCol.className = 'ic-ev-time';
+  const when = document.createElement('time');
+  when.className = 'ic-ev-when';
+  when.dateTime = ev.tsIso || '';
+  when.textContent = fmt(ev.tsIso);
+  const rel = document.createElement('span');
+  rel.className = 'ic-ev-ago';
+  rel.textContent = ago(ev.tsIso) || '—';
+  timeCol.append(when, rel);
 
-  const main = document.createElement('div');
-  main.className = 'ic-ev-main';
-  const title = document.createElement('div');
-  title.className = 'ic-ev-title';
+  const body = document.createElement('div');
+  body.className = 'ic-ev-body';
 
-  const kind = document.createElement('span');
-  kind.className = 'ic-ev-kind';
-  kind.textContent = ev.kind || '';
+  const head = document.createElement('div');
+  head.className = 'ic-ev-head';
+  const badge = document.createElement('span');
+  badge.className = 'ic-ev-badge';
+  badge.textContent = ev.kind || '—';
+  const name = document.createElement('span');
+  name.className = 'ic-ev-name';
+  name.textContent = ev.name || '—';
+  head.append(badge, name);
 
-  const link = document.createElement('button');
-  link.type = 'button';
-  link.className = 'ic-ev-link';
-  link.textContent = ev.name || '—';
-  if (ev.title) link.title = ev.title;
-  if (typeof ev.onClick === 'function') link.addEventListener('click', ev.onClick);
-
-  title.append(kind, link);
-
-  const desc = document.createElement('div');
+  const desc = document.createElement('p');
   desc.className = 'ic-ev-desc';
-  desc.textContent = ev.desc || '';
+  const why = String(ev.desc || '').trim();
+  desc.textContent = why || (ev.title || '—');
 
-  main.append(title);
-  if (ev.desc) main.append(desc);
+  body.append(head, desc);
+  row.append(timeCol, body);
 
-  row.append(time, main);
+  if (typeof ev.onClick === 'function') {
+    const run = () => ev.onClick();
+    row.addEventListener('click', run);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        run();
+      }
+    });
+  }
+
   wrap.appendChild(row);
 }
 
@@ -814,14 +1045,13 @@ function renderIncidentCards(snap) {
     if (!b || !isBuildProblemStatus(b.status)) return;
     const ts = _icTsMs(b.started_at);
     const st = normalizeBuildStatus(b.status);
-    const num = (b.build_number != null && b.build_number !== '') ? ` #${b.build_number}` : '';
     const branch = b.branch ? ` · ${b.branch}` : '';
     events.push({
       ts,
       tsIso: b.started_at || '',
       cls: st === 'unstable' ? 'ic-warn' : 'ic-fail',
       kind: t('icenter.card_build'),
-      name: `${String(b.job_name || '—')}${num}`,
+      name: String(b.job_name || '—'),
       desc: _icShort(`${st}${branch}`, 160),
       title: b.url ? String(b.url) : '',
       onClick: () => {
@@ -835,7 +1065,10 @@ function renderIncidentCards(snap) {
         const fj = document.getElementById('f-job');
         const fsrc = document.getElementById('f-source');
         const finst = document.getElementById('f-instance');
-        if (fsrc) fsrc.value = '';
+        if (fsrc) {
+          const src = String(b.source || '').toLowerCase();
+          fsrc.value = (src === 'github' || src === 'gitlab') ? src : 'gitlab';
+        }
         if (finst) finst.value = '';
         if (fs) fs.value = st;
         if (fj) fj.value = String(b.job_name || '');
@@ -852,13 +1085,13 @@ function renderIncidentCards(snap) {
     if (!(st === 'failed' || st === 'error')) return;
     const ts = _icTsMs(trow.timestamp);
     const suite = String(trow.suite || '');
-    const nm = String(trow.test_name || '—');
+    const nm = _icShortTestName(trow.test_name);
     events.push({
       ts,
       tsIso: trow.timestamp || '',
       cls: 'ic-test',
       kind: t('icenter.card_test'),
-      name: suite ? `${suite} · ${nm}` : nm,
+      name: nm,
       desc: _icShort(trow.failure_message || '', 180),
       title: String(trow.failure_message || ''),
       onClick: () => {
@@ -880,24 +1113,50 @@ function renderIncidentCards(snap) {
     });
   });
 
-  // Sort: newest first; keep the list readable.
-  const dedup = new Set();
-  events
-    .filter((e) => e && !isNaN(e.ts))
-    .sort((a, b) => b.ts - a.ts)
-    .forEach((ev) => {
-      const k = `${ev.kind}|${ev.name}|${String(ev.tsIso || '').slice(0, 16)}`;
-      if (dedup.has(k)) return;
-      dedup.add(k);
-      if (dedup.size <= 30) _icAppendEventRow(wrap, ev);
-    });
+  const dedupKey = (ev) => `${ev.kind}|${ev.name}|${String(ev.tsIso || '').slice(0, 16)}`;
+  const dedupSort = (list) => {
+    const seen = new Set();
+    return list
+      .filter((e) => e && !isNaN(e.ts))
+      .sort((a, b) => b.ts - a.ts)
+      .filter((ev) => {
+        const k = dedupKey(ev);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+  };
+  const all = dedupSort(events);
+  const MAX_FEED = 80;
+  all.slice(0, MAX_FEED).forEach((ev) => _icAppendEventRow(wrap, ev));
 
-  wrap.style.display = wrap.childElementCount ? 'flex' : 'none';
+  const feedHead = document.getElementById('ic-feed-head');
+  const feedCount = document.getElementById('ic-feed-count');
+  const hasCards = wrap.childElementCount > 0;
+  if (feedHead) feedHead.style.display = hasCards ? 'flex' : 'none';
+  if (feedCount) feedCount.textContent = String(all.length);
+  wrap.style.display = hasCards ? 'block' : 'none';
+
+  const aff = document.getElementById('ic-affected');
+  const meta = document.getElementById('ic-meta');
+  const tl = document.getElementById('ic-timeline');
+  if (aff) aff.style.display = hasCards ? 'none' : '';
+  if (meta) meta.style.display = hasCards ? 'none' : '';
+  if (tl && hasCards) {
+    tl.innerHTML = '';
+    tl.style.display = 'none';
+  }
 }
 
 function renderIcTimeline(incidents) {
   const wrap = document.getElementById('ic-timeline');
   if (!wrap) return;
+  const cards = document.getElementById('ic-cards');
+  if (cards && cards.style.display !== 'none' && cards.childElementCount > 0) {
+    wrap.innerHTML = '';
+    wrap.style.display = 'none';
+    return;
+  }
   if (!incidents || !incidents.length) {
     wrap.innerHTML = '';
     wrap.style.display = 'none';
@@ -1002,6 +1261,34 @@ function renderIncidentCenter(snap, summary, _metaObj) {
     } else {
       rEl.style.display = 'none';
       rEl.textContent = '';
+    }
+  }
+
+  const icSummary = document.getElementById('ic-summary');
+  const icKpiBuilds = document.getElementById('ic-kpi-builds');
+  const icKpiTests = document.getElementById('ic-kpi-tests');
+  const icKpiSvcs = document.getElementById('ic-kpi-svcs');
+  const icKpiAge = document.getElementById('ic-kpi-age');
+  if (icSummary) {
+    icSummary.style.display = 'grid';
+    if (icKpiBuilds) {
+      icKpiBuilds.textContent = String(fb);
+      icKpiBuilds.className = 'ic-kpi-val ' + (fb > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiTests) {
+      icKpiTests.textContent = String(ft);
+      icKpiTests.className = 'ic-kpi-val ' + (ft > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiSvcs) {
+      icKpiSvcs.textContent = String(sd);
+      icKpiSvcs.className = 'ic-kpi-val ' + (sd > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiAge) {
+      const ageTxt = (summary && summary.snapshot && summary.snapshot.age_human)
+        ? String(summary.snapshot.age_human)
+        : (collected ? fmt(collected) : '—');
+      icKpiAge.textContent = ageTxt;
+      icKpiAge.className = 'ic-kpi-val ' + (stale ? 'c-warn' : 'c-info');
     }
   }
 
@@ -1180,8 +1467,7 @@ function setUILang(code) {
   try { _refreshChatHelloI18n(); } catch { /* ignore */ }
   try { updateFailuresExportLinks(); } catch { /* ignore */ }
   try { if (typeof refreshHarI18n === 'function') refreshHarI18n(); } catch { /* ignore */ }
-  if (_trendsRawCache && _trendsRawCache.length) renderTrendsFromCache();
-  else loadTrends(_trendsViewDays, null);
+  try { syncDashNavTips(); } catch { /* ignore */ }
   _renderFavPanel();
   initBackToTop();
 }
@@ -1196,12 +1482,16 @@ function _gid(id) {
 function _finalizeStatTrends() {
   const cur = {
     builds: _gid('s-builds'),
-    ok: _gid('s-ok'),
+    ok: _gid('hero-builds-ok'),
     fail: _gid('s-fail'),
     run: _gid('s-run'),
     tfail: _gid('s-tfail'),
-    tpass: _gid('s-tpass'),
-    down: _gid('s-down'),
+    tpass: (() => {
+      const total = _gid('hero-tests-total');
+      const fail = _gid('hero-tests-fail');
+      return total != null && fail != null ? total - fail : null;
+    })(),
+    down: _gid('hero-svcs-down'),
   };
   const prev = JSON.parse(sessionStorage.getItem('cimon-stat-snap') || 'null');
   const pairs = [

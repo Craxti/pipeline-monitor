@@ -11,7 +11,7 @@ from web.services import status_policy as _sp
 def dashboard_summary_payload(
     *,
     load_yaml_config: Callable[[], dict],
-    load_snapshot: Callable[[], Any],
+    snap: Any,
     collect_state: dict,
     instance_health: list[dict[str, Any]],
     data_revision: int,
@@ -21,8 +21,6 @@ def dashboard_summary_payload(
     w_cfg = cfg.get("web", {})
     interval = int(w_cfg.get("collect_interval_seconds", 300))
     stale_threshold = interval * 2
-
-    snap = load_snapshot()
     counts: dict[str, int] = {
         "builds": 0,
         "failed_builds": 0,

@@ -1,0 +1,10 @@
+    enabled_gitlab = any(
+        inst.get("enabled", True) and str(inst.get("url", "") or "").strip()
+        for inst in (cfg.get("gitlab_instances", []) or [])
+    )
+
+    sources: set[str] = set()
+    if enabled_jenkins:
+        sources.add("jenkins")
+    if enabled_gitlab:
+        sources.add("gitlab")

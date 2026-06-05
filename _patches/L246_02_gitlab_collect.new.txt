@@ -1,0 +1,13 @@
+            incremental = bool(
+                incremental_collect and sqlite_available and get_collector_state_int and set_collector_state_int
+            )
+            # Watermarks can outlive a snapshot that lost GitLab rows (e.g. after force_full).
+            # Refetch pipelines for instances with no GitLab builds in the current snapshot.
+            if incremental and not _snapshot_has_gitlab_for_instance(snapshot, gl_key):
+                incremental = False
+                logger.info(
+                    "GitLab [%s] incremental skip disabled — snapshot has no GitLab builds for this instance",
+                    label,
+                )
+
+            for proj_cfg in project_list:

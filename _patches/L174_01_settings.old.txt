@@ -1,0 +1,9 @@
+function removeGInst(gi) {
+  if (!confirm(tf('st.g_confirm_remove', { name: _gi[gi].name }))) return;
+  _gi.splice(gi, 1);
+  renderGInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TELEGRAM BOTS (multiple)
+// ══════════════════════════════════════════════════════════════════════════════

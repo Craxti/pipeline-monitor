@@ -1,0 +1,4 @@
+    def _should_retry_status(self, status_code: int | None) -> bool:
+        return status_code in (408, 425, 429, 500, 502, 503, 504)
+
+    def _check_cancelled(self) -> None:

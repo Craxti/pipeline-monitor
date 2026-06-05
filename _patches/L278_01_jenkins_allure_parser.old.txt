@@ -1,0 +1,9 @@
+        timeout: int = 30,
+        verify_ssl: bool = True,
+        progress_cb: callable | None = None,
+        retries: int = 3,
+        backoff_seconds: float = 0.8,
+        records_cb: callable | None = None,
+        timing_cb: callable | None = None,
+        should_cancel: callable | None = None,
+    ) -> None:

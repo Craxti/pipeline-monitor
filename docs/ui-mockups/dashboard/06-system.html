@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>System — UI Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — static preview, not connected to app</span>
+  <nav><a href="../index.html">Gallery</a><a href="01-overview.html">Overview</a><a href="08-incidents.html">Incidents</a><a href="../settings/01-jenkins.html">Settings</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>CI/CD Monitor</h1></div>
+  <div class="m-collect"><span class="dot"></span> Collect: OK · 42s</div>
+  <div class="m-actions">
+    <button class="m-btn m-btn-primary">↻ Collect</button>
+    <button class="m-btn m-btn-ghost">Refresh</button>
+    <a href="../settings/01-jenkins.html" class="m-btn m-btn-ghost">⚙ Settings</a>
+  </div>
+</header>
+<div class="m-topbar">
+  <div class="m-pills">
+    <span class="m-pill"><span class="m-dot ok"></span> Collect: OK</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Age: 42s</span>
+    <span class="m-pill"><span class="m-dot fail"></span> Builds: 3 · Tests: 12 · Svcs: 1</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Sources: 2/2</span>
+  </div>
+  <div class="m-legend">
+    <span><span class="m-dot ok"></span> OK</span>
+    <span><span class="m-dot warn"></span> Unstable</span>
+    <span><span class="m-dot fail"></span> Failed</span>
+  </div>
+</div>
+<nav class="m-tabs"><div class="m-tab-cell"><a href="01-overview.html" class="m-tab">Overview</a><span class="m-tab-sub">Metrics, map & situation</span></div>
+<div class="m-tab-cell"><a href="02-builds.html" class="m-tab">Builds</a><span class="m-tab-sub">Pipelines, filters & starred</span></div>
+<div class="m-tab-cell"><a href="03-top-failures.html" class="m-tab">Top failures</a><span class="m-tab-sub">Aggregated failing tests</span></div>
+<div class="m-tab-cell"><a href="04-test-runs.html" class="m-tab">Test runs</a><span class="m-tab-sub">All runs, filters & export</span></div>
+<div class="m-tab-cell"><a href="05-services.html" class="m-tab">Services</a><span class="m-tab-sub">Containers & timeline</span></div>
+<div class="m-tab-cell"><a href="06-system.html" class="m-tab active">System</a><span class="m-tab-sub">Host CPU, memory & processes</span></div>
+<div class="m-tab-cell"><a href="07-trends.html" class="m-tab">Trends</a><span class="m-tab-sub">Charts over time</span></div>
+<div class="m-tab-cell"><a href="08-incidents.html" class="m-tab">Incidents</a><span class="m-tab-sub">Summary & correlated failures</span></div>
+<div class="m-tab-cell"><a href="09-log-intelligence.html" class="m-tab">Log intelligence</a><span class="m-tab-sub">Clusters & correlation</span></div>
+<div class="m-tab-cell"><a href="10-har.html" class="m-tab">HAR</a><span class="m-tab-sub">Request diagnostics</span></div>
+</nav>
+<main class="m-main">
+<div class="m-stats">
+  <div class="m-stat"><div class="n c-info">42%</div><div class="l">CPU load</div></div>
+  <div class="m-stat"><div class="n c-info">68%</div><div class="l">Memory used</div></div>
+  <div class="m-stat"><div class="n c-warn">81%</div><div class="l">Disk used</div></div>
+  <div class="m-stat"><div class="n c-info">142</div><div class="l">Processes</div></div>
+</div>
+<div class="m-panel">
+  <div class="m-panel-head"><h2>🖥 System monitor</h2><span class="m-panel-count">Updated 42s ago</span></div>
+  <div class="m-table-wrap"><table class="m-table"><thead><tr><th>Name</th><th>PID</th><th>CPU</th><th>Memory</th></tr></thead><tbody>
+    <tr><td>dockerd</td><td>1248</td><td>12.4%</td><td>890 MB</td></tr>
+    <tr><td>java (jenkins-agent)</td><td>8832</td><td>8.1%</td><td>1.2 GB</td></tr>
+    <tr><td>python (ci-monitor)</td><td>9910</td><td>3.2%</td><td>256 MB</td></tr>
+  </tbody></table></div>
+</div></main>
+</body>
+</html>

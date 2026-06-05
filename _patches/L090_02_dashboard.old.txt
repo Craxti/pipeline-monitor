@@ -1,0 +1,2 @@
+.lintel-graph{height:min(68vh,620px);min-height:480px;border:1px solid var(--border);border-radius:.75rem;background:radial-gradient(ellipse at 50% 20%,#152238 0%,#0b1220 70%)}
+.lintel-graph canvas{outline:none}

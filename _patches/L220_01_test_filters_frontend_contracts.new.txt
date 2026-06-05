@@ -1,0 +1,7 @@
+    assert "_BUILD_PIPELINE_SOURCES" in sources_js
+    ui_js = _read("web/static/dashboard.helpers.ui.js")
+    assert "_primeBuildsTableFromSession" in ui_js
+    assert "_STALE_SS_KEY" in ui_js
+    html = _read("web/templates/index.html")
+    assert 'id="f-source"' in html
+    assert 'value="github"' in html

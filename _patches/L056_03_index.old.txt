@@ -1,0 +1,31 @@
+  <div class="app-header-actions">
+    <div class="app-header-actions-primary">
+      <div class="collect-actions-stack">
+        <button class="btn btn-primary" id="btn-collect" data-dash-action="triggerCollect">&#8635; <span data-i18n="dash.collect">Collect</span></button>
+        <button type="button" class="btn btn-collect-stop collect-stop-hidden" id="btn-collect-stop" data-dash-action="stopCollect" disabled data-i18n-title="dash.collect_stop_title" title="">
+          &#9632; <span data-i18n="dash.collect_stop">Stop</span>
+        </button>
+      </div>
+      <button class="btn btn-ghost btn-toolbar" data-dash-action="refreshAll" data-i18n-title="dash.refresh" title="">&#8635;</button>
+    </div>
+    <div class="app-header-actions-tools">
+      <button class="btn btn-ghost btn-toolbar" id="btn-theme" data-dash-action="toggleTheme" data-i18n-title="dash.theme" title="">&#9681;</button>
+      <div class="lang-toggle" id="lang-toggle" data-i18n-title="dash.lang_title" title="">
+        <button type="button" data-lang="en" data-dash-action="setUILang" data-dash-args='["en"]'>EN</button>
+        <button type="button" data-lang="ru" data-dash-action="setUILang" data-dash-args='["ru"]'>RU</button>
+      </div>
+      <button class="btn btn-ghost btn-toolbar header-tool-extra" id="btn-compact" data-dash-action="toggleCompact" data-i18n-title="dash.compact" title="">&#8801;</button>
+      <button class="btn btn-ghost btn-toolbar header-tool-extra" data-dash-action="exportCSV" data-i18n-title="dash.export_csv_title" title="">&#11015;</button>
+      <div class="export-wrap header-tool-extra" id="ew-incident">
+        <button class="btn btn-ghost btn-toolbar ico-btn ico-btn--doc" data-dash-action="toggleExportMenu" data-dash-args='["ew-incident"]' data-i18n-title="dash.incident_title" title=""></button>
+        <div class="export-menu">
+          <a href="/api/incident.json" target="_blank" rel="noopener">JSON</a>
+          <a href="/api/incident.md" target="_blank" rel="noopener">Markdown</a>
+        </div>
+      </div>
+      <a href="settings" class="btn btn-ghost btn-toolbar ico-btn ico-btn--gear" data-i18n-title="dash.settings" title=""></a>
+      <button id="notif-btn" class="btn-toolbar ico-btn ico-btn--bell" data-dash-action="toggleNotifPanel" data-i18n-title="dash.notif_btn" title="">
+        <span id="notif-badge"></span>
+      </button>
+    </div>
+  </div>

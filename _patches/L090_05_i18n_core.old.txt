@@ -1,0 +1,4 @@
+      correlated_failures: 'Связанные падения',
+      tl_more: 'ещё',
+      tl_collapse: 'Свернуть',
+    },

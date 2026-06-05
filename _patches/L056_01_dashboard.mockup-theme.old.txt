@@ -1,0 +1,37 @@
+body.ui-modern #topbar {
+  display: none !important;
+}
+
+body.ui-modern header.app-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "brand health actions";
+  gap: 0.65rem 0.85rem;
+}
+
+body.ui-modern .app-header-brand {
+  grid-area: brand;
+}
+
+body.ui-modern .app-header-collect-compact {
+  display: none !important;
+}
+
+body.ui-modern .app-header-health {
+  grid-area: health;
+  justify-self: stretch;
+}
+
+body.ui-modern .app-header-actions {
+  grid-area: actions;
+  justify-self: end;
+}
+
+body.ui-modern .app-header-actions-primary {
+  display: none !important;
+}
+
+body.ui-modern .header-tool-extra,
+body.ui-modern .lang-toggle,
+body.ui-modern #notif-btn {
+  display: none !important;
+}

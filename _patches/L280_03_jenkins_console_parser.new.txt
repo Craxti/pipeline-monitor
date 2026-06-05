@@ -1,0 +1,10 @@
+            except requests.HTTPError as exc:
+                code = getattr(getattr(exc, "response", None), "status_code", None)
+                if self._is_auth_failure(code):
+                    logger.warning(
+                        "ConsoleParser: %s -> %d (auth failed — check Jenkins token, skip)",
+                        url,
+                        code,
+                    )
+                    return None
+                if code is not None and self._should_retry_status(code) and attempt < self.retries:

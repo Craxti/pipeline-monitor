@@ -1,0 +1,3 @@
+        <a id="exp-tests-csv" href="api/export/tests?fmt=csv" target="_blank">CSV</a>
+        <a id="exp-tests-xlsx" href="api/export/tests?fmt=xlsx" target="_blank">XLSX</a>
+        <a id="exp-tests-failed-csv" href="api/export/tests?fmt=csv&status=failed" target="_blank"><span data-i18n="dash.export_csv_failed_only">CSV (failed only)</span></a>

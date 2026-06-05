@@ -1,0 +1,5 @@
+      } else if (src === 'gitlab') {
+        extraHint = `<div class="empty-hint">${esc(t('dash.empty_builds_gitlab'))}</div>`;
+      } else if (src === 'github') {
+        extraHint = `<div class="empty-hint">${esc(t('dash.empty_builds_github'))}</div>`;
+      }

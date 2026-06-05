@@ -1,0 +1,2 @@
+      har_title: 'HAR Analyze',
+      har_subtitle: 'Upload, filter, inspect failed/slow requests',

@@ -1,0 +1,6 @@
+<div id="tab-panel-test-failures" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-failures" hidden>
+<section id="sec-test-failures" class="dash-section">
+<!-- ── Top Failures Panel ── -->
+<div class="panel" id="panel-failures">
+  <div class="panel-head">
+    <h2>&#128308; <span data-i18n="dash.top_fail_title">Top Failing Tests</span></h2>

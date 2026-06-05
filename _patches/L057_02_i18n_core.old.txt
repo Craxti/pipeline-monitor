@@ -1,0 +1,6 @@
+      collect: 'Full sync',
+      collect_stop: 'Stop',
+      collect_stop_title: 'Stop collection immediately',
+      collect_stop_sent: 'Stop requested — collection is stopping now.',
+      collect_full_title: 'Full rescan (ignore incremental cache)',
+      collect_full_pill: 'FULL',

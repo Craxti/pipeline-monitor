@@ -1,0 +1,4 @@
+      builds_title: 'Сборки / пайплайны',
+      starred_title: 'Избранные сборки',
+      top_fail_title: 'Топ упавших тестов',
+      tests_runs_title: 'Все прогоны тестов',

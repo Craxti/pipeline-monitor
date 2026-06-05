@@ -1,0 +1,1 @@
+    <button type="button" class="chat-send" id="chat-send-btn" onclick="sendChat()" data-i18n-title="dash.chat_send" title="">&#10148;</button>

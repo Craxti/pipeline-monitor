@@ -1,0 +1,2 @@
+    const rows = _sortTestsRows(scoped);
+    if (s.page === 1 && !rows.length) {

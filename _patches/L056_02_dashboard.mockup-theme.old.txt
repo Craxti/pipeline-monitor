@@ -1,0 +1,42 @@
+/* Tab subtitles on wide screens */
+@media (min-width: 900px) {
+  .dash-tab-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-right: 0.15rem;
+  }
+
+  .dash-tab-sub {
+    display: block !important;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 0 0.95rem 0.35rem;
+    margin-top: -0.2rem;
+    line-height: 1.25;
+    max-width: 11rem;
+    white-space: normal;
+  }
+
+  .dash-tab-cell:has(.dash-tab.active) .dash-tab-sub,
+  .dash-tab-cell:has(.dash-tab[aria-selected="true"]) .dash-tab-sub {
+    color: rgba(96, 165, 250, 0.85);
+  }
+}
+
+/* Section intros */
+.dash-section-intro {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dash-section-intro strong {
+  color: var(--text);
+  font-weight: 650;
+}

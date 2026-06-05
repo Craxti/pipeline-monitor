@@ -1,0 +1,9 @@
+    <h2><span class="panel-icon panel-icon--gitlab" aria-hidden="true"></span><span data-i18n="dash.builds_title">GitLab Pipelines</span></h2>
+    <span class="panel-count" id="builds-count">0</span>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetBuilds" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <button class="expand-btn" id="expand-builds" data-dash-action="toggleExpand" data-dash-args='["builds"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="builds-toolbar">
+    <div class="filters">
+      <input type="hidden" id="f-source" value="gitlab"/>
+      <span class="source-scope-badge" data-i18n="dash.builds_scope_gitlab">GitLab</span>

@@ -1,0 +1,4 @@
+  .incident-center .ic-feed-item {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }

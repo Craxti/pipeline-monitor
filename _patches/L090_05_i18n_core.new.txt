@@ -1,0 +1,5 @@
+      correlated_failures: 'Связанные падения',
+      feed_title: 'Активные инциденты',
+      tl_more: 'ещё',
+      tl_collapse: 'Свернуть',
+    },

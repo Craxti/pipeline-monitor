@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -12,7 +13,6 @@ from web.core import runtime as rt
 from web.services import (
     analytics_endpoints,
     build_analytics,
-    correlation,
     dashboard_summary,
     instances_health_endpoint,
     meta_api,
@@ -63,7 +63,8 @@ async def api_status():
     from web.services import status_endpoints
     from web.services.build_filters import inst_label_for_build_with_cfg
 
-    return status_endpoints.api_status(
+    return await asyncio.to_thread(
+        status_endpoints.api_status,
         load_snapshot=rt.load_snapshot,
         load_yaml_config=load_yaml_config,
         is_snapshot_build_enabled=is_snapshot_build_enabled,
@@ -74,9 +75,10 @@ async def api_status():
 @router.get("/api/dashboard/summary", response_class=JSONResponse)
 async def api_dashboard_summary():
     """Return dashboard summary payload."""
+    snap = await rt.load_snapshot_async()
     return dashboard_summary.dashboard_summary_payload(
         load_yaml_config=load_yaml_config,
-        load_snapshot=rt.load_snapshot,
+        snap=snap,
         collect_state=rt.collect_state,
         instance_health=rt.get_instance_health(),
         data_revision=rt.revision_rt.revision,
@@ -101,18 +103,11 @@ async def api_meta():
 
         return event_feed_api.load(limit=limit)
 
-    def _correlation_last_hour():
-        return correlation.correlation_last_hour(
-            load_snapshot=rt.load_snapshot,
-            load_events=_load_events,
-            events_limit=500,
-        )
-
     return await meta_api.meta_payload(
         load_yaml_config=load_yaml_config,
         load_snapshot_async=rt.load_snapshot_async,
         job_build_analytics=build_analytics.job_build_analytics,
-        correlation_last_hour=_correlation_last_hour,
+        load_events=_load_events,
         collect_state=rt.collect_state,
         data_revision=rt.revision_rt.revision,
     )

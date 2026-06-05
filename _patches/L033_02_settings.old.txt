@@ -1,0 +1,6 @@
+.snav-icon {
+  font-size: 1rem;
+  width: 1.3rem;
+  text-align: center;
+  flex-shrink: 0;
+}

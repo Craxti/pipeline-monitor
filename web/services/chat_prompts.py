@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-
 CHAT_TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "system_base": (

@@ -1,0 +1,1 @@
+    monkeypatch.setattr("clients.gitlab_client.GitLabClient", lambda **kwargs: fake_client)

@@ -1,0 +1,1 @@
+    return "Jenkins" if kind == "jenkins" else "GitLab"

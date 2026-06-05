@@ -224,6 +224,60 @@ function _chartColors() {
   };
 }
 
+function _trendTealColor() {
+  const v = _cssVar('--chart-teal') || _cssVar('--trend-teal');
+  return v && v !== '#94a3b8' ? v : '#14b8a6';
+}
+
+const _MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function _formatTrendDateLabel(iso) {
+  const s = String(iso || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return s;
+  const lang = (typeof currentLang === 'function' ? currentLang() : 'en') || 'en';
+  if (lang === 'ru') return `${m[3]}.${m[2]}`;
+  const mi = parseInt(m[2], 10) - 1;
+  const day = parseInt(m[3], 10);
+  if (mi < 0 || mi > 11) return s;
+  return `${_MONTH_SHORT[mi]} ${day}`;
+}
+
+const _trendDataLabelsPlugin = {
+  id: 'trendDataLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, di) => {
+      if (dataset._hideDataLabels) return;
+      const meta = chart.getDatasetMeta(di);
+      if (!meta || meta.hidden) return;
+      const isLine = dataset.type === 'line';
+      const isFailBar = dataset._labelRole === 'failed';
+      meta.data.forEach((el, idx) => {
+        const val = dataset.data[idx];
+        if (val == null || val === 0) return;
+        if (!isLine && !isFailBar) return;
+        const txt = typeof val === 'number' ? String(Math.round(val)) : String(val);
+        ctx.save();
+        if (isLine) {
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = 'bold 11px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(txt, el.x, el.y - 10);
+        } else {
+          ctx.fillStyle = dataset._labelColor || dataset.backgroundColor || '#94a3b8';
+          ctx.font = '600 9px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(txt, el.x, el.y - 3);
+        }
+        ctx.restore();
+      });
+    });
+  },
+};
+
 function _destroyCharts() {
   _trendsCharts.forEach(c => c && c.destroy());
   _trendsCharts = [];
@@ -276,6 +330,105 @@ function _mkBar(id, labels, datasets) {
       scales: {
         x: { beginAtZero: true, ticks: { color: text, font: { size: 10 }, precision: 0 }, grid: { color: grid } },
         y: { ticks: { color: text, font: { size: 10 } }, grid: { color: grid } },
+      },
+    },
+  });
+}
+
+/** Bar + line combo chart (mockup style) */
+function _mkComboBarLine(id, labels, totalData, failData, opts) {
+  opts = opts || {};
+  const { grid, text } = _chartColors();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return null;
+  const cTeal = opts.totalColor || _trendTealColor();
+  const cFail = opts.failColor || _cssVar('--st-failure');
+  const totalLabel = opts.totalLabel || t('dash.chart_total');
+  const failLabel = opts.failLabel || t('dash.chart_failed');
+  const yTitle = opts.yTitle || '';
+  const g = { color: grid, drawBorder: false, borderDash: [4, 4] };
+  const yScale = {
+    beginAtZero: true,
+    ticks: { color: text, font: { size: 10 }, precision: 0 },
+    grid: g,
+  };
+  if (opts.yMax != null && typeof opts.yMax === 'number' && !Number.isNaN(opts.yMax) && opts.yMax > 0) {
+    yScale.max = opts.yMax;
+  }
+  if (yTitle) {
+    yScale.title = { display: true, text: yTitle, color: text, font: { size: 10, weight: '600' } };
+  }
+  return new Chart(ctx, {
+    type: 'bar',
+    plugins: [_trendDataLabelsPlugin],
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: totalLabel,
+          data: totalData,
+          backgroundColor: cTeal,
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: 0.55,
+          categoryPercentage: 0.72,
+          maxBarThickness: 42,
+          order: 2,
+        },
+        {
+          type: 'bar',
+          label: failLabel,
+          data: failData,
+          backgroundColor: cFail,
+          borderRadius: 4,
+          borderSkipped: false,
+          barPercentage: 0.35,
+          categoryPercentage: 0.72,
+          maxBarThickness: 18,
+          order: 3,
+          _labelRole: 'failed',
+          _labelColor: cFail,
+        },
+        {
+          type: 'line',
+          label: totalLabel,
+          data: totalData,
+          borderColor: cTeal,
+          backgroundColor: 'transparent',
+          pointRadius: 5,
+          pointHoverRadius: 6,
+          pointBackgroundColor: cTeal,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          borderWidth: 2,
+          tension: 0.1,
+          fill: false,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          align: 'center',
+          labels: {
+            color: text,
+            boxWidth: 12,
+            font: { size: 11 },
+            filter: (item, chartData) => chartData.datasets[item.datasetIndex].type !== 'line',
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: text, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          grid: { display: false },
+        },
+        y: yScale,
       },
     },
   });
@@ -968,9 +1121,21 @@ function resetTrendsFilters() {
   void loadTrends(_trendsViewDays, null);
 }
 
+function toggleTrendsAdvancedFilters() {
+  const bar = document.getElementById('trends-filters-bar');
+  const btn = document.getElementById('btn-trends-more-filters');
+  if (!bar) return;
+  const open = bar.classList.toggle('trends-filters-advanced-open');
+  if (btn) {
+    btn.textContent = open ? t('dash.trends_less_filters') : t('dash.trends_more_filters');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+}
+
 window.applyTrendsDateRange = applyTrendsDateRange;
 window.clearTrendsDateRange = clearTrendsDateRange;
 window.resetTrendsFilters = resetTrendsFilters;
+window.toggleTrendsAdvancedFilters = toggleTrendsAdvancedFilters;
 
 function initTrendsFiltersFromStorage() {
   const st = _scopeStore();
@@ -1041,12 +1206,11 @@ function renderTrendsChartsFromData(data) {
     });
     return;
   }
-  const labels = data.map((d) => d.date);
+  const labels = data.map((d) => _formatTrendDateLabel(d.date));
   const sm = _trendsSmooth;
   const sl = (arr) => _smoothSeries(arr, sm);
-  const cInfo = _cssVar('--info');
+  const cTeal = _trendTealColor();
   const cFail = _cssVar('--st-failure');
-  const cOk = _cssVar('--st-success');
 
   const getInstVal = (id) => (document.getElementById(id)?.value || '').trim();
   const globalInst = getInstVal('trends-instance-all');
@@ -1065,10 +1229,13 @@ function renderTrendsChartsFromData(data) {
     const m = d.builds_by_instance && d.builds_by_instance[instBuilds];
     return m && typeof m.failed === 'number' ? m.failed : 0;
   });
-  const cBuilds = _mkLine('chart-builds', labels, [
-    { label: t('dash.chart_total'), data: sl(buildTotals), borderColor: cInfo, backgroundColor: _hexToRgba(cInfo, 0.12), tension: 0.3, fill: true },
-    { label: t('dash.chart_failed'), data: sl(buildFails), borderColor: cFail, backgroundColor: _hexToRgba(cFail, 0.12), tension: 0.3, fill: true },
-  ]);
+  const cBuilds = _mkComboBarLine('chart-builds', labels, sl(buildTotals), sl(buildFails), {
+    totalLabel: t('dash.chart_total_builds'),
+    failLabel: t('dash.chart_failed_builds'),
+    yTitle: t('dash.chart_axis_builds'),
+    totalColor: cTeal,
+    failColor: cFail,
+  });
 
   const instToTestSrc = (v) => (v.startsWith('jenkins|') ? 'jenkins' : v.startsWith('gitlab|') ? 'gitlab' : '');
   const wantTestSrc = instToTestSrc(instTests);
@@ -1082,10 +1249,13 @@ function renderTrendsChartsFromData(data) {
     const m = d.tests_by_source && d.tests_by_source[wantTestSrc];
     return m && typeof m.failed === 'number' ? m.failed : 0;
   });
-  const cTests = _mkLine('chart-tests', labels, [
-    { label: t('dash.chart_total'), data: sl(testTotalsLine), borderColor: cOk, backgroundColor: _hexToRgba(cOk, 0.12), tension: 0.3, fill: true },
-    { label: t('dash.chart_failed'), data: sl(testFailsLine), borderColor: cFail, backgroundColor: _hexToRgba(cFail, 0.12), tension: 0.3, fill: true },
-  ]);
+  const cTests = _mkComboBarLine('chart-tests', labels, sl(testTotalsLine), sl(testFailsLine), {
+    totalLabel: t('dash.chart_total_tests'),
+    failLabel: t('dash.chart_failed_tests'),
+    yTitle: t('dash.chart_axis_tests'),
+    totalColor: cTeal,
+    failColor: cFail,
+  });
 
   const svcsKind = (document.getElementById('trends-inst-svcs')?.value || '').trim();
   const svcDownSeries = data.map((d) => {

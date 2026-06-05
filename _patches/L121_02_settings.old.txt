@@ -1,0 +1,46 @@
+/* ── Header ─────────────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.65rem var(--page-pad);
+  background: rgba(17, 24, 39, 0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+html.light header {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+header .app-logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.45rem;
+  flex-shrink: 0;
+}
+
+header h1 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pill {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.6rem;
+  font-weight: 600;
+}
+
+header > div:last-of-type {
+  margin-left: auto;
+}

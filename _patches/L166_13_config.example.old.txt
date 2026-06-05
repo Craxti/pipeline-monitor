@@ -1,0 +1,8 @@
+gitlab_instances:
+- name: GitLab
+  enabled: false
+  url: https://gitlab.example.com/
+  token: ""
+  projects: []
+  max_pipelines: 10
+  show_all_projects: false

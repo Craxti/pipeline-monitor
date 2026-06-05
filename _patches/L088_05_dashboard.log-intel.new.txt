@@ -1,0 +1,6 @@
+  _logIntelCorrData = data.correlation || {};
+  renderLogIntelCorrList(_logIntelCorrData);
+  renderLogIntelGraph(_logIntelCorrData);
+  setLogIntelCorrView(_logIntelCorrView || 'list');
+
+  const recent = document.getElementById('log-intel-recent');

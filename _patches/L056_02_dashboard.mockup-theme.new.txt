@@ -1,0 +1,4 @@
+/* Section intros — hidden (too noisy; mockup uses clean panels only) */
+.dash-section-intro {
+  display: none !important;
+}

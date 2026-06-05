@@ -1,0 +1,4 @@
+      if (keepTableOnTransientEmpty(tbody, rows, s)) {
+        _showBuildsCollectStaleHint();
+        return;
+      }

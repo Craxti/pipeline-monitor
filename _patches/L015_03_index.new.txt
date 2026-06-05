@@ -1,0 +1,4 @@
+      <a href="settings" class="btn btn-ghost btn-toolbar ico-btn ico-btn--gear" data-i18n-title="dash.settings" title=""></a>
+      <button id="notif-btn" class="btn-toolbar ico-btn ico-btn--bell" data-dash-action="toggleNotifPanel" data-i18n-title="dash.notif_btn" title="">
+        <span id="notif-badge"></span>
+      </button>

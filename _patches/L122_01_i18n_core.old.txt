@@ -1,0 +1,6 @@
+      doc_title: 'Settings — CI/CD Monitor',
+      title: 'Settings',
+      breadcrumb_dashboard: 'Dashboard',
+      page_subtitle: 'Configure Jenkins, GitLab, collection interval, notifications, Docker/HTTP checks, and AI. Saved settings apply immediately after save (collect loop restarts).',
+      back: '← Dashboard',
+      save: 'Save Settings',

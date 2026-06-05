@@ -1,0 +1,6 @@
+    monkeypatch.setattr(gl_mod, "GitLabClient", lambda **kwargs: fake_client)
+    monkeypatch.setattr(
+        gl_mod,
+        "config_instance_label",
+        lambda inst, kind="gitlab": inst.get("name", "GitLab Test"),
+    )

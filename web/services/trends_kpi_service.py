@@ -7,7 +7,6 @@ from typing import Callable
 
 from web.services import trends_uptime
 
-
 TrendsComputeFn = Callable[[int], list]
 EventFeedLoadFn = Callable[[int], list[dict]]
 

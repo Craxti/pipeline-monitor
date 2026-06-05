@@ -1,0 +1,2 @@
+    edges: {
+      smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.3 },

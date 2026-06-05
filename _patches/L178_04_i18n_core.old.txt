@@ -1,0 +1,2 @@
+      wz_toast_gitlab: 'Fill GitLab URL/token and click Test connection.',
+      test_connection_btn: 'Test connection',

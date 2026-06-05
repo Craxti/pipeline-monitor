@@ -1,0 +1,16 @@
+    const data = await res.json();
+    s.total = data.total;
+    const scoped = _filterTestRunsScope(data.items || [], uiSource);
+    const countEl = document.getElementById('tests-count');
+    if (countEl) {
+      countEl.textContent = (uiSource === 'pipelines' || uiSource === 'gitlab_test')
+        ? String(scoped.length) + (s.page === 1 && data.total > scoped.length ? '+' : '')
+        : String(data.total);
+    }
+    if (data.breakdown) {
+      const b = data.breakdown;
+      const el = document.getElementById('tests-breakdown');
+      if (el) el.textContent = `Jenkins: ${b.real_total || 0} (${b.real_failed || 0} failed)`;
+    }
+
+    const rows = _sortTestsRows(scoped);

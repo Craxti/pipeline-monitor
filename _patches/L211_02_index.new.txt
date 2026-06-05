@@ -1,0 +1,4 @@
+      <select class="f-select" id="f-source" style="min-width:140px" aria-label="Source">
+        <option value="gitlab" data-i18n="dash.builds_source_gitlab">GitLab</option>
+        <option value="github" data-i18n="dash.builds_source_github">GitHub</option>
+      </select>

@@ -44,6 +44,7 @@ META_TRENDS_HISTORY = "trends_history_json"
 META_APP_CONFIG_JSON = "app_config_json"
 META_RETENTION_LAST_RUN_AT = "retention_last_run_at"
 META_VACUUM_LAST_RUN_AT = "vacuum_last_run_at"
+META_LOG_INTEL_MODELS = "log_intel_models_v1"
 
 
 def init_db(data_dir: str | Path) -> Path:
@@ -82,8 +83,7 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
 
 
 def _apply_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
+    conn.executescript("""
         CREATE TABLE IF NOT EXISTS meta (
             key   TEXT PRIMARY KEY,
             value TEXT
@@ -193,8 +193,7 @@ def _apply_schema(conn: sqlite3.Connection) -> None:
             UNIQUE(domain, value)
         );
         CREATE INDEX IF NOT EXISTS idx_dim_domain_value ON dim_values(domain, value);
-    """
-    )
+    """)
     _ensure_compact_columns(conn)
     _backfill_epoch_columns(conn)
     _migrate_meta_blobs_to_tables(conn)
@@ -515,8 +514,7 @@ def _build_test_dedup_key(
 
 def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
     # Builds: keep one row per logical build record.
-    conn.execute(
-        """
+    conn.execute("""
         DELETE FROM builds
         WHERE id NOT IN (
             SELECT MIN(id)
@@ -524,8 +522,7 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
             WHERE source IS NOT NULL AND job_name IS NOT NULL AND build_number IS NOT NULL
             GROUP BY source, job_name, build_number
         )
-        """
-    )
+        """)
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_build_unique " "ON builds(source, job_name, build_number)")
 
     # Tests: add stable hash key and deduplicate old rows before creating unique index.
@@ -549,8 +546,7 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
                 r["id"],
             ),
         )
-    conn.execute(
-        """
+    conn.execute("""
         DELETE FROM tests
         WHERE id NOT IN (
             SELECT MIN(id)
@@ -558,8 +554,7 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
             WHERE dedup_key IS NOT NULL AND dedup_key <> ''
             GROUP BY dedup_key
         )
-        """
-    )
+        """)
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_tests_dedup_key " "ON tests(dedup_key)")
 
 
@@ -755,6 +750,29 @@ def set_app_config_to_db(cfg: dict) -> None:
         raise RuntimeError("DB not initialized")
     with _conn() as conn:
         _meta_set(conn, META_APP_CONFIG_JSON, json.dumps(cfg, ensure_ascii=False, separators=(",", ":")))
+
+
+def get_log_intel_models_json() -> str | None:
+    """Load persisted log-intelligence models blob from ``meta``."""
+    if _DB_PATH is None:
+        return None
+    try:
+        with _conn() as conn:
+            return _meta_get(conn, META_LOG_INTEL_MODELS)
+    except Exception as exc:
+        logger.debug("get_log_intel_models_json failed: %s", exc)
+        return None
+
+
+def set_log_intel_models_json(body: str) -> None:
+    """Persist log-intelligence models blob to ``meta``."""
+    if _DB_PATH is None:
+        return
+    try:
+        with _conn() as conn:
+            _meta_set(conn, META_LOG_INTEL_MODELS, body)
+    except Exception as exc:
+        logger.debug("set_log_intel_models_json failed: %s", exc)
 
 
 def is_db_ready() -> bool:

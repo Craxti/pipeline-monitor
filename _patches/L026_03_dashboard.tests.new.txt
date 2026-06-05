@@ -1,0 +1,10 @@
+function updateTestsExportLinks() {
+  const uiSrc = document.getElementById('f-tsource')?.value || '';
+  const src = _mapTestSourceForApi(uiSrc);
+  const a1 = document.getElementById('exp-tests-csv');
+  const a2 = document.getElementById('exp-tests-xlsx');
+  const a3 = document.getElementById('exp-tests-failed-csv');
+  if (a1) a1.href = `api/export/tests?fmt=csv${src ? '&source=' + encodeURIComponent(src) : ''}`;
+  if (a2) a2.href = `api/export/tests?fmt=xlsx${src ? '&source=' + encodeURIComponent(src) : ''}`;
+  if (a3) a3.href = `api/export/tests?fmt=csv&status=failed${src ? '&source=' + encodeURIComponent(src) : ''}`;
+}

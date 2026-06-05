@@ -1,0 +1,4 @@
+  // Timeline — persisted state changes + snapshot activity (deduped)
+  renderTimeline(builds, svcs, persistedItems);
+
+  _renderFavPanel();

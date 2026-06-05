@@ -1,0 +1,1 @@
+    g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))

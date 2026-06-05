@@ -1,0 +1,4 @@
+  updateDockerUI();
+  updateProviderUI();
+  updateProxyUI();
+}

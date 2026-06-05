@@ -1,0 +1,1 @@
+  <span id="fab-icon">&#129302;</span>

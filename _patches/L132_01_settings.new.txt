@@ -1,0 +1,6 @@
+  updateDockerUI();
+  updateProviderUI();
+  updateProxyUI();
+  const activeSec = document.querySelector('.snav-item.active')?.dataset?.sec;
+  if (activeSec) showSec(activeSec);
+}

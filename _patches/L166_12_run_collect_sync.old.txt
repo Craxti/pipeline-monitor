@@ -1,0 +1,1 @@
+            (not bool(h.get("ok", True))) and str(h.get("kind", "")).lower() in {"jenkins", "gitlab"}

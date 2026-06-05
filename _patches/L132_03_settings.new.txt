@@ -1,0 +1,5 @@
+.settings-content > main {
+  max-width: 980px;
+  margin: 0;
+  width: 100%;
+}

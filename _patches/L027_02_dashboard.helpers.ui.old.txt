@@ -1,0 +1,5 @@
+        if (fsrc) fsrc.value = '';
+        if (finst) finst.value = '';
+        if (fs) fs.value = st;
+        if (fj) fj.value = String(b.job_name || '');
+        resetBuilds();

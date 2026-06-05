@@ -1,0 +1,2 @@
+        <a href="api/export/failures?fmt=csv" id="exp-failures-csv" target="_blank" rel="noopener">CSV</a>
+        <a href="api/export/failures?fmt=xlsx" id="exp-failures-xlsx" target="_blank" rel="noopener">XLSX</a>

@@ -1,0 +1,12 @@
+function keepTableOnTransientEmpty(tbody, rows, state, cacheKey) {
+  try {
+    if (!tbody || !state || state.page !== 1) return false;
+    if (!Array.isArray(rows) || rows.length) return false;
+    if (typeof _liveMode === 'undefined' || !_liveMode) return false;
+    if (_collectGraceActive() && cacheKey && _tryRestoreStaleTable(cacheKey, tbody, state)) return true;
+    if (cacheKey === 'builds' && _tryRestoreStaleTable('builds', tbody, state)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}

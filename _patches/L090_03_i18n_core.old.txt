@@ -1,0 +1,4 @@
+      correlated_failures: 'Correlated failures',
+      tl_more: 'more',
+      tl_collapse: 'Collapse',
+    },

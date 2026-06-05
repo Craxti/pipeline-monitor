@@ -1,0 +1,3 @@
+    assert "_ensureSourceSelectOption" in sources_js
+    assert "_BUILD_PIPELINE_SOURCES" in sources_js
+    assert "_primeBuildsTableFromSession" in sources_js

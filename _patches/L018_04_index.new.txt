@@ -1,0 +1,1 @@
+    <h2><span class="panel-icon panel-icon--system" aria-hidden="true"></span><span data-i18n="dash.system_title">System monitor</span></h2>

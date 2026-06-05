@@ -1,0 +1,5 @@
+let _logIntelCorrView = 'list';
+
+function initLogIntelBindings() {
+  /* delegated: refreshLogIntelList, openLogIntelDetail, closeLogIntelDetail, trainLogIntelContainer, fitLogIntelGraph, resetLogIntelGraphLayout, setLogIntelCorrView */
+}

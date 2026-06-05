@@ -10,7 +10,8 @@ from models.models import CISnapshot
 
 def correlation_last_hour(
     *,
-    load_snapshot: Callable[[], Optional[CISnapshot]],
+    load_snapshot: Callable[[], Optional[CISnapshot]] | None = None,
+    snap: Optional[CISnapshot] = None,
     load_events: Callable[[int], list[dict[str, Any]]],
     events_limit: int = 500,
 ) -> dict[str, int]:
@@ -19,7 +20,8 @@ def correlation_last_hour(
     cutoff = now - timedelta(hours=1)
 
     n_builds = 0
-    snap = load_snapshot()
+    if snap is None and load_snapshot is not None:
+        snap = load_snapshot()
     if snap:
         for b in snap.builds:
             if not getattr(b, "started_at", None):

@@ -1,0 +1,3 @@
+        cfg = {
+            "github_instances": [{"enabled": True, "name": "GH1", "url": "https://github.com"}],
+        }

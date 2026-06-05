@@ -1,0 +1,6 @@
+  <div class="panel" id="panel-har">
+    <div class="panel-head">
+      <h2><span class="panel-icon panel-icon--har" aria-hidden="true"></span><span data-i18n="dash.har_title">HAR diagnostics</span></h2>
+    </div>
+    <p class="dhar-intro" data-i18n="dash.har_intro">Upload a HAR file from browser DevTools to find failed, slow, and error requests. Use filters and presets to focus on problems.</p>
+    <div class="panel-body-har">

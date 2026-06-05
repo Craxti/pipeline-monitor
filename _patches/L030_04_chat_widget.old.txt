@@ -1,0 +1,1 @@
+      <span class="chat-clear-ico" aria-hidden="true">&#128465;</span>

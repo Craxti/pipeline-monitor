@@ -1,0 +1,1 @@
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetBuilds" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>

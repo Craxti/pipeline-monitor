@@ -1,0 +1,15 @@
+        with ThreadPoolExecutor(max_workers=self.workers) as ex:
+            futs = [ex.submit(_work, job, b) for job, b in tasks]
+            for fut in as_completed(futs):
+                self._check_cancelled()
+                try:
+                    recs = fut.result(timeout=self.per_task_timeout_sec)
+                except TimeoutError:
+                    logger.warning(
+                        "AllureParser: job/build timed out after %ds, skip",
+                        self.per_task_timeout_sec,
+                    )
+                    continue
+                except Exception as exc:
+                    logger.warning("AllureParser: worker failed: %s", exc)
+                    continue

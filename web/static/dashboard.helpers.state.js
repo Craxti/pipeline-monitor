@@ -7,14 +7,10 @@ let _lastIncidentReasons = [];
 let _lastIcReasonFacts = null;
 let _lastIncidentSeverity = 'ok';
 let _collectAutoRefreshTs = 0;
-let _collectLogsOffset = 0;
-let _collectLogsTotal = 0;
-let _collectLogsPollTs = 0;
-let _collectLogsWarn = 0;
-let _collectLogsErr = 0;
-let _collectLogsInstances = new Set();
-let _collectLogsLastCollectId = '';
-let _collectLogsSlowPollTs = 0;
+let _logIntelSelectedKey = '';
+let _logIntelPollTs = 0;
+let _logIntelGraph = null;
+let _logIntelCorrData = null;
 
 /** Builds table LIVE: skip full tbody rewrite when /api/builds payload unchanged (reduces flicker). */
 let _lastBuildsPageSig = '';
@@ -41,11 +37,39 @@ const DASH_TABS = [
   'system',
   'trends',
   'incidents',
-  'logs',
+  'log-intel',
   'har',
 ];
+
+const DASH_TAB_META = {
+  overview: { titleKey: 'tabNav.overview', subKey: 'tabNav.overview_sub' },
+  builds: { titleKey: 'tabNav.builds', subKey: 'tabNav.builds_sub' },
+  'test-failures': { titleKey: 'tabNav.test_failures', subKey: 'tabNav.test_failures_sub' },
+  'test-runs': { titleKey: 'tabNav.test_runs', subKey: 'tabNav.test_runs_sub' },
+  services: { titleKey: 'tabNav.services', subKey: 'tabNav.services_sub' },
+  system: { titleKey: 'tabNav.system', subKey: 'tabNav.system_sub' },
+  trends: { titleKey: 'tabNav.trends', subKey: 'tabNav.trends_sub' },
+  incidents: { titleKey: 'tabNav.incidents', subKey: 'tabNav.incidents_sub' },
+  'log-intel': { titleKey: 'tabNav.log_intel', subKey: 'tabNav.log_intel_sub' },
+  har: { titleKey: 'tabNav.har', subKey: 'tabNav.har_sub' },
+};
+
 let _dashTab = 'overview';
 let _backTopInit = false;
+
+function _updateDashSectionHeader(name) {
+  const meta = DASH_TAB_META[name] || DASH_TAB_META.overview;
+  const titleEl = document.getElementById('dash-section-title');
+  const subEl = document.getElementById('dash-section-sub');
+  if (titleEl) {
+    titleEl.textContent = t(meta.titleKey);
+    titleEl.setAttribute('data-i18n', meta.titleKey);
+  }
+  if (subEl) {
+    subEl.textContent = t(meta.subKey);
+    subEl.setAttribute('data-i18n', meta.subKey);
+  }
+}
 
 function setDashboardTab(name, opts) {
   opts = opts || {};
@@ -57,31 +81,30 @@ function setDashboardTab(name, opts) {
     const panel = document.getElementById('tab-panel-' + id);
     if (panel) panel.hidden = (id !== name);
   });
-  document.querySelectorAll('#dash-page-tabs .dash-tab').forEach((btn) => {
+  document.querySelectorAll('#dash-page-tabs .dash-nav-item').forEach((btn) => {
     const sel = btn.dataset.tab === name;
     btn.setAttribute('aria-selected', sel ? 'true' : 'false');
     btn.classList.toggle('active', sel);
   });
+  _updateDashSectionHeader(name);
   try {
     if (!skipStore) localStorage.setItem('cimon-dash-tab', name);
   } catch { /* ignore */ }
   if (!skipUrl) _writeURLFilters();
-  // Safety: a stale fullscreen trends chart can cover the whole viewport
-  // (fixed positioned card + large backdrop shadow) and block all clicks.
-  if (name !== 'trends') {
-    document.querySelectorAll('.chart-card.chart-fs').forEach((card) => {
-      card.classList.remove('chart-fs');
-    });
-  }
-  if (name === 'trends') {
-    requestAnimationFrame(() => { _trendsCharts.forEach((c) => c && c.resize()); });
-  }
+  document.querySelectorAll('.chart-card.chart-fs').forEach((card) => {
+    card.classList.remove('chart-fs');
+  });
+  // Close mobile sidebar after navigation
+  try {
+    document.body.classList.remove('dash-nav-open');
+    const bd = document.getElementById('dash-sidebar-backdrop');
+    if (bd) bd.hidden = true;
+  } catch { /* ignore */ }
   // Prevent stale panel requests from overriding current UI.
   if (name !== 'builds') abortFetchKey('builds');
   if (name !== 'test-runs') abortFetchKey('tests');
   if (name !== 'test-failures') abortFetchKey('failures');
   if (name !== 'services') abortFetchKey('services');
-  if (name !== 'trends') abortFetchKey('trends');
 }
 
 function goToInTab(tab, elId) {

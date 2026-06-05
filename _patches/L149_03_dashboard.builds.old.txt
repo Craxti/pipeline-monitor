@@ -1,0 +1,4 @@
+    const tbody = document.getElementById('tbody-builds');
+    if (res === FETCH_ABORTED) return;
+    if (!res || !res.ok) {
+      if (keepTableOnTransientApiError(tbody, res, s)) return;

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Notifications — Settings Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — Settings · static preview</span>
+  <nav><a href="../index.html">Gallery</a><a href="../dashboard/01-overview.html">Dashboard</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>Settings — CI/CD Monitor</h1></div>
+  <div class="m-actions"><a href="../dashboard/01-overview.html" class="m-btn m-btn-ghost">← Dashboard</a></div>
+</header>
+<div class="m-settings-page">
+  <nav class="m-sidenav"><a href="01-jenkins.html" class="m-snav-item">Jenkins</a>
+<a href="02-gitlab.html" class="m-snav-item">GitLab</a>
+<a href="03-general.html" class="m-snav-item">General</a>
+<a href="04-notifications.html" class="m-snav-item active">Notifications</a>
+<a href="05-docker.html" class="m-snav-item">Docker / HTTP</a>
+<a href="06-ai.html" class="m-snav-item">AI Assistant</a>
+</nav>
+  <main>
+<div class="m-panel">
+  <div class="m-panel-head"><h2>Notifications</h2><button class="m-btn m-btn-primary m-btn-sm">+ Add Telegram bot</button></div>
+  <div class="m-table-wrap"><table class="m-table"><thead><tr><th>Bot</th><th>Chat ID</th><th>Triggers</th><th>Status</th></tr></thead><tbody>
+    <tr><td>@ci_alerts_bot</td><td>-100123456789</td><td>Build fail, Service down</td><td><span class="m-badge ok">Active</span></td></tr>
+  </tbody></table></div>
+</div></main>
+</div>
+</body>
+</html>

@@ -1,0 +1,2 @@
+      <input type="hidden" id="f-source" value="gitlab"/>
+      <span class="source-scope-badge" data-i18n="dash.builds_scope_gitlab">GitLab</span>

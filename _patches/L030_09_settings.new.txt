@@ -1,0 +1,1 @@
+        <h2><span class="sec-icon"><img src="/static/icons/jenkins.svg" alt=""/></span><span data-i18n="st.sec_jenkins">Jenkins Instances</span></h2>

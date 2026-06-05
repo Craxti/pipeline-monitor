@@ -1,0 +1,2 @@
+      builds_intro: 'GitLab CI/CD pipelines only — filter by instance, status, and job name.',
+      builds_scope_gitlab: 'GitLab',

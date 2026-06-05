@@ -1,0 +1,6 @@
+  _ji = JSON.parse(JSON.stringify(cfg.jenkins_instances || []));
+  _gi = JSON.parse(JSON.stringify(cfg.gitlab_instances  || []));
+  _ghi = JSON.parse(JSON.stringify(cfg.github_instances || []));
+  renderJInsts();
+  renderGInsts();
+  renderGhInsts();

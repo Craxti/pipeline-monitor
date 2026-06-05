@@ -1,0 +1,5 @@
+    if kind == "jenkins":
+        return "Jenkins"
+    if kind == "github":
+        return "GitHub"
+    return "GitLab"

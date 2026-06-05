@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Test runs — UI Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — static preview, not connected to app</span>
+  <nav><a href="../index.html">Gallery</a><a href="01-overview.html">Overview</a><a href="08-incidents.html">Incidents</a><a href="../settings/01-jenkins.html">Settings</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>CI/CD Monitor</h1></div>
+  <div class="m-collect"><span class="dot"></span> Collect: OK · 42s</div>
+  <div class="m-actions">
+    <button class="m-btn m-btn-primary">↻ Collect</button>
+    <button class="m-btn m-btn-ghost">Refresh</button>
+    <a href="../settings/01-jenkins.html" class="m-btn m-btn-ghost">⚙ Settings</a>
+  </div>
+</header>
+<div class="m-topbar">
+  <div class="m-pills">
+    <span class="m-pill"><span class="m-dot ok"></span> Collect: OK</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Age: 42s</span>
+    <span class="m-pill"><span class="m-dot fail"></span> Builds: 3 · Tests: 12 · Svcs: 1</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Sources: 2/2</span>
+  </div>
+  <div class="m-legend">
+    <span><span class="m-dot ok"></span> OK</span>
+    <span><span class="m-dot warn"></span> Unstable</span>
+    <span><span class="m-dot fail"></span> Failed</span>
+  </div>
+</div>
+<nav class="m-tabs"><div class="m-tab-cell"><a href="01-overview.html" class="m-tab">Overview</a><span class="m-tab-sub">Metrics, map & situation</span></div>
+<div class="m-tab-cell"><a href="02-builds.html" class="m-tab">Builds</a><span class="m-tab-sub">Pipelines, filters & starred</span></div>
+<div class="m-tab-cell"><a href="03-top-failures.html" class="m-tab">Top failures</a><span class="m-tab-sub">Aggregated failing tests</span></div>
+<div class="m-tab-cell"><a href="04-test-runs.html" class="m-tab active">Test runs</a><span class="m-tab-sub">All runs, filters & export</span></div>
+<div class="m-tab-cell"><a href="05-services.html" class="m-tab">Services</a><span class="m-tab-sub">Containers & timeline</span></div>
+<div class="m-tab-cell"><a href="06-system.html" class="m-tab">System</a><span class="m-tab-sub">Host CPU, memory & processes</span></div>
+<div class="m-tab-cell"><a href="07-trends.html" class="m-tab">Trends</a><span class="m-tab-sub">Charts over time</span></div>
+<div class="m-tab-cell"><a href="08-incidents.html" class="m-tab">Incidents</a><span class="m-tab-sub">Summary & correlated failures</span></div>
+<div class="m-tab-cell"><a href="09-log-intelligence.html" class="m-tab">Log intelligence</a><span class="m-tab-sub">Clusters & correlation</span></div>
+<div class="m-tab-cell"><a href="10-har.html" class="m-tab">HAR</a><span class="m-tab-sub">Request diagnostics</span></div>
+</nav>
+<main class="m-main">
+<div class="m-panel">
+  <div class="m-panel-head"><h2>✅ All Test Runs</h2><span class="m-panel-count">847</span></div>
+  <div class="m-filters">
+    <select class="m-select"><option>All statuses</option><option>Failed</option></select>
+    <button class="m-chip active">24h</button><button class="m-chip">7d</button>
+  </div>
+  <div class="m-table-wrap"><table class="m-table"><thead><tr><th>Test</th><th>Suite</th><th>Status</th><th>Duration</th><th>Timestamp</th></tr></thead><tbody>
+    <tr class="row-fail"><td>test_checkout_flow</td><td>Checkout.E2E</td><td><span class="m-badge fail">Failed</span></td><td>32.4s</td><td>14:32</td></tr>
+    <tr><td>test_login_valid_user</td><td>Auth.Unit</td><td><span class="m-badge ok">Passed</span></td><td>0.8s</td><td>14:30</td></tr>
+    <tr><td>test_sitemap_generation</td><td>SEO.Unit</td><td><span class="m-badge ok">Passed</span></td><td>1.2s</td><td>14:28</td></tr>
+  </tbody></table></div>
+</div></main>
+</body>
+</html>

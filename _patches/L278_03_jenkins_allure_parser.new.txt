@@ -1,0 +1,35 @@
+    def _should_retry_status(self, status_code: int | None) -> bool:
+        return status_code in (408, 425, 429, 500, 502, 503, 504)
+
+    def _is_auth_failure(self, status_code: int | None) -> bool:
+        return status_code in (401, 403, 407)
+
+    def _request_timeout(self) -> tuple[int, int]:
+        """(connect_sec, read_sec) — fail fast on dead hosts instead of blocking collect."""
+        read_sec = max(5, int(self.timeout or 20))
+        return (5, read_sec)
+
+    def _get_json(self, path: str) -> dict | list | None:
+        url = f"{self.base_url}{path}"
+        attempt = 0
+        while True:
+            self._check_cancelled()
+            try:
+                import time
+
+                t0 = time.monotonic()
+                r = requests.get(
+                    url,
+                    auth=self.auth,
+                    timeout=self._request_timeout(),
+                    verify=self.verify_ssl,
+                )
+                elapsed_ms = int((time.monotonic() - t0) * 1000)
+                if self._is_auth_failure(r.status_code):
+                    logger.warning(
+                        "AllureParser: GET %s -> %d (auth failed — check Jenkins token, skip)",
+                        path,
+                        r.status_code,
+                    )
+                    return None
+                if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:

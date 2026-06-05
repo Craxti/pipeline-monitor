@@ -1,0 +1,12 @@
+.topbar-right {
+  display: flex !important;
+  align-items: center;
+}
+
+.topbar-legend {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+}

@@ -1,0 +1,19 @@
+.snav-icon {
+  font-size: 1rem;
+  width: 1.3rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.snav-icon-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.snav-icon-dot--warn { background: var(--warn); }
+.snav-icon-dot--teal { background: #2dd4bf; }
+.snav-icon-dot--purple { background: var(--purple); }

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections import Counter
-from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -22,6 +20,7 @@ from web.services import (
     settings_save_endpoint,
     ui_lang,
 )
+from web.services.har_analyze import analyze_har_payload
 
 router = APIRouter(tags=["settings"])
 
@@ -77,19 +76,6 @@ async def api_settings_test_connection_route(request: Request):
 )
 async def api_har_analyze_route(file: UploadFile = File(...)):
     """Analyze uploaded HAR and return lightweight diagnostics."""
-
-    def _safe_int(value: object, *, default: int = 0) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
-
-    def _safe_float(value: object, *, default: float = 0.0) -> float:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return default
-
     name = (file.filename or "").lower()
     if name and not name.endswith(".har") and not name.endswith(".json"):
         return JSONResponse({"detail": "Upload a .har or .json file."}, status_code=400)
@@ -98,93 +84,13 @@ async def api_har_analyze_route(file: UploadFile = File(...)):
         payload = json.loads(raw.decode("utf-8"))
     except Exception:
         return JSONResponse({"detail": "Could not parse HAR JSON."}, status_code=400)
-    log = payload.get("log") if isinstance(payload, dict) else None
-    entries = log.get("entries") if isinstance(log, dict) else None
-    if not isinstance(entries, list):
-        return JSONResponse({"detail": "Invalid HAR: missing log.entries list."}, status_code=400)
-
-    total = len(entries)
-    failed = []
-    slow = []
-    status_counter = Counter()
-    host_counter = Counter()
-    total_time = 0.0
-    timed_count = 0
-    warnings: list[str] = []
-    skipped_entries = 0
-    for idx, item in enumerate(entries):
-        if not isinstance(item, dict):
-            skipped_entries += 1
-            warnings.append(f"entry[{idx}] skipped: expected object")
-            continue
-        request = item.get("request") if isinstance(item.get("request"), dict) else {}
-        response = item.get("response") if isinstance(item.get("response"), dict) else {}
-        timings = item.get("timings") if isinstance(item.get("timings"), dict) else {}
-        url = str(request.get("url") or "")
-        method = str(request.get("method") or "GET")
-        raw_status = response.get("status")
-        status = _safe_int(raw_status, default=0)
-        if raw_status not in (None, "") and status == 0:
-            warnings.append(f"entry[{idx}] invalid response.status={raw_status!r}; using 0")
-        raw_time = item.get("time")
-        time_ms = _safe_float(raw_time, default=0.0)
-        if raw_time not in (None, "") and time_ms == 0.0:
-            warnings.append(f"entry[{idx}] invalid time={raw_time!r}; using 0")
-        if time_ms > 0:
-            total_time += time_ms
-            timed_count += 1
-        host = urlparse(url).netloc
-        if host:
-            host_counter[host] += 1
-        if status > 0:
-            status_counter[str(status)] += 1
-
-        net_error = str(item.get("_error") or item.get("_errorText") or "").strip()
-        if status >= 400 or net_error:
-            failed.append(
-                {
-                    "method": method,
-                    "url": url,
-                    "status": status or None,
-                    "time_ms": round(time_ms, 2) if time_ms else None,
-                    "error": net_error or None,
-                }
-            )
-        if time_ms >= 2000:
-            raw_wait = timings.get("wait")
-            wait_ms = _safe_float(raw_wait, default=0.0)
-            if raw_wait not in (None, "") and wait_ms == 0.0:
-                warnings.append(f"entry[{idx}] invalid timings.wait={raw_wait!r}; using 0")
-            slow.append(
-                {
-                    "method": method,
-                    "url": url,
-                    "status": status or None,
-                    "time_ms": round(time_ms, 2),
-                    "wait_ms": round(wait_ms, 2) if wait_ms else None,
-                }
-            )
-
-    failed.sort(key=lambda x: (x.get("status") is None, -(x.get("status") or 0)))
-    slow.sort(key=lambda x: x.get("time_ms") or 0, reverse=True)
-    top_statuses = [{"status": k, "count": v} for k, v in status_counter.most_common(10)]
-    top_hosts = [{"host": k, "count": v} for k, v in host_counter.most_common(10)]
-
-    return {
-        "file_name": file.filename,
-        "summary": {
-            "total_requests": total,
-            "failed_requests": len(failed),
-            "slow_requests": len(slow),
-            "avg_time_ms": round((total_time / timed_count), 2) if timed_count else 0,
-        },
-        "top_statuses": top_statuses,
-        "top_hosts": top_hosts,
-        "failed_requests": failed[:200],
-        "slow_requests": slow[:200],
-        "warnings": warnings[:200],
-        "skipped_entries": skipped_entries,
-    }
+    try:
+        result = await asyncio.to_thread(analyze_har_payload, payload, file_name=file.filename)
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
+    except Exception:
+        return JSONResponse({"detail": "HAR analysis failed."}, status_code=500)
+    return result
 
 
 @router.post(

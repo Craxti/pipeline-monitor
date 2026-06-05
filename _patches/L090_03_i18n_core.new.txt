@@ -1,0 +1,5 @@
+      correlated_failures: 'Correlated failures',
+      feed_title: 'Active incidents',
+      tl_more: 'more',
+      tl_collapse: 'Collapse',
+    },

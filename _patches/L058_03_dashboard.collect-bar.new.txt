@@ -1,0 +1,4 @@
+    dot.classList.add('collecting');
+    btn.disabled = true;
+    if (fullBtn) fullBtn.disabled = true;
+    if (stopBtn) {

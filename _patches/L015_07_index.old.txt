@@ -1,0 +1,1 @@
+    <h2>&#9201; <span data-i18n="panel.timeline">Event Timeline</span></h2>

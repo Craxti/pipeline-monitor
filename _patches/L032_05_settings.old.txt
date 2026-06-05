@@ -1,0 +1,1 @@
+        <h2>&#129302; <span data-i18n="st.nav_ai">AI Assistant</span></h2>

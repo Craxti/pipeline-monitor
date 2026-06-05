@@ -1,0 +1,29 @@
+      const skipBuilds = shouldSkipTableReloadDuringCollect('builds', document.getElementById('tbody-builds'));
+      const skipTests = shouldSkipTableReloadDuringCollect('tests', document.getElementById('tbody-tests'));
+      const skipFailures = shouldSkipTableReloadDuringCollect('failures', document.getElementById('tbody-failures'));
+      const skipSvcs = shouldSkipTableReloadDuringCollect('svcs', document.getElementById('tbody-svcs'));
+      ['builds', 'failures', 'tests', 'services'].forEach((k) => {
+        if (k === 'builds' && skipBuilds) return;
+        if (k === 'tests' && skipTests) return;
+        if (k === 'failures' && skipFailures) return;
+        if (k === 'services' && skipSvcs) return;
+        try { abortFetchKey(k); } catch { /* ignore */ }
+      });
+      // Do not blank tables on refresh; keep current rows until new data arrives.
+      if (skipBuilds) { _state.builds.done = true; _state.builds.loading = false; }
+      if (skipTests) { _state.tests.done = true; _state.tests.loading = false; }
+      if (skipFailures) { _state.failures.done = true; _state.failures.loading = false; }
+      if (skipSvcs) { _state.svcs.done = true; _state.svcs.loading = false; }
+
+      // Update dropdowns (can change after Collect / settings updates).
+      await populateSourcesAndInstances();
+      const reloads = [
+        loadSummary(),
+        loadSystemStats(),
+      ];
+      if (!skipBuilds) reloads.push(loadBuilds());
+      if (!skipFailures) reloads.push(loadFailures());
+      if (!skipTests) reloads.push(loadTests());
+      if (!skipSvcs) reloads.push(loadUptimeData().then(() => loadServices()));
+      else reloads.push(loadUptimeData());
+      await Promise.all(reloads);

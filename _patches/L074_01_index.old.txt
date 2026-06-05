@@ -1,0 +1,12 @@
+<!-- ── Event Timeline (overview) ── -->
+<div class="panel" id="panel-timeline">
+  <div class="panel-head panel-head-timeline">
+    <h2><span class="panel-icon panel-icon--timeline" aria-hidden="true"></span><span data-i18n="panel.timeline">Event Timeline</span></h2>
+    <span class="panel-count" id="tl-count">—</span>
+    <span class="tl-sub" id="tl-subtitle" data-i18n="timeline.subtitle"></span>
+    <button type="button" class="btn btn-ghost btn-sm tl-view-all" data-dash-action="setDashboardTab" data-dash-args='["services"]' data-i18n="timeline.view_all">View all</button>
+    <button class="expand-btn" id="expand-tl" data-dash-action="toggleExpand" data-dash-args='["tl"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div id="wrap-tl" class="tl-list tl-list-compact"></div>
+</div>
+</section>

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 PROVIDER_BASES: dict[str, str] = {
     "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/",
     "openrouter": "https://openrouter.ai/api/v1",

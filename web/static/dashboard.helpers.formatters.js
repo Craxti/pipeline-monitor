@@ -25,6 +25,27 @@ const badge = (s) => {
     : '·';
   return `<span class="b ${cls}" role="status" data-status="${_svgTitleAttr(s)}"><span class="b-code" aria-hidden="true">${code}</span>${esc(s)}</span>`;
 };
+
+/** Mockup-style status: colorful mini icon + text pill (Builds tab). */
+const badgeMockup = (s) => {
+  s = (s || '').toLowerCase();
+  const cls = ['success', 'passed', 'up'].includes(s) ? 'b-ok'
+    : ['failure', 'failed', 'error', 'down'].includes(s) ? 'b-fail'
+    : ['unstable', 'degraded', 'skipped'].includes(s) ? 'b-warn'
+    : ['running', 'pending'].includes(s) ? 'b-info'
+    : 'b-dim';
+  const ico = ['success', 'passed', 'up'].includes(s) ? 'st-ico-ok'
+    : ['failure', 'failed', 'error', 'down'].includes(s) ? 'st-ico-fail'
+    : ['unstable', 'degraded', 'skipped'].includes(s) ? 'st-ico-warn'
+    : ['running', 'pending'].includes(s) ? 'st-ico-run'
+    : 'st-ico-dim';
+  const label = ['success', 'passed', 'up'].includes(s) ? 'Success'
+    : ['failure', 'failed', 'error', 'down'].includes(s) ? 'Failed'
+    : ['unstable', 'degraded', 'skipped'].includes(s) ? 'Unstable'
+    : ['running', 'pending'].includes(s) ? 'Running'
+    : (s || '—');
+  return `<span class="status-mockup" role="status" data-status="${_svgTitleAttr(s)}"><span class="st-ico ${ico}" aria-hidden="true"></span><span class="b b-mockup-pill ${cls}">${esc(label)}</span></span>`;
+};
 const fmt = (v) => {
   if (!v) return '—';
   try {
@@ -47,6 +68,16 @@ const dur = (s) => {
   if (x < 60) return `${Math.round(x)}s`;
   return `${Math.floor(x / 60)}m ${Math.round(x % 60)}s`;
 };
+function ago(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const secs = Math.floor((Date.now() - d) / 1000);
+  if (secs < 60) return secs + 's ago';
+  if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+  if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+  return Math.floor(secs / 86400) + 'd ago';
+}
 // Escaping helpers:
 // - esc(): safe for HTML text nodes (also safe-ish in attributes; use _svgTitleAttr for title="" specifically)
 // Note: we escape quotes too because this project often interpolates values into HTML attributes.

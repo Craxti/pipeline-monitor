@@ -1,0 +1,1 @@
+          <span class="inst-sec-title"><span data-i18n="st.ai_proxy_title">OpenAI proxy (VPN)</span></span>

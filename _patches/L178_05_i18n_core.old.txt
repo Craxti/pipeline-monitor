@@ -1,0 +1,2 @@
+      g_confirm_remove: 'Remove GitLab instance "{{name}}"?',
+      dm_hint_all: 'All containers currently running on this machine will be discovered and shown.',

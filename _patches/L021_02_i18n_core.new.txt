@@ -1,0 +1,3 @@
+      log_intel_title: 'Log intelligence',
+      log_intel_hint: 'Live models per Docker container: clustering → correlation graph.',
+      log_intel_intro: 'Per-container log analysis: <strong>clustering</strong> groups similar messages, <strong>correlation graph</strong> links events in time. Select a container to explore.',

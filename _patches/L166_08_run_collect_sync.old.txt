@@ -1,0 +1,1 @@
+from web.services.collect_sync import gitlab_collect as _gitlab_collect

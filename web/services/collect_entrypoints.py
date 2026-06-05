@@ -78,7 +78,7 @@ def save_snapshot_partial(snapshot: CISnapshot, *, data_dir: str | None = None) 
 def maybe_save_partial(
     snapshot: CISnapshot,
     *,
-    min_interval_s: float = 2.0,
+    min_interval_s: float = 5.0,
     force: bool = False,
 ) -> None:
     """Save partial snapshot if enough time passed (throttled)."""

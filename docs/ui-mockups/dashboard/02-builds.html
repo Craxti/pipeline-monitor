@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Builds — UI Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — static preview, not connected to app</span>
+  <nav><a href="../index.html">Gallery</a><a href="01-overview.html">Overview</a><a href="08-incidents.html">Incidents</a><a href="../settings/01-jenkins.html">Settings</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>CI/CD Monitor</h1></div>
+  <div class="m-collect"><span class="dot"></span> Collect: OK · 42s</div>
+  <div class="m-actions">
+    <button class="m-btn m-btn-primary">↻ Collect</button>
+    <button class="m-btn m-btn-ghost">Refresh</button>
+    <a href="../settings/01-jenkins.html" class="m-btn m-btn-ghost">⚙ Settings</a>
+  </div>
+</header>
+<div class="m-topbar">
+  <div class="m-pills">
+    <span class="m-pill"><span class="m-dot ok"></span> Collect: OK</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Age: 42s</span>
+    <span class="m-pill"><span class="m-dot fail"></span> Builds: 3 · Tests: 12 · Svcs: 1</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Sources: 2/2</span>
+  </div>
+  <div class="m-legend">
+    <span><span class="m-dot ok"></span> OK</span>
+    <span><span class="m-dot warn"></span> Unstable</span>
+    <span><span class="m-dot fail"></span> Failed</span>
+  </div>
+</div>
+<nav class="m-tabs"><div class="m-tab-cell"><a href="01-overview.html" class="m-tab">Overview</a><span class="m-tab-sub">Metrics, map & situation</span></div>
+<div class="m-tab-cell"><a href="02-builds.html" class="m-tab active">Builds</a><span class="m-tab-sub">Pipelines, filters & starred</span></div>
+<div class="m-tab-cell"><a href="03-top-failures.html" class="m-tab">Top failures</a><span class="m-tab-sub">Aggregated failing tests</span></div>
+<div class="m-tab-cell"><a href="04-test-runs.html" class="m-tab">Test runs</a><span class="m-tab-sub">All runs, filters & export</span></div>
+<div class="m-tab-cell"><a href="05-services.html" class="m-tab">Services</a><span class="m-tab-sub">Containers & timeline</span></div>
+<div class="m-tab-cell"><a href="06-system.html" class="m-tab">System</a><span class="m-tab-sub">Host CPU, memory & processes</span></div>
+<div class="m-tab-cell"><a href="07-trends.html" class="m-tab">Trends</a><span class="m-tab-sub">Charts over time</span></div>
+<div class="m-tab-cell"><a href="08-incidents.html" class="m-tab">Incidents</a><span class="m-tab-sub">Summary & correlated failures</span></div>
+<div class="m-tab-cell"><a href="09-log-intelligence.html" class="m-tab">Log intelligence</a><span class="m-tab-sub">Clusters & correlation</span></div>
+<div class="m-tab-cell"><a href="10-har.html" class="m-tab">HAR</a><span class="m-tab-sub">Request diagnostics</span></div>
+</nav>
+<main class="m-main">
+<div class="m-panel">
+  <div class="m-panel-head"><h2>⭐ Starred Builds</h2><span class="m-panel-count">2</span></div>
+  <div class="m-table-wrap"><table class="m-table"><thead><tr><th>Status</th><th>Job</th><th>Instance</th><th>Build #</th><th>Duration</th><th>Age</th></tr></thead><tbody>
+    <tr><td><span class="m-badge ok">Success</span></td><td>api-service/main</td><td>jenkins-prod</td><td>#412</td><td>4m 12s</td><td>2h ago</td></tr>
+    <tr class="row-fail"><td><span class="m-badge fail">Failure</span></td><td>frontend/e2e</td><td>jenkins-prod</td><td>#891</td><td>18m 03s</td><td>45m ago</td></tr>
+  </tbody></table></div>
+</div>
+<div class="m-panel">
+  <div class="m-panel-head"><h2>Builds / Pipelines</h2><span class="m-panel-count">48</span></div>
+  <div class="m-filters">
+    <select class="m-select"><option>All sources</option><option>Jenkins</option></select>
+    <select class="m-select"><option>All statuses</option><option>Failure</option></select>
+    <input class="m-input" placeholder="Filter job…"/>
+    <button class="m-chip active">24h</button><button class="m-chip">7d</button>
+  </div>
+  <div class="m-table-wrap"><table class="m-table"><thead><tr><th>Status</th><th>Job</th><th>Instance</th><th>Build #</th><th>Duration</th><th>Age</th></tr></thead><tbody>
+    <tr class="row-fail"><td><span class="m-badge fail">Failure</span></td><td>api-build</td><td>jenkins-ci</td><td>#137</td><td>6m 44s</td><td>12m ago</td></tr>
+    <tr><td><span class="m-badge run">Running</span></td><td>regression-suite</td><td>jenkins-ci</td><td>#138</td><td>—</td><td>now</td></tr>
+    <tr><td><span class="m-badge ok">Success</span></td><td>deploy-prod</td><td>jenkins-ci</td><td>#136</td><td>3m 21s</td><td>1h ago</td></tr>
+  </tbody></table></div>
+</div></main>
+</body>
+</html>

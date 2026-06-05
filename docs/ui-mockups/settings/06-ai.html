@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Assistant — Settings Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — Settings · static preview</span>
+  <nav><a href="../index.html">Gallery</a><a href="../dashboard/01-overview.html">Dashboard</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>Settings — CI/CD Monitor</h1></div>
+  <div class="m-actions"><a href="../dashboard/01-overview.html" class="m-btn m-btn-ghost">← Dashboard</a></div>
+</header>
+<div class="m-settings-page">
+  <nav class="m-sidenav"><a href="01-jenkins.html" class="m-snav-item">Jenkins</a>
+<a href="02-gitlab.html" class="m-snav-item">GitLab</a>
+<a href="03-general.html" class="m-snav-item">General</a>
+<a href="04-notifications.html" class="m-snav-item">Notifications</a>
+<a href="05-docker.html" class="m-snav-item">Docker / HTTP</a>
+<a href="06-ai.html" class="m-snav-item active">AI Assistant</a>
+</nav>
+  <main>
+<div class="m-panel">
+  <div class="m-panel-head"><h2>AI Assistant</h2></div>
+  <div class="m-form">
+    <div class="m-field"><label>Provider</label><select class="m-select" style="width:100%;padding:.6rem"><option>OpenAI</option><option>Anthropic</option><option>Local (Ollama)</option></select></div>
+    <div class="m-field"><label>API Key</label><input type="password" value="••••••••••••"/></div>
+    <div class="m-field"><label>Model</label><input type="text" value="gpt-4o-mini"/></div>
+    <div class="m-form-actions">
+      <button class="m-btn m-btn-ghost">Test</button>
+      <button class="m-btn m-btn-primary">Save</button>
+    </div>
+  </div>
+</div></main>
+</div>
+</body>
+</html>

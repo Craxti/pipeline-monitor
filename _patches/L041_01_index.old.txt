@@ -1,0 +1,2 @@
+<div id="tab-panel-incidents" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-incidents" hidden>
+<section id="incident-center" class="incident-center" style="display:none" role="region" aria-labelledby="ic-title">

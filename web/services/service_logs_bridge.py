@@ -1,4 +1,4 @@
-"""Bridge Python logging records into runtime collect logs buffer."""
+"""Bridge Python logging records into runtime collect log stream (stdout)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def _is_service_logger(logger_name: str) -> bool:
 
 
 class RuntimeCollectLogHandler(logging.Handler):
-    """Write selected log records into collect runtime log stream."""
+    """Write selected log records into collect runtime log stream (stdout)."""
 
     def __init__(self, push_log):
         super().__init__(level=logging.INFO)

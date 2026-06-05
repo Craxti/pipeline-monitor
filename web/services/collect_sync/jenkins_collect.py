@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
+from threading import Lock
 
 
 def collect_jenkins(
@@ -28,10 +29,29 @@ def collect_jenkins(
     append_synth_tests_from_builds,
     check_cancelled,
     incremental_stats: dict | None = None,
+    snap_lock: Lock | None = None,
 ) -> None:
     """Collect Jenkins builds and (optionally) console/Allure tests."""
     from clients.jenkins_client import JenkinsClient
     from web.services.collect_sync.exceptions import CollectCancelled
+
+    state_lock = snap_lock
+
+    def _extend_tests(recs: list) -> None:
+        if not recs:
+            return
+        if state_lock:
+            with state_lock:
+                snapshot.tests.extend(recs)
+        else:
+            snapshot.tests.extend(recs)
+
+    def _set_collect_meta(key: str, value: dict) -> None:
+        if state_lock:
+            with state_lock:
+                snapshot.collect_meta[key] = value
+        else:
+            snapshot.collect_meta[key] = value
 
     for inst in cfg.get("jenkins_instances", []):
         check_cancelled()
@@ -44,17 +64,12 @@ def collect_jenkins(
         n_allure_jobs_parsed = 0
         t0 = time.monotonic()
         last_status_by_job: dict[str, str] = {}
+        # Always discover all Jenkins jobs and builds (no configurable limits).
+        show_all_jobs = True
         try:
             verify_ssl = bool(inst.get("verify_ssl", True))
             progress("jenkins_builds", f"Jenkins: {label}", "Preparing job list…")
             check_cancelled()
-
-            _raw_limit = inst.get("show_all_limit_jobs", 0)
-            try:
-                _raw_limit = int(_raw_limit)
-            except Exception:
-                _raw_limit = 50
-            show_all_limit_jobs = None if (_raw_limit is not None and int(_raw_limit) <= 0) else int(_raw_limit)
 
             client = JenkinsClient(
                 url=inst["url"],
@@ -62,12 +77,8 @@ def collect_jenkins(
                 token=inst.get("token", ""),
                 jobs=inst.get("jobs", []),
                 timeout=15,
-                show_all=inst.get("show_all_jobs", False),
-                show_all_limit_jobs=(
-                    show_all_limit_jobs
-                    if inst.get("show_all_jobs", False) and not inst.get("jobs") and show_all_limit_jobs is not None
-                    else None
-                ),
+                show_all=show_all_jobs,
+                show_all_limit_jobs=None,
                 verify_ssl=verify_ssl,
                 progress_cb=lambda msg: progress(
                     "jenkins_builds",
@@ -76,43 +87,19 @@ def collect_jenkins(
                 ),
                 source_instance=inst_key,
             )
-            if inst.get("show_all_jobs", False):
+            if show_all_jobs:
                 check_cancelled()
                 try:
                     shared_discovered = client.fetch_job_list() or []
                 except Exception as exc:
                     logger.warning("Jenkins [%s] fetch_job_list failed: %s", label, exc)
                     shared_discovered = []
-                if show_all_limit_jobs is not None and len(shared_discovered) > show_all_limit_jobs:
-                    msg = (
-                        f"show_all_limit_jobs={show_all_limit_jobs} trims discovered jobs "
-                        f"({len(shared_discovered)} total) for Jenkins: {label}"
-                    )
-                    logger.warning(msg)
-                    try:
-                        push_collect_log(
-                            "jenkins_builds",
-                            f"Jenkins: {label}",
-                            msg,
-                            "warn",
-                        )
-                    except Exception:
-                        pass
 
-            try:
-                effective_max_builds = int(inst.get("max_builds", 10))
-            except Exception:
-                effective_max_builds = 10
-            if inst.get("show_all_jobs", False) and not inst.get("jobs"):
-                cap = int(inst.get("show_all_max_builds", 20) or 20)
-                if cap > 0:
-                    effective_max_builds = min(effective_max_builds, cap)
+            effective_max_builds = 0
 
-            if inst.get("show_all_jobs", False):
+            if show_all_jobs:
                 check_cancelled()
-                limit_jobs = (
-                    show_all_limit_jobs if (inst.get("show_all_jobs", False) and not inst.get("jobs")) else None
-                )
+                limit_jobs = None
                 progress(
                     "jenkins_builds",
                     f"Jenkins: {label}",
@@ -167,7 +154,7 @@ def collect_jenkins(
                         except Exception as exc:
                             logger.debug("Jenkins history fetch for %s: %s", jn, exc)
 
-                if inst.get("show_all_jobs", False) and (not shared_discovered) and bulk_builds:
+                if show_all_jobs and (not shared_discovered) and bulk_builds:
                     try:
                         shared_discovered = [b.job_name for b in bulk_builds if getattr(b, "job_name", None)]
                     except Exception:
@@ -293,7 +280,7 @@ def collect_jenkins(
             logger.info(
                 "Jenkins [%s] build collection ok (show_all=%s, latency_ms=%d)",
                 label,
-                bool(inst.get("show_all_jobs", False)),
+                show_all_jobs,
                 int((time.monotonic() - t0) * 1000),
             )
         except CollectCancelled:
@@ -323,19 +310,14 @@ def collect_jenkins(
                 from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_allure = inst.get("jobs", []) or []
-                if inst.get("show_all_jobs", False):
-                    raw_limit = inst.get("allure_jobs_limit", 25)
-                    try:
-                        limit = int(raw_limit)
-                    except Exception:
-                        limit = 25
+                if show_all_jobs:
                     discovered = shared_discovered
                     if discovered:
                         wanted = {"failure", "unstable"}
                         filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
                         if filtered:
                             discovered = filtered
-                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
+                        discovered_sel = discovered
                         explicit_by_name = {
                             (j.get("name") or ""): j for j in (jobs_for_allure or []) if (j.get("name") or "")
                         }
@@ -352,11 +334,10 @@ def collect_jenkins(
                             for n in merged_names
                         ]
                         logger.info(
-                            ("Jenkins [%s] allure: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),
+                            ("Jenkins [%s] allure: discovered %d jobs, parsing %d " "(limit=all, explicit=%d)"),
                             label,
                             len(discovered),
                             len(jobs_for_allure),
-                            "all" if limit <= 0 else str(limit),
                             len(explicit_by_name),
                         )
                     else:
@@ -383,7 +364,7 @@ def collect_jenkins(
                                 r.source_instance = inst_key
                     except Exception:
                         pass
-                    snapshot.tests.extend(recs)
+                    _extend_tests(recs)
                     maybe_save_partial(snapshot)
 
                 def _should_cancel() -> bool:
@@ -393,13 +374,7 @@ def collect_jenkins(
                     except Exception:
                         return True
 
-                try:
-                    _ab_raw = inst.get("allure_builds")
-                    if _ab_raw is None:
-                        _ab_raw = inst.get("console_builds", 5)
-                    allure_max_builds = int(_ab_raw)
-                except Exception:
-                    allure_max_builds = 5
+                allure_max_builds = 0
                 allure_parser = JenkinsAllureParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
@@ -449,19 +424,14 @@ def collect_jenkins(
                 from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_console = inst.get("jobs", []) or []
-                if inst.get("show_all_jobs", False):
-                    raw_limit = inst.get("console_jobs_limit", 25)
-                    try:
-                        limit = int(raw_limit)
-                    except Exception:
-                        limit = 25
+                if show_all_jobs:
                     discovered = shared_discovered
                     if discovered:
                         wanted = {"success", "failure", "unstable"}
                         filtered = [n for n in discovered if last_status_by_job.get(n) in wanted]
                         if filtered:
                             discovered = filtered
-                        discovered_sel = discovered if limit <= 0 else discovered[: max(1, limit)]
+                        discovered_sel = discovered
                         explicit_by_name = {
                             (j.get("name") or ""): j for j in (jobs_for_console or []) if (j.get("name") or "")
                         }
@@ -478,11 +448,10 @@ def collect_jenkins(
                             for n in merged_names
                         ]
                         logger.info(
-                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),
+                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=all, explicit=%d)"),
                             label,
                             len(discovered),
                             len(jobs_for_console),
-                            "all" if limit <= 0 else str(limit),
                             len(explicit_by_name),
                         )
                     else:
@@ -508,7 +477,7 @@ def collect_jenkins(
                                 r.source_instance = inst_key
                     except Exception:
                         pass
-                    snapshot.tests.extend(recs)
+                    _extend_tests(recs)
                     maybe_save_partial(snapshot)
 
                 def _should_cancel() -> bool:
@@ -523,7 +492,7 @@ def collect_jenkins(
                     username=inst.get("username", ""),
                     token=inst.get("token", ""),
                     jobs=jobs_for_console,
-                    max_builds=int(inst.get("console_builds", 5) or 0),
+                    max_builds=0,
                     workers=int(inst.get("console_workers", 8) or 8),
                     verify_ssl=bool(inst.get("verify_ssl", True)),
                     retries=int(inst.get("console_retries", 3) or 3),
@@ -560,12 +529,15 @@ def collect_jenkins(
                     "error",
                 )
 
-        jobs_index_size = len(shared_discovered) if inst.get("show_all_jobs") else len(inst.get("jobs") or [])
-        snapshot.collect_meta[f"jenkins:{label}"] = {
-            "jobs_indexed": jobs_index_size,
-            "console_jobs_parsed": n_console_jobs_parsed,
-            "allure_jobs_parsed": n_allure_jobs_parsed,
-        }
+        jobs_index_size = len(shared_discovered) if show_all_jobs else len(inst.get("jobs") or [])
+        _set_collect_meta(
+            f"jenkins:{label}",
+            {
+                "jobs_indexed": jobs_index_size,
+                "console_jobs_parsed": n_console_jobs_parsed,
+                "allure_jobs_parsed": n_allure_jobs_parsed,
+            },
+        )
         logger.info(
             "Jenkins [%s] parsing summary: jobs_indexed=%d, console_jobs=%d, allure_jobs=%d",
             label,

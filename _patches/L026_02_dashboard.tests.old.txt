@@ -1,0 +1,3 @@
+function clearTestFilters() {
+  document.getElementById('f-tstatus').value = '';
+  document.getElementById('f-tsource').value = 'real';

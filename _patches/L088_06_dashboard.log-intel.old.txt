@@ -1,0 +1,15 @@
+function _liGraphOptions() {
+  return {
+    layout: {
+      improvedLayout: true,
+      hierarchical: {
+        enabled: true,
+        direction: 'LR',
+        sortMethod: 'directed',
+        levelSeparation: 220,
+        nodeSpacing: 150,
+        treeSpacing: 180,
+        blockShifting: true,
+        edgeMinimization: true,
+      },
+    },

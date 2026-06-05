@@ -7,10 +7,24 @@ import time
 from urllib.parse import quote_plus
 
 
+def _snapshot_has_gitlab_for_instance(snapshot, inst_label: str) -> bool:
+    """True if the current snapshot already contains GitLab builds for this instance."""
+    want = (inst_label or "").strip()
+    if not want:
+        return False
+    for b in getattr(snapshot, "builds", None) or []:
+        if (getattr(b, "source", None) or "").lower() != "gitlab":
+            continue
+        if (getattr(b, "source_instance", None) or "").strip() == want:
+            return True
+    return False
+
+
 def collect_gitlab_builds(
     *,
     cfg: dict,
     since,
+    snapshot,
     progress,
     merge_build_records,
     health: list,
@@ -64,6 +78,14 @@ def collect_gitlab_builds(
             incremental = bool(
                 incremental_collect and sqlite_available and get_collector_state_int and set_collector_state_int
             )
+            # Watermarks can outlive a snapshot that lost GitLab rows (e.g. after force_full).
+            # Refetch pipelines for instances with no GitLab builds in the current snapshot.
+            if incremental and not _snapshot_has_gitlab_for_instance(snapshot, gl_key):
+                incremental = False
+                logger.info(
+                    "GitLab [%s] incremental skip disabled — snapshot has no GitLab builds for this instance",
+                    label,
+                )
 
             for proj_cfg in project_list:
                 check_cancelled()

@@ -1,0 +1,1 @@
+    <span class="chat-hdr-ico" aria-hidden="true"></span>

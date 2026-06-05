@@ -1,0 +1,7 @@
+function filterBuilds(source, status, job, instance) {
+  const srcSel = document.getElementById('f-source');
+  if (srcSel) {
+    const want = String(source || '').toLowerCase();
+    if (want === 'github' || want === 'gitlab') srcSel.value = want;
+    else srcSel.value = _defaultBuildSourceValue();
+  }

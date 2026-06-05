@@ -1,0 +1,31 @@
+                return None
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "ConsoleParser: GET unreachable (%s), retry in %.1fs: %s",
+                        type(exc).__name__,
+                        delay,
+                        url,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("ConsoleParser: GET unreachable, skip %s: %s", url, exc)
+                return None
+            except Exception as exc:
+                if attempt < self.retries:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "ConsoleParser: GET failed (%s), retry in %.1fs: %s",
+                        type(exc).__name__,
+                        delay,
+                        url,
+                    )

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from web.schemas import HealthResponse, ReadyResponse
 from web.core.paths import REPO_ROOT
-from web.services.app_constants import APP_BUILD
+from web.services.app_constants import APP_BUILD, APP_VERSION
 
 router = APIRouter(tags=["ops"])
 
@@ -18,7 +18,7 @@ async def health() -> HealthResponse:
     """Simple liveness probe."""
     return HealthResponse(
         ts=datetime.now(tz=timezone.utc).isoformat(),
-        version="1.0.1",
+        version=APP_VERSION,
         app_build=APP_BUILD,
         app_path=str((REPO_ROOT / "web" / "app.py").resolve()),
     )

@@ -1,0 +1,18 @@
+.lintel-view-toggle{display:inline-flex;gap:.25rem;padding:.15rem;border:1px solid var(--border);border-radius:.55rem;background:var(--surface2)}
+.lintel-view-btn{font-size:.72rem!important;padding:.28rem .6rem!important;border-radius:.4rem!important}
+.lintel-view-btn.active{background:var(--info);color:#fff;border-color:var(--info)}
+.lintel-corr-list{max-height:min(52vh,480px);overflow:auto;border:1px solid var(--border);border-radius:.7rem;background:var(--surface2)}
+.lintel-corr-empty{padding:1rem .85rem;font-size:.8rem}
+.lintel-corr-table{display:flex;flex-direction:column}
+.lintel-corr-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;gap:.45rem .65rem;align-items:center;padding:.62rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.lintel-corr-row:last-child{border-bottom:none}
+.lintel-corr-row:hover{background:rgba(59,130,246,.07)}
+.lintel-corr-from,.lintel-corr-to{font-size:.76rem;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lintel-corr-from{color:var(--text);font-weight:600}
+.lintel-corr-to{color:var(--muted)}
+.lintel-corr-arrow{color:var(--muted);font-size:.9rem;font-weight:700}
+.lintel-corr-weight{text-align:right}
+.lintel-corr-count{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;padding:.12rem .45rem;border-radius:999px;font-size:.68rem;font-weight:800;color:#dbeafe;background:rgba(59,130,246,.18)}
+.lintel-graph-wrap{margin-top:.55rem}
+.lintel-graph{height:min(48vh,520px);min-height:360px;border:1px solid var(--border);border-radius:.75rem;background:radial-gradient(ellipse at 50% 20%,#152238 0%,#0b1220 70%)}
+.lintel-graph canvas{outline:none}

@@ -1,0 +1,3 @@
+<script src="/static/dashboard.build-log-cells.js?v=20260605i" defer></script>
+<script src="/static/dashboard.builds.js?v=20260605h" defer></script>
+<script src="/static/dashboard.tests.js?v=20260423f" defer></script>

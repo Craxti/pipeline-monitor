@@ -1,0 +1,2 @@
+      logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>
+        <button type="button" class="act-btn" onclick='openLogIntelTab(${keyArg})' title="${_svgTitleAttr(t('dash.log_intel_open'))}">&#128270;</button>`;

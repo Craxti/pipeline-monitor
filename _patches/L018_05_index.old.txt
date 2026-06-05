@@ -1,0 +1,7 @@
+  <p class="ic-reasons" id="ic-reasons" style="display:none"></p>
+  <div class="ic-cta">
+    <a class="btn btn-ghost ic-btn" href="/api/incident.json" target="_blank" rel="noopener" id="ic-export"><span class="ic-btn-ico" aria-hidden="true">&#8593;</span><span data-i18n="icenter.export_json">Export incident</span></a>
+    <button type="button" class="btn ic-btn" id="ic-open-logs"><span class="ic-btn-ico" aria-hidden="true">&#128196;</span><span data-i18n="icenter.open_logs">Open logs</span></button>
+    <button type="button" class="btn btn-ghost ic-btn" id="ic-runbook" data-dash-action="openRunbook" data-i18n-title="runbook.checklist_title" title=""><span class="ic-btn-ico" aria-hidden="true">&#128214;</span><span data-i18n="runbook.title">Runbook</span></button>
+  </div>
+  <p class="ic-meta" id="ic-meta"></p>

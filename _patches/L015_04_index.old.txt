@@ -1,0 +1,1 @@
+    <span>&#128276; <span data-i18n="notif.title">Notifications</span></span>

@@ -37,7 +37,6 @@ from docker_monitor.monitor import DockerMonitor
 from web.app import save_snapshot
 from web.core.logging_setup import clear_request_id, configure_logging
 
-
 # ── Optional hardcoded Jenkins overrides ──────────────────────────────────────
 #
 # If you want to run without storing credentials in SQLite or YAML, you can
@@ -210,13 +209,8 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
         token = JENKINS_TOKEN or inst.get("token", "")
         verify_ssl = bool(inst.get("verify_ssl", True)) if JENKINS_VERIFY_SSL is None else bool(JENKINS_VERIFY_SSL)
         jobs = inst.get("jobs", [])
-        allowlist_applies = bool(JENKINS_JOBS_ALLOWLIST) and (
-            not JENKINS_ALLOWLIST_INSTANCE_NAME or (inst.get("name", "") == JENKINS_ALLOWLIST_INSTANCE_NAME)
-        )
-        # If user asked to "show all jobs" for this instance, do not force an allowlist.
-        # Otherwise the UI toggle becomes confusing (show_all does nothing).
-        if bool(inst.get("show_all_jobs", False)):
-            allowlist_applies = False
+        # Always discover all Jenkins jobs from the instance.
+        allowlist_applies = False
         if allowlist_applies:
             jobs = [{"name": n, "critical": False, "parse_console": True} for n in JENKINS_JOBS_ALLOWLIST]
         logging.getLogger(__name__).info(
@@ -227,7 +221,7 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             verify_ssl,
             len(jobs),
             "on" if allowlist_applies else "off",
-            bool(inst.get("show_all_jobs", False)),
+            True,
         )
         inst_label = str(inst.get("name") or "").strip() or str(inst.get("url") or "Jenkins")[:240]
         client = JenkinsClient(
@@ -236,11 +230,11 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
             token=token,
             jobs=jobs,
             timeout=15,
-            show_all=inst.get("show_all_jobs", False),
+            show_all=True,
             verify_ssl=verify_ssl,
             source_instance=inst_label,
         )
-        snapshot.builds.extend(client.fetch_builds(since=since, max_builds=inst.get("max_builds", 10)))
+        snapshot.builds.extend(client.fetch_builds(since=since, max_builds=0))
         if inst.get("parse_console", False):
             console_parser = JenkinsConsoleParser(
                 url=inst["url"],
@@ -249,25 +243,21 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                 jobs=(
                     jobs
                     if jobs
-                    else (
-                        [
-                            {"name": n, "critical": False, "parse_console": True}
-                            for n in JenkinsClient(
-                                url=inst["url"],
-                                username=username,
-                                token=token,
-                                jobs=[],
-                                timeout=15,
-                                show_all=False,
-                                verify_ssl=verify_ssl,
-                                source_instance=inst_label,
-                            ).fetch_job_list()[: max(1, int(inst.get("console_jobs_limit", 25) or 25))]
-                        ]
-                        if inst.get("show_all_jobs", False)
-                        else []
-                    )
+                    else [
+                        {"name": n, "critical": False, "parse_console": True}
+                        for n in JenkinsClient(
+                            url=inst["url"],
+                            username=username,
+                            token=token,
+                            jobs=[],
+                            timeout=15,
+                            show_all=False,
+                            verify_ssl=verify_ssl,
+                            source_instance=inst_label,
+                        ).fetch_job_list()
+                    ]
                 ),
-                max_builds=inst.get("console_builds", 5),
+                max_builds=0,
                 verify_ssl=verify_ssl,
             )
             snapshot.tests.extend(console_parser.fetch_tests())
@@ -280,25 +270,21 @@ def collect(ctx: click.Context, from_arg: str, fmt: str, short: bool, notify: bo
                 jobs=(
                     jobs
                     if jobs
-                    else (
-                        [
-                            {"name": n, "critical": False, "parse_allure": True}
-                            for n in JenkinsClient(
-                                url=inst["url"],
-                                username=username,
-                                token=token,
-                                jobs=[],
-                                timeout=15,
-                                show_all=False,
-                                verify_ssl=verify_ssl,
-                                source_instance=inst_label,
-                            ).fetch_job_list()[: max(1, int(inst.get("allure_jobs_limit", 25) or 25))]
-                        ]
-                        if inst.get("show_all_jobs", False)
-                        else []
-                    )
+                    else [
+                        {"name": n, "critical": False, "parse_allure": True}
+                        for n in JenkinsClient(
+                            url=inst["url"],
+                            username=username,
+                            token=token,
+                            jobs=[],
+                            timeout=15,
+                            show_all=False,
+                            verify_ssl=verify_ssl,
+                            source_instance=inst_label,
+                        ).fetch_job_list()
+                    ]
                 ),
-                max_builds=int(inst.get("allure_builds", inst.get("console_builds", 5)) or 5),
+                max_builds=0,
                 verify_ssl=verify_ssl,
             )
             snapshot.tests.extend(allure_parser.fetch_tests())

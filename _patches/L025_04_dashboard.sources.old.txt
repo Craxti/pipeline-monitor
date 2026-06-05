@@ -1,0 +1,14 @@
+function _desiredBuildSourceFilter() {
+  const sel = document.getElementById('f-source');
+  const cur = sel?.value || '';
+  if (cur) return cur;
+  try {
+    const fromUrl = new URLSearchParams(location.search).get('source');
+    if (fromUrl) return String(fromUrl);
+  } catch { /* ignore */ }
+  try {
+    const fromLs = localStorage.getItem('cimon-f-source');
+    if (fromLs) return String(fromLs);
+  } catch { /* ignore */ }
+  return '';
+}

@@ -1,0 +1,25 @@
+@media (max-width: 768px) {
+  .page {
+    grid-template-columns: 1fr;
+    padding-top: 0.75rem;
+  }
+
+  .side-nav {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .snav-item {
+    width: auto;
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.76rem;
+  }
+
+  .snav-divider {
+    display: none;
+  }
+}

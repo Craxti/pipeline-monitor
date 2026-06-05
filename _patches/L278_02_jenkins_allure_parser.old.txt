@@ -1,0 +1,3 @@
+        self.should_cancel = should_cancel
+
+    def _check_cancelled(self) -> None:

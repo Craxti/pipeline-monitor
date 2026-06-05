@@ -1,0 +1,30 @@
+async function triggerCollect(forceFull = false) {
+  if (_ticker) { clearInterval(_ticker); _ticker = null; }
+  const btn = document.getElementById('btn-collect');
+  const fullBtn = document.getElementById('btn-collect-full');
+  if (btn) btn.disabled = true;
+  if (fullBtn) fullBtn.disabled = true;
+  _collectStartedAt = Date.now();
+  const cdot = document.getElementById('cdot');
+  if (cdot) cdot.className = 'dot collecting';
+  const tickPre = () => {
+    const sec = Math.floor((Date.now() - _collectStartedAt) / 1000);
+    const main = forceFull ? t('dash.collecting_full') : t('dash.collecting');
+    _setCollectLines(main, `${t('dash.collect_elapsed')}: ${fmtSec(sec)}`);
+  };
+  tickPre();
+  if (_collectElapsedTimer) clearInterval(_collectElapsedTimer);
+  _collectElapsedTimer = setInterval(tickPre, 1000);
+  const cr = await fetch(apiUrl('api/collect'), {
+    method:'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force_full: !!forceFull }),
+  }).catch(()=>null);
+  if (cr && cr.ok) _dashIsCollecting = true;
+  _prevCollecting = true;
+  pollCollect();
+}
+
+function triggerCollectFull() {
+  return triggerCollect(true);
+}

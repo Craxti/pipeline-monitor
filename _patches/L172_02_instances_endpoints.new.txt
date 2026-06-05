@@ -1,0 +1,13 @@
+    for inst in cfg.get("gitlab_instances", []) or []:
+        if not inst.get("enabled", True):
+            continue
+        if not str(inst.get("url", "") or "").strip():
+            continue
+        out.append({"source": "gitlab", "name": config_instance_label(inst, kind="gitlab")})
+    for inst in cfg.get("github_instances", []) or []:
+        if not inst.get("enabled", True):
+            continue
+        if not str(inst.get("token", "") or "").strip():
+            continue
+        out.append({"source": "github", "name": config_instance_label(inst, kind="github")})
+    out.sort(key=lambda x: (x.get("source", ""), x.get("name", "")))

@@ -1,0 +1,2 @@
+      empty_builds_gitlab: 'No GitLab builds in the snapshot yet. Run Collect after checking GitLab settings.',
+      empty_builds_github: 'No GitHub workflow runs in the snapshot yet. Run Collect after checking GitHub settings.',

@@ -1,0 +1,4 @@
+      builds_intro: 'Пайплайны GitLab и GitHub Actions — фильтры по источнику, инстансу, статусу и имени джоба.',
+      builds_scope_gitlab: 'GitLab',
+      builds_source_gitlab: 'GitLab',
+      builds_source_github: 'GitHub Actions',

@@ -1,0 +1,2 @@
+    icon.className = 'modal-icon ' + kind;
+    icon.innerHTML = kind === 'jenkins' ? '&#128296;' : kind === 'gitlab' ? '&#129347;' : '&#128051;';

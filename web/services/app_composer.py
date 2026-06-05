@@ -32,6 +32,7 @@ from web.routes.chat import router as _chat_router
 from web.routes.collect import router as _collect_router
 from web.routes.dashboard import router as _dashboard_router
 from web.routes.incident import router as _incident_router
+from web.routes.log_intel import router as _log_intel_router
 from web.routes.logs import router as _logs_router
 from web.routes.ops import router as _ops_router
 from web.routes.services import router as _services_router
@@ -47,6 +48,7 @@ from web.services import cursor_proxy_facade as _cursor_proxy_facade
 logger = logging.getLogger(__name__)
 
 APP_BUILD = _app_constants.APP_BUILD
+APP_VERSION = _app_constants.APP_VERSION
 CURSOR_AGENT_UNAVAILABLE_MSG = _app_constants.CURSOR_AGENT_UNAVAILABLE_MSG
 
 templates = _templates_boot.create_templates(base_dir=Path(__file__).resolve().parents[1])
@@ -87,7 +89,7 @@ lifespan = _app_lifespan_wiring.make_app_lifespan(
 )
 
 
-app = FastAPI(title="CI/CD Monitor", version="1.0.1", lifespan=lifespan)
+app = FastAPI(title="CI/CD Monitor", version=APP_VERSION, lifespan=lifespan)
 app.openapi = _openapi_safe.make_safe_openapi(app, logger=logger)
 
 _static_mount.mount_static_if_present(app=app, base_dir=Path(__file__).resolve().parents[1])
@@ -116,6 +118,7 @@ for __r in (
     _chat_router,
     _dashboard_router,
     _actions_router,
+    _log_intel_router,
     _logs_router,
     _webhooks_router,
 ):

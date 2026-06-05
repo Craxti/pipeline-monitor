@@ -1,0 +1,4 @@
+            for root in (web, base):
+                if root and bu.startswith(root):
+                    return config_instance_label(inst, kind="github")
+        return None

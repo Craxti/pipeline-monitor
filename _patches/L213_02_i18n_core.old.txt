@@ -1,0 +1,2 @@
+      builds_title: 'Пайплайны GitLab',
+      starred_title: 'Избранные сборки',

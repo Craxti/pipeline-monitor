@@ -1,0 +1,6 @@
+    const status = document.getElementById('f-tstatus').value;
+    const uiSource = document.getElementById('f-tsource').value;
+    const apiSource = _mapTestSourceForApi(uiSource);
+    const name   = document.getElementById('f-tname').value;
+    const suite  = document.getElementById('f-tsuite').value;
+    const url = apiUrl(`api/tests?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}&source=${encodeURIComponent(apiSource)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`);

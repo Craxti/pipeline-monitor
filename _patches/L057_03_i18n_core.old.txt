@@ -1,0 +1,6 @@
+      collect: 'Полная синхронизация',
+      collect_stop: 'Стоп',
+      collect_stop_title: 'Немедленно остановить сбор',
+      collect_stop_sent: 'Запрошена остановка — сбор прерывается.',
+      collect_full_title: 'Полный пересбор (без инкрементального кеша)',
+      collect_full_pill: 'ПОЛНЫЙ',

@@ -1,0 +1,3 @@
+      har_title: 'HAR diagnostics',
+      har_intro: 'Upload a HAR file from browser DevTools to find failed, slow, and error requests. Use filters and presets to focus on problems.',
+      har_subtitle: 'Upload, filter, inspect failed/slow requests',

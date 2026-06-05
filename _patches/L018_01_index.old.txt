@@ -1,0 +1,27 @@
+<div id="tab-panel-test-runs" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-runs" hidden>
+<section id="sec-test-runs" class="dash-section">
+<!-- ── Test Runs Panel ── -->
+<div class="panel" id="panel-tests">
+  <div class="panel-head">
+    <h2>&#9989; <span data-i18n="dash.tests_runs_title">All Test Runs</span></h2>
+    <span class="panel-count" id="tests-count">0</span>
+    <span class="panel-count" style="border-color:transparent;padding:.05rem .15rem">
+      <button type="button" class="log-lvl-btn" id="tsrc-real" data-dash-action="setTestSourceQuick" data-dash-args='["real"]' title="Real: merged Jenkins + other parsers (no raw Allure/console rows)">Real</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-jenkins" data-dash-action="setTestSourceQuick" data-dash-args='["jenkins"]' title="Jenkins only: one row per test (build time + Allure + console)">Jenkins</button>
+      <button type="button" class="log-lvl-btn" id="tsrc-synth" data-dash-action="setTestSourceQuick" data-dash-args='["synthetic"]' title="Job-as-tests (synthetic)">Jobs</button>
+    </span>
+    <span class="panel-count" id="tests-breakdown" style="border-color:transparent;color:var(--muted);font-size:.72rem">—</span>
+    <div class="filters">
+      <select class="f-select" id="f-tsource">
+        <option value="real" selected>Real (no raw Jenkins parsers)</option>
+        <option value="jenkins">Jenkins (merged: build+Allure+console)</option>
+        <option value="gitlab">GitLab</option>
+        <option value="synthetic">Synthetic (build as test)</option>
+        <option value="">All sources</option>
+        <optgroup label="Raw / debug">
+        <option value="jenkins_allure">jenkins_allure</option>
+        <option value="jenkins_console">jenkins_console</option>
+        <option value="jenkins_build">jenkins_build</option>
+        <option value="jenkins_unified">jenkins_unified</option>
+        </optgroup>
+      </select>

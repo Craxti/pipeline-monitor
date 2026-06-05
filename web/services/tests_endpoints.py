@@ -79,7 +79,7 @@ async def api_tests(
 
 async def api_top_failures(
     *,
-    load_snapshot: Callable[[], Any],
+    load_snapshot_async: Callable[[], Awaitable[Any]],
     filter_tests_by_lookback_hours: Callable[..., list[Any]],
     filter_tests_by_source: Callable[[list[Any], str], list[Any]],
     aggregate_top_failing_tests: Callable[..., list[dict[str, Any]]],
@@ -93,7 +93,7 @@ async def api_top_failures(
     days: int,
 ) -> dict:
     """Return aggregated top failing tests (paged)."""
-    snap = load_snapshot()
+    snap = await load_snapshot_async()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
 

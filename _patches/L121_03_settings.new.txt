@@ -1,0 +1,40 @@
+/* ── Side nav items ──────────────────────────────────────────────────────── */
+.snav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.58rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 0.08rem;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  font-weight: 550;
+}
+
+.snav-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--text);
+}
+
+html.light .snav-item:hover {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.snav-item.active {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  font-weight: 650;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+
+.snav-icon-img {
+  flex-shrink: 0;
+  opacity: 0.9;
+}

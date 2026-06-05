@@ -1,0 +1,17 @@
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 120% 70% at 0% -25%, rgba(59, 130, 246, 0.08), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(16, 185, 129, 0.05), transparent 50%);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 0;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+}
+
+body.settings-app {
+  overflow: hidden;
+}

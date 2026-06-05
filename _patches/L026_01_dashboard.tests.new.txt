@@ -1,0 +1,40 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ALL TEST RUNS
+// ─────────────────────────────────────────────────────────────────────────────
+const _TEST_PIPELINE_RE = /\b(test|tests|testing|e2e|spec|pytest|unittest|unit-?test|integration)\b/i;
+
+function _isGitlabTestPipeline(row) {
+  const pipeline = String((row && (row.suite || row.job_name)) || '').toLowerCase();
+  return _TEST_PIPELINE_RE.test(pipeline);
+}
+
+function _mapTestSourceForApi(uiSource) {
+  const s = String(uiSource || '').trim().toLowerCase();
+  if (s === 'pipelines' || s === 'gitlab_test') return 'real';
+  if (s === 'jenkins') return 'jenkins';
+  return s || 'real';
+}
+
+function _filterTestRunsScope(rows, uiSource) {
+  const s = String(uiSource || '').trim().toLowerCase();
+  if (!s || s === 'pipelines') {
+    return (rows || []).filter((r) => {
+      const src = String(r.source || '').toLowerCase();
+      if (src === 'jenkins_unified' || src.startsWith('jenkins')) return true;
+      if (src === 'gitlab') return _isGitlabTestPipeline(r);
+      return false;
+    });
+  }
+  if (s === 'gitlab_test') {
+    return (rows || []).filter((r) => String(r.source || '').toLowerCase() === 'gitlab' && _isGitlabTestPipeline(r));
+  }
+  if (s === 'jenkins') {
+    return (rows || []).filter((r) => {
+      const src = String(r.source || '').toLowerCase();
+      return src === 'jenkins_unified' || src.startsWith('jenkins');
+    });
+  }
+  return rows || [];
+}
+
+let _lastTestsPageSig = '';

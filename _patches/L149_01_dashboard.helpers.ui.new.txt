@@ -1,0 +1,101 @@
+/** Timestamp (ms) of last collect_done — transient empty API right after refresh should not blank tables. */
+let _lastCollectFinishedAt = 0;
+
+/** Grace after collect ends: snapshot/API may briefly return 0 rows before new data is readable. */
+const _KEEP_TABLE_AFTER_COLLECT_MS = 45000;
+
+/** Last rendered tbody HTML per table — restored when collect briefly returns empty/API errors. */
+const _staleTableHtml = { builds: '', tests: '', failures: '', svcs: '' };
+
+function _collectGraceActive() {
+  const now = Date.now();
+  const inCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+  const sinceFinish =
+    typeof _lastCollectFinishedAt !== 'undefined' &&
+    _lastCollectFinishedAt > 0 &&
+    now - _lastCollectFinishedAt < _KEEP_TABLE_AFTER_COLLECT_MS;
+  return inCollect || sinceFinish;
+}
+
+/** Remember last good table markup (call after a successful page-1 render). */
+function cacheStaleTableHtml(key, tbody) {
+  try {
+    if (!key || !tbody || !tbodyHasDataRows(tbody)) return;
+    _staleTableHtml[key] = tbody.innerHTML;
+  } catch { /* ignore */ }
+}
+
+function _restoreStaleTableHtml(key, tbody) {
+  const html = _staleTableHtml[key];
+  if (!html || !tbody) return false;
+  tbody.innerHTML = html;
+  return true;
+}
+
+function _finishKeepTableState(state) {
+  if (!state) return;
+  state.done = true;
+  state.loading = false;
+  try { updateFilterSummary(); } catch { /* ignore */ }
+  try { _applyGlobalSearch(); } catch { /* ignore */ }
+}
+
+/**
+ * In LIVE mode, keep the previous table when page-1 API returns zero rows (transient during/after collect).
+ * Returns true if the caller should skip blanking the tbody.
+ */
+function keepTableOnTransientEmpty(tbody, rows, state, cacheKey) {
+  try {
+    if (!tbody || !state || state.page !== 1) return false;
+    if (!Array.isArray(rows) || rows.length) return false;
+    if (typeof _liveMode === 'undefined' || !_liveMode) return false;
+    if (!_collectGraceActive()) return false;
+    if (tbodyHasDataRows(tbody)) {
+      _finishKeepTableState(state);
+      return true;
+    }
+    if (cacheKey && _restoreStaleTableHtml(cacheKey, tbody)) {
+      _finishKeepTableState(state);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * In LIVE mode, avoid replacing a populated table with the generic API error row during/shortly after collect
+ * (transient 5xx / network while snapshot is being rewritten).
+ */
+function keepTableOnTransientApiError(tbody, res, state, cacheKey) {
+  try {
+    if (!tbody || !state || state.page !== 1) return false;
+    if (typeof _liveMode === 'undefined' || !_liveMode) return false;
+    if (!_collectGraceActive()) return false;
+    if (tbodyHasDataRows(tbody)) {
+      _finishKeepTableState(state);
+      return true;
+    }
+    if (cacheKey && _restoreStaleTableHtml(cacheKey, tbody)) {
+      _finishKeepTableState(state);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Skip LIVE refreshAll reload for a tab that already shows data while collect is running. */
+function shouldSkipTableReloadDuringCollect(tableKey, tbody) {
+  try {
+    if (!_collectGraceActive()) return false;
+    if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
+    const tabFor = { builds: 'builds', tests: 'test-runs', failures: 'test-failures', svcs: 'services' };
+    if (typeof _dashTab !== 'undefined' && _dashTab !== tabFor[tableKey]) return false;
+    return tbodyHasDataRows(tbody) || !!_staleTableHtml[tableKey];
+  } catch {
+    return false;
+  }
+}

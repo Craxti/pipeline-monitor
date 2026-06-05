@@ -1,0 +1,4 @@
+<div id="tab-panel-overview" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-overview">
+<section id="sec-overview" class="dash-section">
+<!-- ── Stats ── -->
+  <div class="stats" id="stats">

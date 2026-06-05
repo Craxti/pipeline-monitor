@@ -54,7 +54,7 @@ async def api_tests_top_failures_route(
     from web.services import tests_analytics, tests_endpoints
 
     return await tests_endpoints.api_top_failures(
-        load_snapshot=rt.load_snapshot,
+        load_snapshot_async=rt.load_snapshot_async,
         filter_tests_by_lookback_hours=tests_analytics.filter_tests_by_lookback_hours,
         filter_tests_by_source=tests_analytics.filter_tests_by_source,
         aggregate_top_failing_tests=tests_analytics.aggregate_top_failing_tests,

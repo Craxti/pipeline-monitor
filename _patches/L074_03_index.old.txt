@@ -1,0 +1,3 @@
+  <div class="ic-correlated-title" id="ic-correlated-title" style="display:none" data-i18n="icenter.correlated_failures">Correlated failures</div>
+  <div class="ic-cards" id="ic-cards" style="display:none"></div>
+  <div class="ic-timeline" id="ic-timeline" style="display:none"></div>

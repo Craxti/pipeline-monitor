@@ -1,0 +1,11 @@
+    def _should_retry_status(self, status_code: int | None) -> bool:
+        return status_code in (408, 425, 429, 500, 502, 503, 504)
+
+    def _is_auth_failure(self, status_code: int | None) -> bool:
+        return status_code in (401, 403, 407)
+
+    def _request_timeout(self) -> tuple[int, int]:
+        read_sec = max(5, int(self.timeout or 20))
+        return (5, read_sec)
+
+    def _check_cancelled(self) -> None:

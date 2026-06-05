@@ -1,0 +1,6 @@
+  <div class="panel" id="panel-har">
+    <div class="panel-head">
+      <h2>&#128202; <span data-i18n="dash.har_title">HAR Analyze</span></h2>
+      <span class="panel-count" data-i18n="dash.har_subtitle">Upload, filter, inspect failed/slow requests</span>
+    </div>
+    <div class="panel-body-har">

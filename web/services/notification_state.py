@@ -12,7 +12,6 @@ from typing import Callable, List, Tuple
 from models.models import CISnapshot
 from web.core.notifications import detect_state_changes as _detect
 
-
 EventAppender = Callable[[List[dict]], None]
 
 

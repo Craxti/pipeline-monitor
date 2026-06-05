@@ -1,0 +1,10 @@
+    const data = await res.json();
+    s.total = data.total;
+    document.getElementById('tests-count').textContent = data.total;
+    if (data.breakdown) {
+      const b = data.breakdown;
+      const el = document.getElementById('tests-breakdown');
+      if (el) el.textContent = `Real: ${b.real_total || 0} (${b.real_failed || 0} failed) · Synthetic: ${b.synthetic_total || 0} (${b.synthetic_failed || 0} failed)`;
+    }
+
+    const rows = _sortTestsRows(data.items || []);

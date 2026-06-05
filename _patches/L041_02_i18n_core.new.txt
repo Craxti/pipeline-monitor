@@ -1,0 +1,2 @@
+      tests_intro: 'Jenkins test jobs and GitLab pipelines whose name contains test-related keywords (test, e2e, spec, pytest, etc.).',
+      incidents_intro: 'Current incident summary: what failed, affected jobs/services, and quick actions.',

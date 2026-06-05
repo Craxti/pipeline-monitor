@@ -1,0 +1,9 @@
+        "Collect cycle started (force_full=%s, incremental=%s, lookback_days=%s, jenkins=%d, gitlab=%d, github=%d, docker=%s)",
+        force_full,
+        incremental_collect,
+        cfg.get("general", {}).get("default_lookback_days", 7),
+        j_enabled,
+        g_enabled,
+        gh_enabled,
+        "on" if dm_enabled else "off",
+    )

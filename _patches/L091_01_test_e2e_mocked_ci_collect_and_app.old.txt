@@ -1,0 +1,1 @@
+    assert 'id="panel-timeline"' in page.text

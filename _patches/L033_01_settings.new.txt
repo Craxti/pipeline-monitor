@@ -1,0 +1,3 @@
+    btn.textContent = '';
+    btn.classList.remove('theme-ico-dark', 'theme-ico-light');
+    btn.classList.add(theme === 'light' ? 'theme-ico-dark' : 'theme-ico-light');

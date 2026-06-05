@@ -1,0 +1,77 @@
+/** Last rendered tbody HTML per table — restored when collect briefly returns empty/API errors. */
+const _staleTableHtml = { builds: '', tests: '', failures: '', svcs: '' };
+const _STALE_SS_KEY = 'cimon-stale-tbody-v1';
+const _STALE_SS_TTL_MS = 30 * 60 * 1000;
+
+function _buildsFilterSig() {
+  try {
+    const source = document.getElementById('f-source')?.value || '';
+    const inst = document.getElementById('f-instance')?.value || '';
+    const status = document.getElementById('f-bstatus')?.value || '';
+    const job = document.getElementById('f-job')?.value || '';
+    const hours = String(typeof _buildsHours !== 'undefined' ? _buildsHours : 0);
+    return [source, inst, status, job, hours].join('\x1f');
+  } catch {
+    return '';
+  }
+}
+
+function _readStaleSessionEntry(key) {
+  try {
+    const raw = sessionStorage.getItem(_STALE_SS_KEY);
+    if (!raw) return null;
+    const bag = JSON.parse(raw);
+    const ent = bag[key];
+    if (!ent || !ent.html) return null;
+    if (Date.now() - Number(ent.ts || 0) > _STALE_SS_TTL_MS) return null;
+    return ent;
+  } catch {
+    return null;
+  }
+}
+
+function _writeStaleSessionEntry(key, html, filterSig) {
+  try {
+    if (!key || !html) return;
+    const bag = JSON.parse(sessionStorage.getItem(_STALE_SS_KEY) || '{}');
+    bag[key] = { html, filters: filterSig || '', ts: Date.now() };
+    sessionStorage.setItem(_STALE_SS_KEY, JSON.stringify(bag));
+  } catch { /* ignore */ }
+}
+
+function _staleEntryMatchesFilters(ent, key) {
+  if (!ent) return false;
+  if (key === 'builds') return ent.filters === _buildsFilterSig();
+  return true;
+}
+
+function _tryRestoreStaleTable(key, tbody, state) {
+  if (!tbody) return false;
+  if (tbodyHasDataRows(tbody)) {
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  if (_restoreStaleTableHtml(key, tbody)) {
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  const ent = _readStaleSessionEntry(key);
+  if (ent && _staleEntryMatchesFilters(ent, key)) {
+    tbody.innerHTML = ent.html;
+    _staleTableHtml[key] = ent.html;
+    if (state) _finishKeepTableState(state);
+    return true;
+  }
+  return false;
+}
+
+/** Show last good builds table immediately after F5 while the API reloads. */
+function _primeBuildsTableFromSession() {
+  if (typeof _dashTab !== 'undefined' && _dashTab !== 'builds') return;
+  const tbody = document.getElementById('tbody-builds');
+  if (!tbody || tbodyHasDataRows(tbody)) return;
+  const ent = _readStaleSessionEntry('builds');
+  if (!ent || !_staleEntryMatchesFilters(ent, 'builds')) return;
+  tbody.innerHTML = ent.html;
+  _staleTableHtml.builds = ent.html;
+}

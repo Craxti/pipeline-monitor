@@ -1,0 +1,83 @@
+function _liNodeLabel(n) {
+  const short = String(n.label || n.id || '').replace(/\s+/g, ' ').trim();
+  return short.length > 56 ? `${short.slice(0, 54)}…` : short;
+}
+
+function _liNodeMap(corr) {
+  const map = new Map();
+  (corr.nodes || []).forEach((n) => {
+    if (n && n.id) map.set(String(n.id), n);
+  });
+  return map;
+}
+
+function renderLogIntelCorrList(corr) {
+  const box = document.getElementById('log-intel-corr-list');
+  if (!box) return;
+  const edges = Array.isArray(corr?.edges) ? [...corr.edges] : [];
+  const nodes = _liNodeMap(corr || {});
+  if (!edges.length) {
+    box.innerHTML = `<div class="lintel-corr-empty muted">${esc(_liT('dash.log_intel_no_corr', 'Not enough correlated transitions yet.'))}</div>`;
+    return;
+  }
+  edges.sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0));
+  const rows = edges.map((e, i) => {
+    const fromN = nodes.get(String(e.from));
+    const toN = nodes.get(String(e.to));
+    const fromLbl = fromN ? _liNodeLabel(fromN) : String(e.from || '—');
+    const toLbl = toN ? _liNodeLabel(toN) : String(e.to || '—');
+    const w = Number(e.weight || 0);
+    const title = e.title || `${w} transitions`;
+    return `<div class="lintel-corr-row" data-lintel-edge="${i}" title="${esc(title)}">
+      <div class="lintel-corr-from" title="${esc(fromLbl)}">${esc(fromLbl)}</div>
+      <div class="lintel-corr-arrow" aria-hidden="true">→</div>
+      <div class="lintel-corr-to" title="${esc(toLbl)}">${esc(toLbl)}</div>
+      <div class="lintel-corr-weight"><span class="lintel-corr-count">×${esc(String(w))}</span></div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="lintel-corr-table">${rows}</div>`;
+  box.querySelectorAll('[data-lintel-edge]').forEach((row) => {
+    row.addEventListener('click', () => {
+      const idx = Number(row.getAttribute('data-lintel-edge'));
+      const edge = edges[idx];
+      if (!edge || !_logIntelGraph) return;
+      setLogIntelCorrView('graph');
+      try {
+        _logIntelGraph.selectNodes([edge.from, edge.to]);
+        _logIntelGraph.focus(edge.to, { scale: 1.1, animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+      } catch { /* ignore */ }
+    });
+  });
+}
+
+function setLogIntelCorrView(view) {
+  view = view === 'graph' ? 'graph' : 'list';
+  _logIntelCorrView = view;
+  const listBtn = document.getElementById('lintel-view-list');
+  const graphBtn = document.getElementById('lintel-view-graph');
+  const listBox = document.getElementById('log-intel-corr-list');
+  const graphWrap = document.getElementById('log-intel-graph-wrap');
+  if (listBtn) listBtn.classList.toggle('active', view === 'list');
+  if (graphBtn) graphBtn.classList.toggle('active', view === 'graph');
+  if (listBox) listBox.hidden = view !== 'list';
+  if (graphWrap) graphWrap.hidden = view !== 'graph';
+  if (view === 'graph' && _logIntelGraph) {
+    try { _logIntelGraph.fit({ animation: { duration: 220, easingFunction: 'easeInOutQuad' } }); } catch { /* ignore */ }
+  }
+}
+
+function _liGraphOptions() {
+  return {
+    layout: {
+      improvedLayout: true,
+      hierarchical: {
+        enabled: true,
+        direction: 'UD',
+        sortMethod: 'directed',
+        levelSeparation: 140,
+        nodeSpacing: 120,
+        treeSpacing: 140,
+        blockShifting: true,
+        edgeMinimization: true,
+      },
+    },

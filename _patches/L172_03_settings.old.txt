@@ -1,0 +1,3 @@
+.inst-badge.gl {
+  background: #e2433e;
+}

@@ -1,0 +1,3 @@
+    dot.classList.add('collecting');
+    btn.disabled = true;
+    if (stopBtn) {

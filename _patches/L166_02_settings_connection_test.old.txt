@@ -1,0 +1,2 @@
+    except Exception as exc:
+        return {"ok": False, "message": f"GitLab response is invalid: {_safe_error(exc)}"}

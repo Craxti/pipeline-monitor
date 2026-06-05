@@ -1,0 +1,1 @@
+      <button type="button" class="act-btn log-btn" onclick='openLogViewer("jenkins",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_console'))}">&#128466;</button>

@@ -1,0 +1,20 @@
+    <button class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
+      <span class="snav-icon">&#128296;</span><span data-i18n="st.nav_jenkins">Jenkins</span>
+    </button>
+    <button class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <span class="snav-icon">&#129347;</span><span data-i18n="st.nav_gitlab">GitLab</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="general" onclick="showSec('general')">
+      <span class="snav-icon">&#9881;</span><span data-i18n="st.nav_general">General</span>
+    </button>
+    <button class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
+      <span class="snav-icon">&#128276;</span><span data-i18n="st.nav_notifications">Notifications</span>
+    </button>
+    <button class="snav-item" data-sec="docker" onclick="showSec('docker')">
+      <span class="snav-icon">&#128051;</span><span data-i18n="st.nav_docker">Docker / HTTP</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="ai" onclick="showSec('ai')">
+      <span class="snav-icon">&#129302;</span><span data-i18n="st.nav_ai">AI Assistant</span>
+    </button>

@@ -1,0 +1,10 @@
+    if (!res || !res.ok) {
+      if (keepTableOnTransientApiError(tbody, res, s)) return;
+      const detail = await fetchApiErrorDetail(res);
+      srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+      const extra = detail ? ` — ${esc(detail)}` : '';
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+      s.done = true;
+      _applyGlobalSearch();
+      return;
+    }

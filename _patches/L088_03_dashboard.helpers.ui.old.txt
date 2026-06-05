@@ -1,0 +1,25 @@
+  const svcEv = dedupSort(events.filter((e) => e.cls === 'ic-svc'));
+  const testEv = dedupSort(events.filter((e) => e.cls === 'ic-test'));
+  const buildEv = dedupSort(events.filter((e) => e.cls === 'ic-fail' || e.cls === 'ic-warn'));
+  const picked = [
+    ...svcEv.slice(0, 2),
+    ...testEv.slice(0, 2),
+    ...buildEv.slice(0, 1),
+  ];
+  picked.forEach((ev) => _icAppendEventRow(wrap, ev));
+
+  const corrTitle = document.getElementById('ic-correlated-title');
+  const hasCards = wrap.childElementCount > 0;
+  if (corrTitle) corrTitle.style.display = hasCards ? 'block' : 'none';
+  wrap.style.display = hasCards ? 'flex' : 'none';
+
+  const aff = document.getElementById('ic-affected');
+  const meta = document.getElementById('ic-meta');
+  const tl = document.getElementById('ic-timeline');
+  if (aff) aff.style.display = hasCards ? 'none' : '';
+  if (meta) meta.style.display = hasCards ? 'none' : '';
+  if (tl && hasCards) {
+    tl.innerHTML = '';
+    tl.style.display = 'none';
+  }
+}

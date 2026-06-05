@@ -1,0 +1,114 @@
+<body data-page="settings" class="ui-modern">
+
+{% include 'partials/i18n_core.html' %}
+
+<header>
+  <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
+  <h1 data-i18n="st.title">Settings</h1>
+  <span class="pill" data-i18n="dash.app_title">CI/CD Monitor</span>
+  <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">
+    <button type="button" class="btn btn-ghost" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" style="padding:.35rem .55rem;font-size:1rem;line-height:1" data-i18n-aria-label="dash.theme" aria-label="">&#9681;</button>
+    <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
+      <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
+      <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
+    </div>
+    <span id="save-status-hdr" style="font-size:.8rem;color:var(--muted)"></span>
+    <a href=".." class="btn btn-ghost" data-i18n="st.back">&#8592; Dashboard</a>
+    <button class="btn" id="save-btn-hdr" onclick="saveSettings()">
+      &#10003;&nbsp;<span data-i18n="st.save">Save Settings</span>
+    </button>
+  </div>
+</header>
+
+<nav class="breadcrumb-strip" aria-label="Breadcrumb">
+  <a href=".." data-i18n="st.breadcrumb_dashboard">Dashboard</a> <span aria-hidden="true">/</span> <span data-i18n="st.title">Settings</span>
+</nav>
+<p class="page-lede" data-i18n="st.page_subtitle"></p>
+
+<div class="page">
+
+  <!-- ── Side nav ── -->
+  <nav class="side-nav">
+    <button class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
+      <img class="snav-icon-img" src="/static/icons/jenkins.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_jenkins">Jenkins</span>
+    </button>
+    <button class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <img class="snav-icon-img" src="/static/icons/gitlab.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_gitlab">GitLab</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="general" onclick="showSec('general')">
+      <span class="snav-icon-dot" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span>
+    </button>
+    <button class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
+      <span class="snav-icon-dot snav-icon-dot--warn" aria-hidden="true"></span><span data-i18n="st.nav_notifications">Notifications</span>
+    </button>
+    <button class="snav-item" data-sec="docker" onclick="showSec('docker')">
+      <span class="snav-icon-dot snav-icon-dot--teal" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button class="snav-item" data-sec="ai" onclick="showSec('ai')">
+      <span class="snav-icon-dot snav-icon-dot--purple" aria-hidden="true"></span><span data-i18n="st.nav_ai">AI Assistant</span>
+    </button>
+  </nav>
+
+  <main>
+    <div class="panel">
+      <div class="panel-header">
+        <h2><span data-i18n="st.wz_title">Quick Start Wizard</span></h2>
+      </div>
+      <div class="form-body">
+        <div class="wizard-stepper" aria-hidden="true">
+          <div class="wizard-step-item active">
+            <span class="wizard-step-num">1</span>
+            <span class="wizard-step-label" data-i18n="st.wz_step1_short">Connection Setup</span>
+            <span class="wizard-step-sub" data-i18n="st.wz_step1_sub">URL &amp; API Token</span>
+          </div>
+          <div class="wizard-step-item">
+            <span class="wizard-step-num">2</span>
+            <span class="wizard-step-label" data-i18n="st.wz_step2_short">Select Projects</span>
+            <span class="wizard-step-sub" data-i18n="st.wz_step2_sub">Choose jobs to monitor</span>
+          </div>
+          <div class="wizard-step-item">
+            <span class="wizard-step-num">3</span>
+            <span class="wizard-step-label" data-i18n="st.wz_step3_short">Finalize &amp; Sync</span>
+            <span class="wizard-step-sub" data-i18n="st.wz_step3_sub">Save and collect</span>
+          </div>
+        </div>
+        <div class="wizard-grid">
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step1_title">1) Choose source</h3>
+            <p data-i18n="st.wz_step1_desc">Pick Jenkins or GitLab. The wizard adds one instance and opens the corresponding section.</p>
+            <div class="wizard-actions">
+              <button type="button" class="btn btn-sm" onclick="startQuickSetup('jenkins')">Jenkins</button>
+              <button type="button" class="btn btn-sm" onclick="startQuickSetup('gitlab')">GitLab</button>
+            </div>
+          </div>
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step2_title">2) Fill credentials</h3>
+            <p data-i18n-html="st.wz_step2_desc">Enter URL and token fields, then run <b>Test connection</b> inside the instance card.</p>
+          </div>
+          <div class="wizard-step">
+            <h3 data-i18n="st.wz_step3_title">3) Save settings</h3>
+            <p data-i18n-html="st.wz_step3_desc">After a successful check, click <b>Save Settings</b>. Collect loop restarts automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ JENKINS ════════════════════════════════════════════ -->
+    <div id="sec-jenkins" class="section active">
+      <div class="sec-header">
+        <h2><span class="sec-icon"><img src="/static/icons/jenkins.svg" alt=""/></span><span data-i18n="st.sec_jenkins">Jenkins Instances</span></h2>
+        <button class="btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
+      </div>
+      <div id="jenkins-instances"></div>
+    </div>
+
+    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
+    <div id="sec-gitlab" class="section">
+      <div class="sec-header">
+        <h2><span class="sec-icon"><img src="/static/icons/gitlab.svg" alt=""/></span><span data-i18n="st.sec_gitlab">GitLab Instances</span></h2>
+        <button class="btn" onclick="addGitlabInst()" data-i18n="st.add_gitlab">+ Add GitLab</button>
+      </div>
+      <div id="gitlab-instances"></div>
+    </div>

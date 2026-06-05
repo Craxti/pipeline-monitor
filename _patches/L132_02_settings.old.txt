@@ -1,0 +1,6 @@
+.settings-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  height: 100vh;
+}

@@ -25,12 +25,14 @@ def _safe_error(exc: Exception) -> str:
 def check_connection(payload: dict[str, Any]) -> dict[str, Any]:
     """Validate credentials against Jenkins or GitLab API."""
     kind = str(payload.get("kind") or "").strip().lower()
-    if kind not in {"jenkins", "gitlab"}:
-        return {"ok": False, "message": "Unsupported kind. Use 'jenkins' or 'gitlab'."}
+    if kind not in {"jenkins", "gitlab", "github"}:
+        return {"ok": False, "message": "Unsupported kind. Use 'jenkins', 'gitlab', or 'github'."}
 
     if kind == "jenkins":
         return _test_jenkins(payload)
-    return _test_gitlab(payload)
+    if kind == "gitlab":
+        return _test_gitlab(payload)
+    return _test_github(payload)
 
 
 def _test_jenkins(payload: dict[str, Any]) -> dict[str, Any]:
@@ -88,3 +90,49 @@ def _test_gitlab(payload: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "message": f"GitLab connection failed: {_safe_error(exc)}"}
     except Exception as exc:
         return {"ok": False, "message": f"GitLab response is invalid: {_safe_error(exc)}"}
+
+
+def _test_github(payload: dict[str, Any]) -> dict[str, Any]:
+    from clients.github_client import GitHubClient, normalize_github_api_base
+
+    base = _clean_url(payload.get("url")) or "https://github.com"
+    token = str(payload.get("token") or "").strip()
+    verify_ssl = _bool(payload.get("verify_ssl"), default=True)
+
+    if not token:
+        return {"ok": False, "message": "GitHub token is required."}
+
+    api_base = normalize_github_api_base(base)
+    try:
+        client = GitHubClient(url=base, token=token, verify_ssl=verify_ssl)
+        login = client.fetch_user_login()
+        if login:
+            return {"ok": True, "message": f"GitHub connected as '{login}' ({api_base})."}
+        return {"ok": True, "message": f"GitHub API reachable ({api_base})."}
+    except requests.RequestException as exc:
+        return {"ok": False, "message": f"GitHub connection failed: {_safe_error(exc)}"}
+    except Exception as exc:
+        return {"ok": False, "message": f"GitHub response is invalid: {_safe_error(exc)}"}
+
+
+def _test_github(payload: dict[str, Any]) -> dict[str, Any]:
+    from clients.github_client import GitHubClient, normalize_github_api_base
+
+    base = _clean_url(payload.get("url")) or "https://github.com"
+    token = str(payload.get("token") or "").strip()
+    verify_ssl = _bool(payload.get("verify_ssl"), default=True)
+
+    if not token:
+        return {"ok": False, "message": "GitHub token is required."}
+
+    api_base = normalize_github_api_base(base)
+    try:
+        client = GitHubClient(url=base, token=token, verify_ssl=verify_ssl)
+        login = client.fetch_user_login()
+        if login:
+            return {"ok": True, "message": f"GitHub connected as '{login}' ({api_base})."}
+        return {"ok": True, "message": f"GitHub API reachable ({api_base})."}
+    except requests.RequestException as exc:
+        return {"ok": False, "message": f"GitHub connection failed: {_safe_error(exc)}"}
+    except Exception as exc:
+        return {"ok": False, "message": f"GitHub response is invalid: {_safe_error(exc)}"}

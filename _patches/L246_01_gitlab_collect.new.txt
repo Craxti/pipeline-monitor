@@ -1,0 +1,33 @@
+from urllib.parse import quote_plus
+
+
+def _snapshot_has_gitlab_for_instance(snapshot, inst_label: str) -> bool:
+    """True if the current snapshot already contains GitLab builds for this instance."""
+    want = (inst_label or "").strip()
+    if not want:
+        return False
+    for b in getattr(snapshot, "builds", None) or []:
+        if (getattr(b, "source", None) or "").lower() != "gitlab":
+            continue
+        if (getattr(b, "source_instance", None) or "").strip() == want:
+            return True
+    return False
+
+
+def collect_gitlab_builds(
+    *,
+    cfg: dict,
+    since,
+    snapshot,
+    progress,
+    merge_build_records,
+    health: list,
+    config_instance_label,
+    logger,
+    incremental_collect: bool,
+    get_collector_state_int,
+    set_collector_state_int,
+    sqlite_available: bool,
+    check_cancelled,
+    incremental_stats: dict | None = None,
+) -> None:

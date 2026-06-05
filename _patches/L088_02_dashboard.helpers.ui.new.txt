@@ -1,0 +1,52 @@
+function _icAppendEventRow(wrap, ev) {
+  if (!wrap || !ev) return;
+  const row = document.createElement('article');
+  row.className = `ic-ev ic-feed-item ${ev.cls || ''}`.trim();
+  row.tabIndex = 0;
+  row.setAttribute('role', 'button');
+
+  const timeCol = document.createElement('div');
+  timeCol.className = 'ic-ev-time';
+  const when = document.createElement('time');
+  when.className = 'ic-ev-when';
+  when.dateTime = ev.tsIso || '';
+  when.textContent = fmt(ev.tsIso);
+  const rel = document.createElement('span');
+  rel.className = 'ic-ev-ago';
+  rel.textContent = ago(ev.tsIso) || '—';
+  timeCol.append(when, rel);
+
+  const body = document.createElement('div');
+  body.className = 'ic-ev-body';
+
+  const head = document.createElement('div');
+  head.className = 'ic-ev-head';
+  const badge = document.createElement('span');
+  badge.className = 'ic-ev-badge';
+  badge.textContent = ev.kind || '—';
+  const name = document.createElement('span');
+  name.className = 'ic-ev-name';
+  name.textContent = ev.name || '—';
+  head.append(badge, name);
+
+  const desc = document.createElement('p');
+  desc.className = 'ic-ev-desc';
+  const why = String(ev.desc || '').trim();
+  desc.textContent = why || (ev.title || '—');
+
+  body.append(head, desc);
+  row.append(timeCol, body);
+
+  if (typeof ev.onClick === 'function') {
+    const run = () => ev.onClick();
+    row.addEventListener('click', run);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        run();
+      }
+    });
+  }
+
+  wrap.appendChild(row);
+}

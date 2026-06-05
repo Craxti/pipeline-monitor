@@ -1,0 +1,5 @@
+            incremental = bool(
+                incremental_collect and sqlite_available and get_collector_state_int and set_collector_state_int
+            )
+
+            for proj_cfg in project_list:

@@ -1,0 +1,9 @@
+function _defaultBuildSourceValue() {
+  const sel = document.getElementById('f-source');
+  if (!sel) return 'gitlab';
+  if (sel.tagName === 'SELECT' && sel.options.length) return sel.options[0].value || 'gitlab';
+  return sel.value || 'gitlab';
+}
+
+function clearBuildFilters() {
+  document.getElementById('f-source').value  = _defaultBuildSourceValue();

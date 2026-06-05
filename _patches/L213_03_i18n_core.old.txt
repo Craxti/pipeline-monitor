@@ -1,0 +1,1 @@
+      empty_builds_gitlab: 'В снимке пока нет сборок GitLab. Запустите Collect после проверки настроек GitLab.',

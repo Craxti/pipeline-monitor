@@ -1,0 +1,4 @@
+      wz_guide_gitlab: 'Добавьте экземпляр ниже, укажите <b>URL GitLab</b> и <b>токен доступа</b>, нажмите <b>Проверить подключение</b>, затем <b>Сохранить</b>.',
+      wz_guide_github: 'Добавьте экземпляр ниже, укажите <b>URL GitHub</b> и <b>Personal Access Token</b> (repo + workflow), нажмите <b>Проверить подключение</b>, затем <b>Сохранить</b>.',
+      github_integration: 'Интеграция GitHub Actions',
+      github_integration_sub: 'Настройка мониторинга workflow runs в GitHub Actions.',

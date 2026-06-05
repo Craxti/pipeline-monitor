@@ -1,0 +1,12 @@
+#notif-btn {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.38rem 0.5rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1;
+}

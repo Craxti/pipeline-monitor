@@ -1,0 +1,1 @@
+      tests_intro: 'Тестовые джобы Jenkins и пайплайны GitLab, в имени которых есть test, e2e, spec, pytest и похожие слова.',

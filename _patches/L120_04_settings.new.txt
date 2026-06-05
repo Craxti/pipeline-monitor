@@ -1,0 +1,71 @@
+const _SETTINGS_SECTION_META = {
+  jenkins: {
+    titleKey: 'st.jenkins_integration',
+    subKey: 'st.jenkins_integration_sub',
+    guideKey: 'st.wz_guide_jenkins',
+    addFn: 'addJenkinsInst()',
+    addKey: 'st.add_jenkins',
+    wizard: true,
+  },
+  gitlab: {
+    titleKey: 'st.gitlab_integration',
+    subKey: 'st.gitlab_integration_sub',
+    guideKey: 'st.wz_guide_gitlab',
+    addFn: 'addGitlabInst()',
+    addKey: 'st.add_gitlab',
+    wizard: true,
+  },
+  general: {
+    titleKey: 'st.general_integration',
+    subKey: 'st.general_integration_sub',
+    wizard: false,
+  },
+  notifications: {
+    titleKey: 'st.notifications_integration',
+    subKey: 'st.notifications_integration_sub',
+    wizard: false,
+  },
+  docker: {
+    titleKey: 'st.docker_integration',
+    subKey: 'st.docker_integration_sub',
+    wizard: false,
+  },
+  ai: {
+    titleKey: 'st.ai_integration',
+    subKey: 'st.ai_integration_sub',
+    wizard: false,
+  },
+};
+
+function showSec(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const sec = document.getElementById('sec-' + name);
+  if (sec) sec.classList.add('active');
+  document.querySelectorAll('.snav-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.sec === name)
+  );
+  const meta = _SETTINGS_SECTION_META[name] || _SETTINGS_SECTION_META.jenkins;
+  const titleEl = $('settings-section-title');
+  const subEl = $('settings-section-sub');
+  const wiz = $('integration-wizard');
+  const guideEl = $('settings-wizard-guide');
+  const addBtn = $('wizard-add-btn');
+  if (titleEl) {
+    titleEl.textContent = t(meta.titleKey);
+    titleEl.setAttribute('data-i18n', meta.titleKey);
+  }
+  if (subEl) {
+    subEl.textContent = t(meta.subKey);
+    subEl.setAttribute('data-i18n', meta.subKey);
+  }
+  if (wiz) wiz.hidden = !meta.wizard;
+  if (guideEl && meta.guideKey) {
+    guideEl.innerHTML = t(meta.guideKey);
+    guideEl.setAttribute('data-i18n-html', meta.guideKey);
+  }
+  if (addBtn && meta.addFn) {
+    addBtn.setAttribute('onclick', meta.addFn);
+    addBtn.textContent = t(meta.addKey);
+    addBtn.setAttribute('data-i18n', meta.addKey);
+  }
+}

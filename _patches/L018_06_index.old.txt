@@ -1,0 +1,9 @@
+<div id="tab-panel-log-intel" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-log-intel" hidden>
+<section id="sec-log-intel" class="dash-section">
+  <div class="panel" id="panel-log-intel-list">
+    <div class="panel-head">
+      <h2>&#128270; <span data-i18n="dash.log_intel_title">Container log intelligence</span></h2>
+      <span class="panel-count" id="log-intel-count">0</span>
+      <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="refreshLogIntelList" title="Refresh">&#8635;</button>
+    </div>
+    <p class="panel-hint" data-i18n="dash.log_intel_hint">Live models per Docker container: clustering → correlation graph.</p>

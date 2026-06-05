@@ -1,0 +1,7 @@
+    const rows = _sortTestsRows(scoped);
+    if (!rows.length && data.has_more && (uiSource === 'pipelines' || uiSource === 'gitlab_test')) {
+      s.page++;
+      window.requestAnimationFrame(() => { loadTests(); });
+      return;
+    }
+    if (s.page === 1 && !rows.length) {

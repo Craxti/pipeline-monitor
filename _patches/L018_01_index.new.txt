@@ -1,0 +1,15 @@
+<div id="tab-panel-test-runs" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-test-runs" hidden>
+<section id="sec-test-runs" class="dash-section">
+<p class="dash-section-intro" data-i18n="dash.tests_intro">Jenkins test jobs and GitLab pipelines whose name contains test-related keywords (test, e2e, spec, pytest, etc.).</p>
+<!-- ── Test Runs Panel ── -->
+<div class="panel" id="panel-tests">
+  <div class="panel-head">
+    <h2><span class="panel-icon panel-icon--tests" aria-hidden="true"></span><span data-i18n="dash.tests_runs_title">Test Runs</span></h2>
+    <span class="panel-count" id="tests-count">0</span>
+    <span class="panel-count" id="tests-breakdown" style="border-color:transparent;color:var(--muted);font-size:.72rem">—</span>
+    <div class="filters">
+      <select class="f-select" id="f-tsource">
+        <option value="pipelines" selected data-i18n="dash.opt_test_pipelines">Jenkins + GitLab test pipelines</option>
+        <option value="jenkins" data-i18n="dash.opt_test_jenkins">Jenkins only</option>
+        <option value="gitlab_test" data-i18n="dash.opt_test_gitlab">GitLab test pipelines</option>
+      </select>

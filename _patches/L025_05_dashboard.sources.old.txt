@@ -1,0 +1,14 @@
+  const sel = document.getElementById('f-source');
+  if (!sel) return;
+  // Rebuild options every time (sources can change after Collect / settings updates).
+  const want = _desiredBuildSourceFilter();
+  while (sel.options.length > 1) sel.remove(1); // keep "All sources"
+  sources.forEach(src => {
+    const opt = document.createElement('option');
+    opt.value = src;
+    opt.textContent = _sourceOptionLabel(src);
+    sel.appendChild(opt);
+  });
+  // Keep URL/LS filter even if /api/sources is momentarily empty during Collect.
+  if (want) _ensureSourceSelectOption(sel, want);
+  if (want && [...sel.options].some((o) => o.value === want)) sel.value = want;

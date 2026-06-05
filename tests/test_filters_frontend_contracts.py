@@ -2,12 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).parent.parent
 
 
 def _read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
+
+
+def test_populate_sources_reapplies_url_filters_after_dropdown_rebuild() -> None:
+    sources_js = _read("web/static/dashboard.sources.js")
+    init_js = _read("web/static/dashboard.init.js")
+    assert "_readURLFilters()" in sources_js
+    assert "_populateSourcesPromise" in sources_js
+    assert "_pickBuildSourceValue" in sources_js
+    assert "abortFetchKey(k)" in init_js
+    assert "populateSourcesAndInstances().then(() => {" in init_js
+    assert "_initObserver('builds', loadBuilds)" in init_js
 
 
 def test_url_filter_params_include_test_and_service_status() -> None:
@@ -44,17 +54,9 @@ def test_trends_reset_filters_contract() -> None:
 
 def test_trends_scope_module_is_loaded_before_trends_script() -> None:
     html = _read("web/templates/index.html")
-    adapter_idx = html.find("/static/dashboard.trends.filters.adapter.js")
-    scope_idx = html.find("/static/dashboard.trends.scope.js")
-    trends_idx = html.find("/static/dashboard.trends.js")
-    assert adapter_idx != -1 and scope_idx != -1 and trends_idx != -1
-    assert adapter_idx < scope_idx
-    assert scope_idx < trends_idx
-
-
-def test_trends_empty_reason_contract_present() -> None:
-    js = _read("web/static/dashboard.trends.js")
-    assert "dash.trend_kpi_problem_jobs_why_empty" in js
+    assert 'data-tab="trends"' not in html
+    assert 'id="tab-panel-trends"' not in html
+    assert "/static/dashboard.trends.js" not in html
 
 
 def test_chat_prompt_is_not_hardcoded_in_helpers_ui() -> None:
@@ -66,16 +68,7 @@ def test_services_tab_required_panels_contract() -> None:
     html = _read("web/templates/index.html")
     assert 'id="tab-panel-services"' in html
     assert 'id="panel-svcs"' in html
-    assert 'id="panel-timeline"' in html
+    assert 'id="ic-cards"' in html
     assert 'id="tab-panel-incidents"' in html
     assert "/static/dashboard.incidents.js" in html
     assert 'id="panel-flaky"' not in html
-
-
-def test_trends_global_scope_toggle_contract() -> None:
-    html = _read("web/templates/index.html")
-    js = _read("web/static/dashboard.trends.js")
-    adapter = _read("web/static/dashboard.trends.filters.adapter.js")
-    assert 'id="trends-scope-global"' in html
-    assert "_syncTrendsScopeToGlobalIfEnabled" in js
-    assert "applyScopeToGlobalFilters" in adapter

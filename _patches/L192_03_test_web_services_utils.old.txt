@@ -1,0 +1,4 @@
+        assert out == ["gitlab", "jenkins"]
+
+
+class TestBuildsEndpoints:

@@ -1,0 +1,15 @@
+      ['builds', 'failures', 'tests', 'services'].forEach((k) => {
+        try { abortFetchKey(k); } catch { /* ignore */ }
+      });
+      // Do not blank tables on refresh; keep current rows until new data arrives.
+
+      // Update dropdowns (can change after Collect / settings updates).
+      await populateSourcesAndInstances();
+      await Promise.all([
+        loadSummary(),
+        loadBuilds(),
+        loadFailures(),
+        loadTests(),
+        loadUptimeData().then(() => loadServices()),
+        loadSystemStats(),
+      ]);

@@ -1,0 +1,3 @@
+  } else if (_dashTab === 'builds') {
+    resetBuilds(true);
+  } else if (_dashTab === 'services') {

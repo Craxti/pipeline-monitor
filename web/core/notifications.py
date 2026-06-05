@@ -7,7 +7,6 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from models.models import CISnapshot
 
-
 EventAppender = Callable[[List[dict]], None]
 
 

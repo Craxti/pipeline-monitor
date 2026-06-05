@@ -1,0 +1,2 @@
+    ['btn-collect', 'dash.collect'],
+    ['btn-collect-full', 'dash.collect_full'],

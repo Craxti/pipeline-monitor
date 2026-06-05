@@ -1,0 +1,2 @@
+      empty_builds_gitlab: 'В снимке пока нет сборок GitLab. Запустите Collect после проверки настроек GitLab.',
+      empty_builds_github: 'В снимке пока нет GitHub workflow runs. Запустите Collect после проверки настроек GitHub.',

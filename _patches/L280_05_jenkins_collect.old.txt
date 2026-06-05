@@ -1,0 +1,9 @@
+                console_parser = JenkinsConsoleParser(
+                    url=inst["url"],
+                    username=inst.get("username", ""),
+                    token=inst.get("token", ""),
+                    jobs=jobs_for_console,
+                    max_builds=0,
+                    workers=int(inst.get("console_workers", 8) or 8),
+                    verify_ssl=bool(inst.get("verify_ssl", True)),
+                    retries=int(inst.get("console_retries", 3) or 3),

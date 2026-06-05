@@ -5,7 +5,17 @@ from __future__ import annotations
 import time
 
 
-def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logger, check_cancelled) -> None:
+def collect_docker_services(
+    *,
+    cfg: dict,
+    snapshot,
+    progress,
+    health: list,
+    logger,
+    check_cancelled,
+    snap_lock=None,
+    maybe_save_partial=None,
+) -> None:
     """Collect container/service status via Docker monitor."""
     from docker_monitor.monitor import DockerMonitor
     from web.services.collect_sync.exceptions import CollectCancelled
@@ -48,7 +58,16 @@ def collect_docker_services(*, cfg: dict, snapshot, progress, health: list, logg
         )
         all_services.extend(http_monitor._check_http())
         check_cancelled()
-        snapshot.services = all_services
+        if snap_lock is not None:
+            with snap_lock:
+                snapshot.services = all_services
+        else:
+            snapshot.services = all_services
+        if maybe_save_partial is not None:
+            try:
+                maybe_save_partial(snapshot)
+            except Exception:
+                pass
         logger.info(
             "Docker monitor completed: hosts=%d, http_checks=%d, services=%d",
             len(hosts),

@@ -1,0 +1,14 @@
+  const payload = isJenkins
+    ? {
+        kind: 'jenkins',
+        url: (inst.url || '').trim(),
+        username: inst.username || '',
+        token: inst.token || '',
+        verify_ssl: inst.verify_ssl !== false,
+      }
+    : {
+        kind: 'gitlab',
+        url: (inst.url || '').trim(),
+        token: inst.token || '',
+        verify_ssl: inst.verify_ssl !== false,
+      };

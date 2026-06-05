@@ -1,0 +1,5 @@
+  <div class="ic-feed-head" id="ic-feed-head" style="display:none">
+    <span class="ic-feed-title" data-i18n="icenter.feed_title">Incidents</span>
+    <span class="ic-feed-count" id="ic-feed-count">0</span>
+  </div>
+  <div class="ic-feed" id="ic-cards" style="display:none"></div>

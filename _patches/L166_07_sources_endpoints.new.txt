@@ -1,0 +1,5 @@
+    if not enabled_gitlab:
+        sources.discard("gitlab")
+    if not enabled_github:
+        sources.discard("github")
+    return sorted(sources)

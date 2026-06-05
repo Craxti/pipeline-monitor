@@ -1,0 +1,10 @@
+    <h2><span data-i18n="dash.builds_title">Builds / Pipelines</span></h2>
+    <span class="panel-count" id="builds-count">0</span>
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetBuilds" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <button class="expand-btn" id="expand-builds" data-dash-action="toggleExpand" data-dash-args='["builds"]' data-i18n="dash.expand_panel">Expand</button>
+  </div>
+  <div class="builds-toolbar">
+    <div class="filters">
+      <select class="f-select" id="f-source">
+        <option value="" data-i18n="dash.opt_all_sources">All sources</option>
+      </select>

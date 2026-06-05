@@ -138,7 +138,9 @@ async function loadServices() {
       const host = String(sv.source_instance || '');
       const hostArg = JSON.stringify(host);
       const p = { container: sv.name, status: sv.status, docker_host: host };
-      logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>`;
+      const keyArg = JSON.stringify(`${host}::${sv.name}`);
+      logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>
+        <button type="button" class="act-btn lintel-btn" onclick='openLogIntelTab(${keyArg})' title="${_svgTitleAttr(t('dash.log_intel_open'))}"></button>`;
       if (up) {
         actionBtn = `<div class="act-group">
           <button type="button" class="act-btn docker-stop" title="Остановить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"stop",${hostArg}]'>&#9632; Stop</button>

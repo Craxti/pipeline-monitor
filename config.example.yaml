@@ -32,6 +32,24 @@ gitlab_instances:
   projects: []
   max_pipelines: 10
   show_all_projects: false
+github_instances:
+- name: GitHub
+  enabled: false
+  url: https://github.com
+  token: ""
+  repos: []
+  max_runs: 10
+  show_all_repos: false
+  verify_ssl: true
+github_instances:
+- name: GitHub
+  enabled: false
+  url: https://github.com
+  token: ""
+  repos: []
+  max_runs: 10
+  show_all_repos: false
+  verify_ssl: true
 parsers:
   pytest_xml_dirs: []
   allure_json_dirs: []

@@ -8,383 +8,125 @@
 <meta http-equiv="Expires" content="0"/>
 <link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
-<link rel="stylesheet" href="/static/dashboard.css?v=20260417i"/>
-<link rel="stylesheet" href="/static/dashboard.shell.css?v=20260420k"/>
 <title>Settings — CI/CD Monitor</title>
-<style>
-  :root{
-    --ok:#22c55e;--fail:#ef4444;--warn:#f59e0b;--info:#3b82f6;--purple:#a855f7;
-    --bg:#0f172a;--surface:#1e293b;--surface2:#263147;
-    --text:#e2e8f0;--muted:#94a3b8;--border:#334155;
-    --radius:.75rem;
-  }
-  html.light{
-    --bg:#f1f5f9;--surface:#ffffff;--surface2:#f8fafc;
-    --text:#0f172a;--muted:#64748b;--border:#cbd5e1;
-  }
-  html.light .snav-item:hover{background:rgba(0,0,0,.05);color:var(--text)}
-  html.light th{background:rgba(0,0,0,.04)}
-  html.light tr:hover td{background:rgba(0,0,0,.03)}
-  html.light .inst-badge.vpn{background:var(--surface2);color:var(--muted)}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:2rem}
-
-  header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:20}
-  header .app-logo{
-    height:2.15rem;
-    width:auto;
-    display:block;
-    flex-shrink:0;
-    padding:.22rem;
-    border-radius:.65rem;
-    background:var(--surface2);
-    border:1px solid var(--border);
-  }
-  header h1{font-size:1.25rem;font-weight:700}
-  .pill{background:var(--surface2);color:var(--muted);border-radius:999px;font-size:.7rem;padding:.2rem .65rem;font-weight:600}
-
-  .btn{display:inline-flex;align-items:center;gap:.35rem;background:var(--info);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-size:.85rem;cursor:pointer;font-weight:600;text-decoration:none;transition:opacity .15s;white-space:nowrap}
-  .btn:hover{opacity:.85}
-  .btn:disabled{opacity:.4;cursor:not-allowed}
-  .btn-ghost{background:var(--surface2)}
-  .btn-danger{background:#b91c1c}
-  .btn-sm{padding:.3rem .7rem;font-size:.8rem}
-  .btn-icon{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .45rem;border-radius:.25rem;transition:color .15s;line-height:1}
-  .btn-icon:hover{color:var(--fail)}
-
-  .page{display:grid;grid-template-columns:210px 1fr;gap:1.5rem;max-width:1300px;margin:0 auto;padding:2rem}
-  /* dashboard.css задаёт main{padding…} — на настройках получается двойной отступ и «кривая» сетка относительно крошек */
-  .page > main{padding:0;margin:0;max-width:none;min-width:0;width:100%}
-
-  .side-nav{position:sticky;top:5rem;align-self:start;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:.5rem;overflow:hidden}
-  .snav-item{display:flex;align-items:center;gap:.65rem;width:100%;padding:.65rem .9rem;border:none;background:transparent;color:var(--muted);font-size:.875rem;border-radius:.45rem;cursor:pointer;text-align:left;margin-bottom:.1rem;transition:all .15s}
-  .snav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
-  .snav-item.active{background:var(--surface2);color:var(--text);font-weight:600}
-  .snav-icon{font-size:1rem;width:1.3rem;text-align:center;flex-shrink:0}
-  .snav-divider{height:1px;background:var(--border);margin:.4rem 0}
-
-  /* ── Section header row (title + Add button) — как Jenkins / GitLab ── */
-  .sec-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;min-height:3rem;box-sizing:border-box}
-  .sec-header h2{flex:1;min-width:0;font-size:1rem;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:.45rem;line-height:1.25;margin:0}
-  .sec-header .btn,.sec-header .btn-sm{flex-shrink:0}
-
-  /* ── Instance card ── */
-  .inst-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden}
-  .inst-hdr{display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:nowrap;min-width:0;min-height:3rem;box-sizing:border-box}
-  .inst-badge{
-    font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:.3rem;background:var(--info);color:#fff;
-    text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;
-    display:inline-flex;align-items:center;justify-content:center;
-    min-width:5.5rem;box-sizing:border-box;
-  }
-  .inst-badge.gl{background:#e2433e}
-  .inst-badge.tg{background:#0088cc}
-  .inst-badge.ai{background:var(--purple)}
-  .inst-badge.vpn{background:var(--surface);color:var(--muted);border:1px solid var(--border);box-shadow:none}
-  .inst-name-inp{background:transparent;border:none;color:var(--text);font-size:.95rem;font-weight:600;font-family:inherit;outline:none;flex:1;min-width:0;line-height:1.35;min-height:1.35em}
-  .inst-name-inp::placeholder{color:var(--muted)}
-  .inst-name-inp:focus{border-bottom:1px solid var(--info)}
-  .inst-sec-title{flex:1;min-width:0;font-size:.95rem;font-weight:600;color:var(--text);line-height:1.35;display:flex;align-items:center;overflow-wrap:anywhere;word-wrap:break-word}
-  .inst-hdr .inst-hdr-pull{margin-left:auto;flex-shrink:0}
-  .inst-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
-
-  /* ── Form fields ── */
-  .field-row{display:flex;flex-direction:column;gap:.3rem}
-  .field-label{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-  .field-hint{font-size:.78rem;color:var(--muted);margin-top:.2rem}
-  .field-input{background:var(--surface2);border:1px solid var(--border);border-radius:.5rem;color:var(--text);padding:.55rem .8rem;font-size:.875rem;width:100%;outline:none;transition:border-color .15s;font-family:inherit}
-  .field-input:focus{border-color:var(--info)}
-  .field-input[type=number]{width:140px}
-  .inst-body .field-input[type=number]{width:100%;max-width:100%}
-  select.field-input{cursor:pointer}
-  .two-col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start}
-  .three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;align-items:start}
-  .pw-wrap{display:flex;gap:.5rem;align-items:stretch}
-  .pw-wrap .field-input{flex:1}
-
-  /* ── Toggle ── */
-  .toggle{display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.875rem;user-select:none}
-  .toggle-track{position:relative;width:42px;height:24px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;flex-shrink:0;transition:background .2s,border-color .2s}
-  .toggle input{position:absolute;opacity:0;width:0;height:0}
-  .toggle input:checked + .toggle-track{background:var(--info);border-color:var(--info)}
-  .toggle input:checked + .toggle-track .toggle-knob{left:20px}
-  .toggle-knob{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;pointer-events:none}
-
-  /* ── Sub-section (jobs/projects within an instance) ── */
-  .sub-sec{border-top:1px solid var(--border);margin-top:.5rem;padding-top:1rem}
-  .sub-sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
-
-  /* ── Tables (единый вид на всех вкладках: Jenkins / GitLab / Docker / HTTP) ── */
-  #jenkins-instances,#gitlab-instances,#telegram-bots{width:100%;min-width:0}
-  .inst-body > .st-table-wrap:first-child{margin-top:0}
-  .st-table-wrap{
-    width:100%;
-    max-width:100%;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    border:1px solid var(--border);
-    border-radius:.5rem;
-    background:var(--surface2);
-    margin-top:.15rem;
-  }
-  .st-table-wrap table{
-    width:100%;
-    min-width:100%;
-    border-collapse:collapse;
-    font-size:.82rem;
-    table-layout:fixed;
-  }
-  .st-table-wrap thead th{
-    text-align:left;
-    padding:.52rem 1rem;
-    color:var(--muted);
-    font-size:.68rem;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    border-bottom:1px solid var(--border);
-    background:rgba(0,0,0,.14);
-    vertical-align:middle;
-  }
-  html.light .st-table-wrap thead th{background:rgba(0,0,0,.05)}
-  .st-table-wrap th.c,.st-table-wrap td.c{text-align:center}
-  .st-table-wrap td{
-    padding:.48rem 1rem;
-    border-bottom:1px solid var(--border);
-    vertical-align:middle;
-    word-wrap:break-word;
-  }
-  .st-table-wrap tbody tr:last-child td{border-bottom:none}
-  .st-table-wrap tbody tr:hover td{background:rgba(255,255,255,.03)}
-  html.light .st-table-wrap tbody tr:hover td{background:rgba(0,0,0,.03)}
-  .st-table-wrap th.st-col-actions{text-align:center}
-  .st-col-actions{width:2.85rem;min-width:2.85rem;max-width:2.85rem;text-align:center!important;padding-left:.35rem!important;padding-right:.35rem!important}
-  .st-col-actions .btn-icon{margin:0 auto;display:inline-flex}
-  .st-col-tight{width:7.25rem;min-width:7.25rem;max-width:9rem;text-align:center!important}
-  .st-col-mid{width:9.25rem;min-width:9.25rem;max-width:11rem;text-align:center!important}
-  .st-col-http-name{width:26%;min-width:11rem}
-  .tbl-input{
-    background:transparent;border:1px solid transparent;border-radius:.35rem;color:var(--text);
-    padding:.38rem .55rem;font-size:.82rem;width:100%;max-width:100%;outline:none;
-    transition:border-color .15s,background .15s;font-family:inherit;box-sizing:border-box;
-  }
-  .tbl-input:hover{border-color:var(--border)}
-  .tbl-input:focus{border-color:var(--info);background:var(--surface)}
-  .empty-row td{text-align:center;color:var(--muted);padding:1.35rem 1rem!important;font-style:italic;border-bottom:none!important}
-  .st-panel-table-body{padding:0 1.25rem 1.2rem}
-
-  /* ── General/Notifications/Docker panels ── */
-  .panel{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:1.25rem;overflow:hidden}
-  .panel-header{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-  .panel-header h2{font-size:.95rem;font-weight:600}
-  .form-body{padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
-  .danger-card{border:1px solid rgba(239,68,68,.45);background:rgba(127,29,29,.16)}
-  .danger-text{font-size:.83rem;color:#fecaca;line-height:1.5}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.72);display:none;align-items:center;justify-content:center;z-index:120}
-  .modal-backdrop.show{display:flex}
-  .modal{width:min(560px, calc(100vw - 2rem));background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 18px 42px rgba(0,0,0,.45);overflow:hidden}
-  .modal-hdr{padding:1rem 1.2rem;border-bottom:1px solid var(--border);font-size:1rem;font-weight:700}
-  .modal-body{padding:1rem 1.2rem;color:var(--muted);line-height:1.55}
-  .modal-actions{padding:0 1.2rem 1.2rem;display:flex;justify-content:flex-end;gap:.6rem}
-  .wizard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem}
-  .wizard-step{background:var(--surface2);border:1px solid var(--border);border-radius:.6rem;padding:.85rem}
-  .wizard-step h3{font-size:.82rem;margin-bottom:.35rem}
-  .wizard-step p{font-size:.8rem;color:var(--muted);line-height:1.45}
-  .wizard-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
-  .inst-test-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
-  .test-status{font-size:.78rem;color:var(--muted)}
-  .test-status.ok{color:var(--ok)}
-  .test-status.err{color:var(--fail)}
-
-  /* ── Empty instance placeholder ── */
-  .empty-card{border:2px dashed var(--border);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--muted);font-size:.9rem;margin-bottom:1rem}
-
-  /* ── Toast ── */
-  .toast{position:fixed;bottom:76px;right:1.5rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.8rem 1.25rem;font-size:.875rem;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;z-index:100;pointer-events:none;max-width:380px}
-  .toast.show{opacity:1;transform:translateY(0)}
-  .toast.ok{border-left:4px solid var(--ok)}
-  .toast.warn{border-left:4px solid var(--warn)}
-  .toast.err{border-left:4px solid var(--fail)}
-
-  .section{display:none}.section.active{display:block}
-  a{color:var(--info);text-decoration:none}a:hover{text-decoration:underline}
-  .lang-toggle{display:inline-flex;border:1px solid var(--border);border-radius:.4rem;overflow:hidden;flex-shrink:0;margin-right:.35rem}
-  .lang-toggle button{background:var(--surface2);border:none;color:var(--muted);padding:.35rem .55rem;font-size:.72rem;cursor:pointer;font-weight:600}
-  .lang-toggle button:hover{background:rgba(255,255,255,.05);color:var(--text)}
-  .lang-toggle button.active{background:var(--info);color:#fff}
-  .breadcrumb-strip{max-width:1300px;margin:0 auto;padding:.35rem 2rem 0;font-size:.82rem;color:var(--muted)}
-  .breadcrumb-strip a{color:var(--info);text-decoration:none}
-  .breadcrumb-strip a:hover{text-decoration:underline}
-  .page-lede{max-width:1300px;margin:0 auto 1rem;padding:0 2rem;font-size:.9rem;color:var(--muted);line-height:1.55}
-
-  /* Anti-copy / anti-selection (best-effort; does not provide real security). */
-  body[data-page="settings"].lockdown{
-    -webkit-user-select:none;
-    user-select:none;
-  }
-  body[data-page="settings"].lockdown input,
-  body[data-page="settings"].lockdown textarea,
-  body[data-page="settings"].lockdown select{
-    -webkit-user-select:text;
-    user-select:text;
-  }
-  body[data-page="settings"].lockdown ._ss-block{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.88);
-    color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:1rem;
-    font-weight:700;
-    z-index:99999;
-    pointer-events:none;
-    opacity:0;
-    transition:opacity .12s ease;
-  }
-  body[data-page="settings"].lockdown ._ss-block.on{opacity:1}
-
-  /* Privacy mask for screen capture / recordings: blur and block pointer events */
-  body[data-page="settings"].privacy-on .sensitive{
-    filter: blur(8px);
-    pointer-events:none;
-  }
-  body[data-page="settings"].privacy-on .sensitive::selection{background:transparent}
-  body[data-page="settings"].privacy-on input.sensitive,
-  body[data-page="settings"].privacy-on textarea.sensitive{
-    color: transparent !important;
-    text-shadow: 0 0 10px rgba(226,232,240,.65);
-    caret-color: transparent;
-  }
-  body[data-page="settings"].privacy-on .privacy-banner{
-    display:flex;
-  }
-  .privacy-banner{
-    display:none;
-    position:fixed;
-    left:1rem;
-    bottom:1rem;
-    z-index:99998;
-    background:rgba(15,23,42,.92);
-    border:1px solid var(--border);
-    border-radius:.75rem;
-    padding:.6rem .8rem;
-    gap:.6rem;
-    align-items:center;
-    max-width:min(520px, calc(100vw - 2rem));
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
-  }
-  .privacy-banner .pmsg{font-size:.82rem;color:var(--text);line-height:1.35}
-  .privacy-banner .btn{padding:.35rem .7rem;font-size:.78rem}
-  .mono{font-family:Consolas,'Courier New',monospace}
-  @media (max-width: 1100px){
-    .wizard-grid{grid-template-columns:1fr}
-  }
-</style>
+<link rel="stylesheet" href="/static/settings.css?v=20260610e"/>
+<link rel="stylesheet" href="/static/settings.modern.css?v=20260610e"/>
 </head>
-<body data-page="settings">
+<body data-page="settings" class="ui-modern settings-app">
 
 {% include 'partials/i18n_core.html' %}
 
-<header>
-  <img src="/static/logo-mark.png?v=20260417i" width="40" height="40" class="app-logo" alt="" decoding="async"/>
-  <h1 data-i18n="st.title">Settings</h1>
-  <span class="pill" data-i18n="dash.app_title">CI/CD Monitor</span>
-  <div style="display:flex;align-items:center;gap:.5rem;margin-left:auto">
-    <button type="button" class="btn btn-ghost" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" style="padding:.35rem .55rem;font-size:1rem;line-height:1" data-i18n-aria-label="dash.theme" aria-label="">&#9681;</button>
-    <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
-      <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
-      <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
+<div class="settings-shell">
+  <aside class="settings-sidebar" aria-label="Settings navigation">
+    <div class="settings-sidebar-brand">
+      <img src="/static/logo-mark.png?v=20260417i" width="28" height="28" alt="" decoding="async"/>
+      <span data-i18n="dash.app_title">CI/CD Monitor</span>
     </div>
-    <span id="save-status-hdr" style="font-size:.8rem;color:var(--muted)"></span>
-    <a href=".." class="btn btn-ghost" data-i18n="st.back">&#8592; Dashboard</a>
-    <button class="btn" id="save-btn-hdr" onclick="saveSettings()" style="background:#16a34a">
-      &#10003;&nbsp;<span data-i18n="st.save">Save Settings</span>
+    <div class="snav-group-label" data-i18n="st.nav_configuration">Configuration</div>
+    <a href=".." class="snav-link">
+      <span class="snav-link-ico snav-ico-dash" aria-hidden="true"></span>
+      <span data-i18n="st.nav_dashboard">Dashboard</span>
+    </a>
+    <div class="snav-group-label" data-i18n="st.nav_integrations">Integrations</div>
+    <button type="button" class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
+      <img class="snav-icon-img" src="/static/icons/jenkins.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_jenkins">Jenkins</span>
     </button>
-  </div>
-</header>
-
-<nav class="breadcrumb-strip" aria-label="Breadcrumb">
-  <a href=".." data-i18n="st.breadcrumb_dashboard">Dashboard</a> <span aria-hidden="true">/</span> <span data-i18n="st.title">Settings</span>
-</nav>
-<p class="page-lede" data-i18n="st.page_subtitle"></p>
-
-<div class="page">
-
-  <!-- ── Side nav ── -->
-  <nav class="side-nav">
-    <button class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
-      <span class="snav-icon">&#128296;</span><span data-i18n="st.nav_jenkins">Jenkins</span>
+    <button type="button" class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <img class="snav-icon-img" src="/static/icons/gitlab.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_gitlab">GitLab</span>
     </button>
-    <button class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
-      <span class="snav-icon">&#129347;</span><span data-i18n="st.nav_gitlab">GitLab</span>
+    <button type="button" class="snav-item" data-sec="github" onclick="showSec('github')">
+      <img class="snav-icon-img" src="/static/icons/github.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_github">GitHub Actions</span>
     </button>
     <div class="snav-divider"></div>
-    <button class="snav-item" data-sec="general" onclick="showSec('general')">
-      <span class="snav-icon">&#9881;</span><span data-i18n="st.nav_general">General</span>
+    <button type="button" class="snav-item" data-sec="general" onclick="showSec('general')">
+      <span class="snav-link-ico snav-ico-gear" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span>
     </button>
-    <button class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
-      <span class="snav-icon">&#128276;</span><span data-i18n="st.nav_notifications">Notifications</span>
+    <button type="button" class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
+      <span class="snav-link-ico snav-ico-bell" aria-hidden="true"></span><span data-i18n="st.nav_notifications">Notifications</span>
     </button>
-    <button class="snav-item" data-sec="docker" onclick="showSec('docker')">
-      <span class="snav-icon">&#128051;</span><span data-i18n="st.nav_docker">Docker / HTTP</span>
+    <button type="button" class="snav-item" data-sec="docker" onclick="showSec('docker')">
+      <span class="snav-link-ico snav-ico-docker" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span>
     </button>
-    <div class="snav-divider"></div>
-    <button class="snav-item" data-sec="ai" onclick="showSec('ai')">
-      <span class="snav-icon">&#129302;</span><span data-i18n="st.nav_ai">AI Assistant</span>
+    <button type="button" class="snav-item" data-sec="ai" onclick="showSec('ai')">
+      <span class="snav-link-ico snav-ico-ai" aria-hidden="true"></span><span data-i18n="st.nav_ai">AI Assistant</span>
     </button>
-  </nav>
+  </aside>
 
-  <main>
-    <div class="panel">
-      <div class="panel-header">
-        <h2>&#9889; <span data-i18n="st.wz_title">Quick Start Wizard</span></h2>
+  <div class="settings-main">
+    <header class="settings-topbar">
+      <div class="settings-topbar-left">
+        <span class="settings-topbar-ico" aria-hidden="true"></span>
+        <h1 data-i18n="st.topbar_title">Settings — CI/CD Monitor</h1>
       </div>
-      <div class="form-body">
-        <div class="wizard-grid">
-          <div class="wizard-step">
-            <h3 data-i18n="st.wz_step1_title">1) Choose source</h3>
-            <p data-i18n="st.wz_step1_desc">Pick Jenkins or GitLab. The wizard adds one instance and opens the corresponding section.</p>
-            <div class="wizard-actions">
-              <button type="button" class="btn btn-sm" onclick="startQuickSetup('jenkins')">Jenkins</button>
-              <button type="button" class="btn btn-sm" onclick="startQuickSetup('gitlab')">GitLab</button>
+      <div class="settings-topbar-actions">
+        <button type="button" class="btn btn-ghost btn-icon-round" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" data-i18n-aria-label="dash.theme" aria-label=""></button>
+        <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
+          <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
+          <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
+        </div>
+        <span id="save-status-hdr" class="save-status-hdr"></span>
+        <button type="button" class="btn" id="save-btn-hdr" onclick="saveSettings()">
+          <span data-i18n="st.save">Save Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="settings-content">
+      <main>
+        <div class="integration-header">
+          <h2 id="settings-section-title" data-i18n="st.jenkins_integration">Jenkins Integration</h2>
+          <p id="settings-section-sub" data-i18n="st.jenkins_integration_sub">Configure and manage your Jenkins CI/CD instance connections.</p>
+        </div>
+
+        <div id="integration-wizard" class="wizard-card panel">
+          <div class="wizard-card-head panel-header">
+            <h2 data-i18n="st.wz_title">Quick Start Wizard</h2>
+          </div>
+          <div class="form-body">
+            <div class="wizard-stepper" aria-hidden="true">
+              <div class="wizard-step-item active">
+                <span class="wizard-step-num">1</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step1_short">Connection Setup</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step1_sub">URL &amp; API Token</span>
+              </div>
+              <div class="wizard-step-item">
+                <span class="wizard-step-num">2</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step2_short">Select Projects</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step2_sub">Choose jobs to monitor</span>
+              </div>
+              <div class="wizard-step-item">
+                <span class="wizard-step-num">3</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step3_short">Finalize &amp; Sync</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step3_sub">Save and collect</span>
+              </div>
+            </div>
+            <p class="wizard-guide" id="settings-wizard-guide" data-i18n-html="st.wz_guide_jenkins">Add an instance below, enter <b>Jenkins Server URL</b> and <b>API Token</b>, run <b>Test connection</b>, then click <b>Save Settings</b>.</p>
+            <div class="wizard-form-actions" id="settings-wizard-actions">
+              <button type="button" class="btn btn-ghost" id="wizard-add-btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
+              <button type="button" class="btn" onclick="saveSettings()" data-i18n="st.save">Save Settings</button>
             </div>
           </div>
-          <div class="wizard-step">
-            <h3 data-i18n="st.wz_step2_title">2) Fill credentials</h3>
-            <p data-i18n-html="st.wz_step2_desc">Enter URL and token fields, then run <b>Test connection</b> inside the instance card.</p>
-          </div>
-          <div class="wizard-step">
-            <h3 data-i18n="st.wz_step3_title">3) Save settings</h3>
-            <p data-i18n-html="st.wz_step3_desc">After a successful check, click <b>Save Settings</b>. Collect loop restarts automatically.</p>
-          </div>
         </div>
-      </div>
-    </div>
 
     <!-- ═══ JENKINS ════════════════════════════════════════════ -->
     <div id="sec-jenkins" class="section active">
-      <div class="sec-header">
-        <h2>&#128296; <span data-i18n="st.sec_jenkins">Jenkins Instances</span></h2>
-        <button class="btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
-      </div>
       <div id="jenkins-instances"></div>
     </div>
 
     <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
     <div id="sec-gitlab" class="section">
-      <div class="sec-header">
-        <h2>&#129347; <span data-i18n="st.sec_gitlab">GitLab Instances</span></h2>
-        <button class="btn" onclick="addGitlabInst()" data-i18n="st.add_gitlab">+ Add GitLab</button>
-      </div>
       <div id="gitlab-instances"></div>
+    </div>
+
+    <!-- ═══ GITHUB ═════════════════════════════════════════════ -->
+    <div id="sec-github" class="section">
+      <div id="github-instances"></div>
     </div>
 
     <!-- ═══ GENERAL ════════════════════════════════════════════ -->
     <div id="sec-general" class="section">
       <div class="sec-header">
-        <h2>&#9881; <span data-i18n="st.nav_general">General</span></h2>
+        <h2><span class="sec-icon snav-icon-dot" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span></h2>
       </div>
       <div class="inst-card">
         <div class="inst-hdr">
@@ -426,26 +168,6 @@
           </div>
         </div>
       </div>
-      <div class="inst-card">
-        <div class="inst-hdr">
-          <span class="inst-badge">UI</span>
-          <span class="inst-sec-title" data-i18n="st.display">Display</span>
-        </div>
-        <div class="inst-body">
-          <div class="two-col">
-            <div class="field-row">
-              <div class="field-label" data-i18n="st.top_failures">Top N Failing Tests</div>
-              <input type="number" id="g-top-failures" class="field-input" min="5" max="100">
-            </div>
-            <div class="field-row">
-              <div class="field-label" data-i18n="st.log_level">Log Level</div>
-              <select id="g-log-level" class="field-input">
-                <option>DEBUG</option><option>INFO</option><option>WARNING</option><option>ERROR</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
       <div class="inst-card danger-card">
         <div class="inst-hdr">
           <span class="inst-badge" style="background:#b91c1c">DATA</span>
@@ -463,7 +185,7 @@
     <!-- ═══ NOTIFICATIONS ══════════════════════════════════════ -->
     <div id="sec-notifications" class="section">
       <div class="sec-header">
-        <h2>&#128276; <span data-i18n="st.nav_notifications">Notifications</span></h2>
+        <h2><span class="sec-icon snav-icon-dot snav-icon-dot--warn" aria-hidden="true"></span><span data-i18n="st.nav_notifications">Notifications</span></h2>
         <button type="button" class="btn" onclick="addTgBot()" data-i18n="st.add_telegram">+ Add Telegram bot</button>
       </div>
       <div class="inst-card">
@@ -489,7 +211,7 @@
     <!-- ═══ DOCKER ══════════════════════════════════════════════ -->
     <div id="sec-docker" class="section">
       <div class="sec-header">
-        <h2>&#128051; <span data-i18n="st.nav_docker">Docker / HTTP</span></h2>
+        <h2><span class="sec-icon snav-icon-dot snav-icon-dot--teal" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span></h2>
       </div>
       <div class="inst-card">
         <div class="inst-hdr">
@@ -583,7 +305,7 @@
     <!-- ═══ AI ASSISTANT ════════════════════════════════════════ -->
     <div id="sec-ai" class="section">
       <div class="sec-header">
-        <h2>&#129302; <span data-i18n="st.nav_ai">AI Assistant</span></h2>
+        <h2><span class="sec-icon snav-icon-dot snav-icon-dot--purple" aria-hidden="true"></span><span data-i18n="st.nav_ai">AI Assistant</span></h2>
       </div>
       <div class="inst-card">
         <div class="inst-hdr">
@@ -673,7 +395,7 @@
       <div class="inst-card">
         <div class="inst-hdr">
           <span class="inst-badge vpn">VPN</span>
-          <span class="inst-sec-title">&#128279; <span data-i18n="st.ai_proxy_title">OpenAI proxy (VPN)</span></span>
+          <span class="inst-sec-title"><span data-i18n="st.ai_proxy_title">OpenAI proxy (VPN)</span></span>
           <button type="button" class="btn btn-sm btn-ghost inst-hdr-pull" onclick="testOpenaiProxyEgress()" data-i18n-title="st.proxy_test_egress_title" title="">Test egress IP</button>
         </div>
         <div class="inst-body">
@@ -751,7 +473,9 @@
       </div>
     </div>
 
-  </main>
+      </main>
+    </div>
+  </div>
 </div>
 
 <a href=".." class="app-watermark" aria-label="CI/CD Monitor">
@@ -782,18 +506,91 @@
 // ── State ──────────────────────────────────────────────────────────────────────
 let _ji = [];   // jenkins instances
 let _gi = [];   // gitlab instances
+let _ghi = [];  // github instances
 let _tgBots = []; // telegram bot rows
 let _hc = [];   // http checks
 let _dc = [];   // docker container names
 let _dh = [];   // docker remote hosts
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
+const _SETTINGS_SECTION_META = {
+  jenkins: {
+    titleKey: 'st.jenkins_integration',
+    subKey: 'st.jenkins_integration_sub',
+    guideKey: 'st.wz_guide_jenkins',
+    addFn: 'addJenkinsInst()',
+    addKey: 'st.add_jenkins',
+    wizard: true,
+  },
+  gitlab: {
+    titleKey: 'st.gitlab_integration',
+    subKey: 'st.gitlab_integration_sub',
+    guideKey: 'st.wz_guide_gitlab',
+    addFn: 'addGitlabInst()',
+    addKey: 'st.add_gitlab',
+    wizard: true,
+  },
+  github: {
+    titleKey: 'st.github_integration',
+    subKey: 'st.github_integration_sub',
+    guideKey: 'st.wz_guide_github',
+    addFn: 'addGithubInst()',
+    addKey: 'st.add_github',
+    wizard: true,
+  },
+  general: {
+    titleKey: 'st.general_integration',
+    subKey: 'st.general_integration_sub',
+    wizard: false,
+  },
+  notifications: {
+    titleKey: 'st.notifications_integration',
+    subKey: 'st.notifications_integration_sub',
+    wizard: false,
+  },
+  docker: {
+    titleKey: 'st.docker_integration',
+    subKey: 'st.docker_integration_sub',
+    wizard: false,
+  },
+  ai: {
+    titleKey: 'st.ai_integration',
+    subKey: 'st.ai_integration_sub',
+    wizard: false,
+  },
+};
+
 function showSec(name) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById('sec-' + name).classList.add('active');
+  const sec = document.getElementById('sec-' + name);
+  if (sec) sec.classList.add('active');
   document.querySelectorAll('.snav-item').forEach(b =>
     b.classList.toggle('active', b.dataset.sec === name)
   );
+  const meta = _SETTINGS_SECTION_META[name] || _SETTINGS_SECTION_META.jenkins;
+  const titleEl = $('settings-section-title');
+  const subEl = $('settings-section-sub');
+  const wiz = $('integration-wizard');
+  const guideEl = $('settings-wizard-guide');
+  const addBtn = $('wizard-add-btn');
+  if (titleEl) {
+    titleEl.textContent = t(meta.titleKey);
+    titleEl.setAttribute('data-i18n', meta.titleKey);
+  }
+  if (subEl) {
+    subEl.textContent = t(meta.subKey);
+    subEl.setAttribute('data-i18n', meta.subKey);
+  }
+  if (wiz) wiz.hidden = !meta.wizard;
+  if (guideEl && meta.guideKey) {
+    guideEl.innerHTML = t(meta.guideKey);
+    guideEl.setAttribute('data-i18n-html', meta.guideKey);
+  }
+  if (addBtn && meta.addFn) {
+    addBtn.setAttribute('onclick', meta.addFn);
+    addBtn.textContent = t(meta.addKey);
+    addBtn.setAttribute('data-i18n', meta.addKey);
+  }
 }
 
 // ── Tiny helpers ───────────────────────────────────────────────────────────────
@@ -816,7 +613,9 @@ function _applyTheme(theme) {
   const btn = document.getElementById('btn-theme');
   if (btn) {
     btn.setAttribute('title', theme === 'light' ? t('dash.theme_light_hint') : t('dash.theme_dark_hint'));
-    btn.textContent = theme === 'light' ? '🌙' : '☀';
+    btn.textContent = '';
+    btn.classList.remove('theme-ico-dark', 'theme-ico-light');
+    btn.classList.add(theme === 'light' ? 'theme-ico-dark' : 'theme-ico-light');
   }
 }
 function toggleTheme() {
@@ -832,6 +631,7 @@ function setUILang(code) {
   _applyTheme(localStorage.getItem('cimon-theme') === 'light' ? 'light' : 'dark');
   renderJInsts();
   renderGInsts();
+  renderGhInsts();
   renderTgBots();
   renderHttpChecks();
   renderContainers();
@@ -839,6 +639,8 @@ function setUILang(code) {
   updateDockerUI();
   updateProviderUI();
   updateProxyUI();
+  const activeSec = document.querySelector('.snav-item.active')?.dataset?.sec;
+  if (activeSec) showSec(activeSec);
 }
 
 const _providerDefaults = {
@@ -972,35 +774,6 @@ function showToast(msg, type = 'ok') {
 // JENKINS INSTANCES
 // ══════════════════════════════════════════════════════════════════════════════
 
-function jJobsHtml(ii) {
-  const jobs = _ji[ii].jobs || [];
-  if (!jobs.length) return `<tr class="empty-row"><td colspan="4">${esc(t('st.j_empty_jobs'))}</td></tr>`;
-  return jobs.map((job, ji) => `
-    <tr>
-      <td><input class="tbl-input" value="${esc(job.name)}" placeholder="${esc(t('st.j_placeholder_job'))}"
-          oninput="_ji[${ii}].jobs[${ji}].name=this.value"></td>
-      <td class="c st-col-tight"><input type="checkbox" ${job.critical ? 'checked' : ''}
-          onchange="_ji[${ii}].jobs[${ji}].critical=this.checked"></td>
-      <td class="c st-col-mid"><input type="checkbox" ${job.parse_console !== false ? 'checked' : ''}
-          onchange="_ji[${ii}].jobs[${ji}].parse_console=this.checked"></td>
-      <td class="st-col-actions"><button class="btn-icon" onclick="removeJJob(${ii},${ji})" title="${esc(t('st.remove'))}">&#10005;</button></td>
-    </tr>`).join('');
-}
-
-function renderJJobs(ii) {
-  const tb = $(`jj-${ii}`);
-  if (tb) tb.innerHTML = jJobsHtml(ii);
-}
-
-function addJJob(ii) {
-  if (!_ji[ii].jobs) _ji[ii].jobs = [];
-  _ji[ii].jobs.push({ name: '', critical: true, parse_console: true });
-  renderJJobs(ii);
-  $(`jj-${ii}`)?.querySelector('tr:last-child .tbl-input')?.focus();
-}
-
-function removeJJob(ii, ji) { _ji[ii].jobs.splice(ji, 1); renderJJobs(ii); }
-
 function jInstHtml(ii) {
   const inst = _ji[ii];
   return `
@@ -1041,27 +814,13 @@ function jInstHtml(ii) {
         <button type="button" class="btn btn-sm btn-ghost" id="ji-test-btn-${ii}" onclick="testInstanceConnection('jenkins', ${ii})">${esc(t('st.test_connection_btn'))}</button>
         <span class="test-status" id="ji-test-status-${ii}"></span>
       </div>
-      <div class="three-col">
-        <div class="field-row">
-          <div class="field-label">${esc(t('st.j_max_builds'))}</div>
-          <input type="number" class="field-input" value="${inst.max_builds??10}" min="0" max="5000"
-                 oninput="_ji[${ii}].max_builds=parseInt(this.value)">
-          <div class="field-hint">${esc(t('st.j_max_builds_hint'))}</div>
-        </div>
-        <div class="field-row">
-          <div class="field-label">${esc(t('st.j_console_builds'))}</div>
-          <input type="number" class="field-input" value="${inst.console_builds??5}" min="0" max="5000"
-                 oninput="_ji[${ii}].console_builds=parseInt(this.value)">
-          <div class="field-hint">${esc(t('st.j_console_builds_hint'))}</div>
-        </div>
-        <div class="field-row" style="justify-content:flex-end;padding-top:1.3rem">
-          <label class="toggle">
-            <input type="checkbox" ${inst.parse_console ? 'checked' : ''}
-                   onchange="_ji[${ii}].parse_console=this.checked">
-            <div class="toggle-track"><div class="toggle-knob"></div></div>
-            ${esc(t('st.parse_console'))}
-          </label>
-        </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.parse_console ? 'checked' : ''}
+                 onchange="_ji[${ii}].parse_console=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          ${esc(t('st.parse_console'))}
+        </label>
       </div>
       <div class="field-row">
         <label class="toggle">
@@ -1081,59 +840,8 @@ function jInstHtml(ii) {
         </label>
         <div class="field-hint">${esc(t('st.verify_ssl_hint'))}</div>
       </div>
-
-      <div class="sub-sec">
-        <div class="field-row" style="margin-bottom:.6rem">
-          <label class="toggle">
-            <input type="checkbox" id="j-show-all-${ii}" ${inst.show_all_jobs ? 'checked' : ''}
-                   onchange="_ji[${ii}].show_all_jobs=this.checked;toggleJJobs(${ii})">
-            <div class="toggle-track"><div class="toggle-knob"></div></div>
-            ${esc(t('st.j_show_all'))}
-          </label>
-          <div class="field-hint" id="j-all-hint-${ii}">
-            ${inst.show_all_jobs
-              ? esc(t('st.j_hint_all'))
-              : esc(t('st.j_hint_list'))}
-          </div>
-        </div>
-        <div class="field-row" style="display:${inst.show_all_jobs ? '' : 'none'}" id="j-all-limit-row-${ii}">
-          <div class="field-label">${esc(t('st.j_show_all_limit'))}</div>
-          <input type="number" class="field-input" value="${inst.show_all_limit_jobs ?? 0}" min="0" max="5000"
-                 oninput="_ji[${ii}].show_all_limit_jobs=parseInt(this.value)">
-          <div class="field-hint">${esc(t('st.j_show_all_limit_hint'))}</div>
-        </div>
-        <div id="j-jobs-panel-${ii}" style="display:${inst.show_all_jobs ? 'none' : ''}">
-          <div class="sub-sec-hdr">
-            <span class="field-label">${esc(t('st.j_jobs_monitor'))}</span>
-            <button class="btn btn-sm" onclick="addJJob(${ii})">${esc(t('st.j_add_job'))}</button>
-          </div>
-          <div class="st-table-wrap">
-            <table>
-              <thead><tr>
-                <th>${esc(t('st.th_job_name'))}</th>
-                <th class="c st-col-tight">${esc(t('st.th_critical'))}</th>
-                <th class="c st-col-mid">${esc(t('st.th_parse_console'))}</th>
-                <th class="st-col-actions" aria-label=""></th>
-              </tr></thead>
-              <tbody id="jj-${ii}">${jJobsHtml(ii)}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   </div>`;
-}
-
-function toggleJJobs(ii) {
-  const showAll = _ji[ii].show_all_jobs;
-  const panel = $('j-jobs-panel-' + ii);
-  const hint  = $('j-all-hint-' + ii);
-  const lim   = $('j-all-limit-row-' + ii);
-  if (panel) panel.style.display = showAll ? 'none' : '';
-  if (lim) lim.style.display = showAll ? '' : 'none';
-  if (hint)  hint.textContent = showAll
-    ? t('st.j_hint_all')
-    : t('st.j_hint_list');
 }
 
 function renderJInsts() {
@@ -1147,8 +855,7 @@ function renderJInsts() {
 
 function addJenkinsInst() {
   _ji.push({ name: `Jenkins ${_ji.length + 1}`, enabled: true, url: '', username: '', token: '',
-             jobs: [], max_builds: 10, parse_console: true, parse_allure: false, console_builds: 5,
-             verify_ssl: true, show_all_jobs: false, show_all_limit_jobs: 0 });
+             jobs: [], parse_console: true, parse_allure: false, verify_ssl: true });
   renderJInsts();
   $(`ji-card-${_ji.length-1}`)?.querySelector('.inst-name-inp')?.focus();
 }
@@ -1316,14 +1023,23 @@ function startQuickSetup(kind) {
     const idx = Math.max(0, _gi.length - 1);
     $(`gi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
     showToast(t('st.wz_toast_gitlab'), 'ok');
+    return;
+  }
+  if (kind === 'github') {
+    if (!_ghi.length) addGithubInst();
+    showSec('github');
+    const idx = Math.max(0, _ghi.length - 1);
+    $(`ghi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_github'), 'ok');
   }
 }
 
 async function testInstanceConnection(kind, idx) {
   const isJenkins = kind === 'jenkins';
-  const inst = isJenkins ? (_ji[idx] || {}) : (_gi[idx] || {});
-  const btn = $(isJenkins ? `ji-test-btn-${idx}` : `gi-test-btn-${idx}`);
-  const status = $(isJenkins ? `ji-test-status-${idx}` : `gi-test-status-${idx}`);
+  const isGitlab = kind === 'gitlab';
+  const inst = isJenkins ? (_ji[idx] || {}) : (isGitlab ? (_gi[idx] || {}) : (_ghi[idx] || {}));
+  const btn = $(isJenkins ? `ji-test-btn-${idx}` : (isGitlab ? `gi-test-btn-${idx}` : `ghi-test-btn-${idx}`));
+  const status = $(isJenkins ? `ji-test-status-${idx}` : (isGitlab ? `gi-test-status-${idx}` : `ghi-test-status-${idx}`));
   if (btn) btn.disabled = true;
   if (status) {
     status.className = 'test-status';
@@ -1338,12 +1054,19 @@ async function testInstanceConnection(kind, idx) {
         token: inst.token || '',
         verify_ssl: inst.verify_ssl !== false,
       }
-    : {
-        kind: 'gitlab',
-        url: (inst.url || '').trim(),
-        token: inst.token || '',
-        verify_ssl: inst.verify_ssl !== false,
-      };
+    : isGitlab
+      ? {
+          kind: 'gitlab',
+          url: (inst.url || '').trim(),
+          token: inst.token || '',
+          verify_ssl: inst.verify_ssl !== false,
+        }
+      : {
+          kind: 'github',
+          url: (inst.url || '').trim() || 'https://github.com',
+          token: inst.token || '',
+          verify_ssl: inst.verify_ssl !== false,
+        };
 
   const res = await fetch(apiUrl('api/settings/test-connection'), {
     method: 'POST',
@@ -1366,6 +1089,151 @@ function removeGInst(gi) {
   if (!confirm(tf('st.g_confirm_remove', { name: _gi[gi].name }))) return;
   _gi.splice(gi, 1);
   renderGInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GITHUB INSTANCES
+// ══════════════════════════════════════════════════════════════════════════════
+
+function ghRepoHtml(gi) {
+  const repos = _ghi[gi].repos || [];
+  if (!repos.length) return `<tr class="empty-row"><td colspan="3">${esc(t('st.gh_empty_repo'))}</td></tr>`;
+  return repos.map((p, pi) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(p.id)}" placeholder="${esc(t('st.gh_placeholder_repo'))}"
+          oninput="_ghi[${gi}].repos[${pi}].id=this.value"></td>
+      <td class="c st-col-tight"><input type="checkbox" ${p.critical ? 'checked' : ''}
+          onchange="_ghi[${gi}].repos[${pi}].critical=this.checked"></td>
+      <td class="st-col-actions"><button class="btn-icon" onclick="removeGhRepo(${gi},${pi})" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function renderGhRepos(gi) {
+  const tb = $(`ghp-${gi}`);
+  if (tb) tb.innerHTML = ghRepoHtml(gi);
+}
+
+function addGhRepo(gi) {
+  if (!_ghi[gi].repos) _ghi[gi].repos = [];
+  _ghi[gi].repos.push({ id: '', critical: true });
+  renderGhRepos(gi);
+  $(`ghp-${gi}`)?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+function removeGhRepo(gi, pi) { _ghi[gi].repos.splice(pi, 1); renderGhRepos(gi); }
+
+function ghInstHtml(gi) {
+  const inst = _ghi[gi];
+  return `
+  <div class="inst-card" id="ghi-card-${gi}">
+    <div class="inst-hdr">
+      <span class="inst-badge gh">GitHub</span>
+      <input class="inst-name-inp" value="${esc(inst.name)}" placeholder="${esc(t('st.gh_inst_placeholder'))}"
+             oninput="_ghi[${gi}].name=this.value">
+      <label class="toggle" style="margin-left:auto;margin-right:.5rem">
+        <input type="checkbox" ${inst.enabled !== false ? 'checked' : ''}
+               onchange="_ghi[${gi}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+        <span style="font-size:.8rem;color:var(--muted)">${esc(t('st.active'))}</span>
+      </label>
+      <button class="btn-icon" onclick="removeGhInst(${gi})" title="${esc(t('st.remove'))}">&#10005;</button>
+    </div>
+    <div class="inst-body">
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.gh_url'))}</div>
+        <input type="url" class="field-input sensitive" value="${esc(inst.url||'')}" placeholder="https://github.com"
+               oninput="_ghi[${gi}].url=this.value">
+        <div class="field-hint">${esc(t('st.gh_url_hint'))}</div>
+      </div>
+      <div class="two-col">
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.gh_token'))}</div>
+          <div class="pw-wrap">
+            <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="github_instances[${gi}].token"
+                   autocomplete="new-password" oninput="_ghi[${gi}].token=this.value">
+          </div>
+          <div class="field-hint">${esc(t('st.gh_token_hint'))}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.gh_max_runs'))}</div>
+          <input type="number" class="field-input" value="${inst.max_runs??10}" min="1" max="100"
+                 oninput="_ghi[${gi}].max_runs=parseInt(this.value)">
+        </div>
+      </div>
+      <div class="inst-test-row">
+        <button type="button" class="btn btn-sm btn-ghost" id="ghi-test-btn-${gi}" onclick="testInstanceConnection('github', ${gi})">${esc(t('st.test_connection_btn'))}</button>
+        <span class="test-status" id="ghi-test-status-${gi}"></span>
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.verify_ssl !== false ? 'checked' : ''}
+                 onchange="_ghi[${gi}].verify_ssl=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc(t('st.verify_ssl'))}</span>
+        </label>
+      </div>
+      <div class="sub-sec">
+        <div class="field-row" style="margin-bottom:.6rem">
+          <label class="toggle">
+            <input type="checkbox" id="gh-show-all-${gi}" ${inst.show_all_repos ? 'checked' : ''}
+                   onchange="_ghi[${gi}].show_all_repos=this.checked;toggleGhRepos(${gi})">
+            <div class="toggle-track"><div class="toggle-knob"></div></div>
+            ${esc(t('st.gh_show_all'))}
+          </label>
+          <div class="field-hint" id="gh-all-hint-${gi}">
+            ${inst.show_all_repos ? esc(t('st.gh_hint_all')) : esc(t('st.gh_hint_list'))}
+          </div>
+        </div>
+        <div id="gh-repos-panel-${gi}" style="display:${inst.show_all_repos ? 'none' : ''}">
+          <div class="sub-sec-hdr">
+            <span class="field-label">${esc(t('st.gh_repos_monitor'))}</span>
+            <button class="btn btn-sm" onclick="addGhRepo(${gi})">${esc(t('st.gh_add_repo'))}</button>
+          </div>
+          <div class="st-table-wrap">
+            <table>
+              <thead><tr>
+                <th>${esc(t('st.th_repo'))}</th>
+                <th class="c st-col-tight">${esc(t('st.th_critical'))}</th>
+                <th class="st-col-actions" aria-label=""></th>
+              </tr></thead>
+              <tbody id="ghp-${gi}">${ghRepoHtml(gi)}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleGhRepos(gi) {
+  const showAll = _ghi[gi].show_all_repos;
+  const panel = $('gh-repos-panel-' + gi);
+  const hint  = $('gh-all-hint-' + gi);
+  if (panel) panel.style.display = showAll ? 'none' : '';
+  if (hint)  hint.textContent = showAll ? t('st.gh_hint_all') : t('st.gh_hint_list');
+}
+
+function renderGhInsts() {
+  const c = $('github-instances');
+  if (!c) return;
+  if (!_ghi.length) {
+    c.innerHTML = `<div class="empty-card">${esc(t('st.gh_empty'))}</div>`;
+    return;
+  }
+  c.innerHTML = _ghi.map((_, i) => ghInstHtml(i)).join('');
+}
+
+function addGithubInst() {
+  _ghi.push({ name: `GitHub ${_ghi.length + 1}`, enabled: true, url: 'https://github.com', token: '',
+             repos: [], max_runs: 10, verify_ssl: true, show_all_repos: false });
+  renderGhInsts();
+  $(`ghi-card-${_ghi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function removeGhInst(gi) {
+  if (!confirm(tf('st.gh_confirm_remove', { name: _ghi[gi].name }))) return;
+  _ghi.splice(gi, 1);
+  renderGhInsts();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1552,19 +1420,18 @@ async function loadSettings() {
 function populateForm(cfg) {
   _ji = JSON.parse(JSON.stringify(cfg.jenkins_instances || []));
   _gi = JSON.parse(JSON.stringify(cfg.gitlab_instances  || []));
+  _ghi = JSON.parse(JSON.stringify(cfg.github_instances || []));
   renderJInsts();
   renderGInsts();
+  renderGhInsts();
 
   const g  = cfg.general        || {};
   const w  = cfg.web            || {};
-  const p  = cfg.parsers        || {};
   const tg = (cfg.notifications || {}).telegram || {};
   const dm = cfg.docker_monitor || {};
 
   sV('g-lookback',      g.default_lookback_days ?? 7);
   sV('g-history-retention', g.history_retention_days ?? 0);
-  sV('g-log-level',     g.log_level             || 'INFO');
-  sV('g-top-failures',  p.top_failures           ?? 10);
   sC('w-auto-collect',  w.auto_collect            ?? true);
   sC('w-docker-auto-update',  w.docker_auto_update_enabled ?? false);
   sV('w-interval',      w.collect_interval_seconds ?? 300);
@@ -1626,14 +1493,19 @@ function collectForm() {
       default_lookback_days: toInt(gV('g-lookback')),
       history_retention_days: toInt(gV('g-history-retention')),
       data_dir: 'data',
-      log_level: gV('g-log-level'),
+      log_level: 'DEBUG',
     },
-    jenkins_instances: _ji,
+    jenkins_instances: _ji.map((inst) => {
+      const { max_builds, console_builds, show_all_jobs, show_all_limit_jobs, ...rest } = inst;
+      return rest;
+    }),
     gitlab_instances:  _gi,
+    github_instances:  _ghi,
+    github_instances:  _ghi,
     parsers: {
       pytest_xml_dirs:  [],
       allure_json_dirs: [],
-      top_failures: toInt(gV('g-top-failures')),
+      top_failures: 500,
     },
     reports: {
       output_dir: 'data', csv_filename: 'ci_report.csv',

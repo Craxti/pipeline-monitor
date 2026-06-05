@@ -1,0 +1,43 @@
+function _icAppendEventRow(wrap, ev) {
+  if (!wrap || !ev) return;
+  const row = document.createElement('div');
+  row.className = `ic-ev ic-chip ${ev.cls || ''}`.trim();
+  row.tabIndex = 0;
+  row.setAttribute('role', 'button');
+  row.title = ev.title || ev.name || '';
+
+  const dot = document.createElement('span');
+  dot.className = 'ic-chip-dot';
+  dot.setAttribute('aria-hidden', 'true');
+
+  const icon = document.createElement('span');
+  icon.className = 'ic-chip-icon';
+  icon.innerHTML = _icChipIconSvg(ev.cls || '');
+
+  const main = document.createElement('div');
+  main.className = 'ic-ev-main';
+
+  const name = document.createElement('div');
+  name.className = 'ic-ev-link';
+  name.textContent = ev.name || '—';
+
+  const kind = document.createElement('div');
+  kind.className = 'ic-ev-kind';
+  kind.textContent = (ev.kind || '').toLowerCase();
+
+  main.append(name, kind);
+  row.append(dot, icon, main);
+
+  if (typeof ev.onClick === 'function') {
+    const run = () => ev.onClick();
+    row.addEventListener('click', run);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        run();
+      }
+    });
+  }
+
+  wrap.appendChild(row);
+}

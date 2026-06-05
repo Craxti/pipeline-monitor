@@ -9,7 +9,7 @@ def dashboard_summary_payload(
     *,
     dashboard_summary_mod,
     load_yaml_config,
-    load_snapshot,
+    snap,
     collect_state: dict,
     instance_health: list,
     data_revision: int,
@@ -17,7 +17,7 @@ def dashboard_summary_payload(
     """Return dashboard summary payload from injected module/deps."""
     return dashboard_summary_mod.dashboard_summary_payload(
         load_yaml_config=load_yaml_config,
-        load_snapshot=load_snapshot,
+        snap=snap,
         collect_state=collect_state,
         instance_health=instance_health,
         data_revision=data_revision,

@@ -1,0 +1,23 @@
+function startQuickSetup(kind) {
+  if (kind === 'jenkins') {
+    if (!_ji.length) addJenkinsInst();
+    showSec('jenkins');
+    const idx = Math.max(0, _ji.length - 1);
+    $(`ji-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_jenkins'), 'ok');
+    return;
+  }
+  if (kind === 'gitlab') {
+    if (!_gi.length) addGitlabInst();
+    showSec('gitlab');
+    const idx = Math.max(0, _gi.length - 1);
+    $(`gi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_gitlab'), 'ok');
+  }
+}
+
+async function testInstanceConnection(kind, idx) {
+  const isJenkins = kind === 'jenkins';
+  const inst = isJenkins ? (_ji[idx] || {}) : (_gi[idx] || {});
+  const btn = $(isJenkins ? `ji-test-btn-${idx}` : `gi-test-btn-${idx}`);
+  const status = $(isJenkins ? `ji-test-status-${idx}` : `gi-test-status-${idx}`);

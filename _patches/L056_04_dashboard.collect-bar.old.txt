@@ -1,0 +1,21 @@
+async function triggerCollect() {
+  if (_ticker) { clearInterval(_ticker); _ticker = null; }
+  document.getElementById('btn-collect').disabled = true;
+  _collectStartedAt = Date.now();
+  document.getElementById('cdot').className = 'dot collecting';
+  const tickPre = () => {
+    const sec = Math.floor((Date.now() - _collectStartedAt) / 1000);
+    _setCollectLines(t('dash.collecting'), `${t('dash.collect_elapsed')}: ${fmtSec(sec)}`);
+  };
+  tickPre();
+  if (_collectElapsedTimer) clearInterval(_collectElapsedTimer);
+  _collectElapsedTimer = setInterval(tickPre, 1000);
+  const cr = await fetch(apiUrl('api/collect'), {
+    method:'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force_full: true }),
+  }).catch(()=>null);
+  if (cr && cr.ok) _dashIsCollecting = true;
+  _prevCollecting = true;
+  pollCollect();
+}

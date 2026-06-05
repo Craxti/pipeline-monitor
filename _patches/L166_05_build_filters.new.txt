@@ -1,0 +1,15 @@
+        return None
+    if src == "github":
+        for inst in cfg.get("github_instances", []) or []:
+            if not inst.get("enabled", True):
+                continue
+            base = str(inst.get("url", "") or "").rstrip("/")
+            web = base.replace("/api/v3", "").rstrip("/") if base else ""
+            for root in (web, base):
+                if root and bu.startswith(root):
+                    return config_instance_label(inst, kind="github")
+        if stored := getattr(b, "source_instance", None):
+            if isinstance(stored, str) and stored.strip():
+                return stored.strip()
+        return None
+    return None

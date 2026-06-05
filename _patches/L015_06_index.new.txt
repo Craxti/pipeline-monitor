@@ -1,0 +1,1 @@
+    <h2><span class="panel-icon panel-icon--map" aria-hidden="true"></span><span data-i18n="panel.status_map">Status Map</span>

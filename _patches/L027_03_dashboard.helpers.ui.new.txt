@@ -1,0 +1,31 @@
+  const icSummary = document.getElementById('ic-summary');
+  const icKpiBuilds = document.getElementById('ic-kpi-builds');
+  const icKpiTests = document.getElementById('ic-kpi-tests');
+  const icKpiSvcs = document.getElementById('ic-kpi-svcs');
+  const icKpiAge = document.getElementById('ic-kpi-age');
+  if (icSummary) {
+    icSummary.style.display = 'grid';
+    if (icKpiBuilds) {
+      icKpiBuilds.textContent = String(fb);
+      icKpiBuilds.className = 'ic-kpi-val ' + (fb > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiTests) {
+      icKpiTests.textContent = String(ft);
+      icKpiTests.className = 'ic-kpi-val ' + (ft > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiSvcs) {
+      icKpiSvcs.textContent = String(sd);
+      icKpiSvcs.className = 'ic-kpi-val ' + (sd > 0 ? 'c-fail' : 'c-ok');
+    }
+    if (icKpiAge) {
+      const ageTxt = (summary && summary.snapshot && summary.snapshot.age_human)
+        ? String(summary.snapshot.age_human)
+        : (collected ? fmt(collected) : '—');
+      icKpiAge.textContent = ageTxt;
+      icKpiAge.className = 'ic-kpi-val ' + (stale ? 'c-warn' : 'c-info');
+    }
+  }
+
+  const aff = document.getElementById('ic-affected');
+  if (aff) {
+    const failedJobs = [...new Set(builds.filter((b) => isBuildProblemStatus(b.status)).map((b) => b.job_name))].slice(0, 8);

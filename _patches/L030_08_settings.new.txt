@@ -1,0 +1,1 @@
+        <h2><span data-i18n="st.wz_title">Quick Start Wizard</span></h2>

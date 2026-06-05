@@ -1,0 +1,6 @@
+    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
+    <div id="sec-gitlab" class="section">
+      <div id="gitlab-instances"></div>
+    </div>
+
+    <!-- ═══ GENERAL ════════════════════════════════════════════ -->

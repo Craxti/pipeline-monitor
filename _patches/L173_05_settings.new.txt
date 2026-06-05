@@ -1,0 +1,17 @@
+  gitlab: {
+    titleKey: 'st.gitlab_integration',
+    subKey: 'st.gitlab_integration_sub',
+    guideKey: 'st.wz_guide_gitlab',
+    addFn: 'addGitlabInst()',
+    addKey: 'st.add_gitlab',
+    wizard: true,
+  },
+  github: {
+    titleKey: 'st.github_integration',
+    subKey: 'st.github_integration_sub',
+    guideKey: 'st.wz_guide_github',
+    addFn: 'addGithubInst()',
+    addKey: 'st.add_github',
+    wizard: true,
+  },
+  general: {

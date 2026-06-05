@@ -1,0 +1,10 @@
+        timeout: int = 20,
+        verify_ssl: bool = True,
+        progress_cb: callable | None = None,
+        retries: int = 2,
+        backoff_seconds: float = 0.8,
+        records_cb: callable | None = None,
+        timing_cb: callable | None = None,
+        should_cancel: callable | None = None,
+        per_task_timeout_sec: int = 90,
+    ) -> None:

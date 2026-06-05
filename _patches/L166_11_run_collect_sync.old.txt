@@ -1,0 +1,4 @@
+    logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
+    _between_phases()
+
+    _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger, check_cancelled=check_cancelled)

@@ -1,0 +1,5 @@
+    if (s.page === 1 && !rows.length) {
+      if (keepTableOnTransientEmpty(tbody, rows, s)) {
+        _showBuildsCollectStaleHint();
+        return;
+      }

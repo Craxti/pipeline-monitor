@@ -1,0 +1,16 @@
+  const all = dedupSort(events);
+  const MAX_FEED = 80;
+  all.slice(0, MAX_FEED).forEach((ev) => _icAppendEventRow(wrap, ev));
+
+  const feedHead = document.getElementById('ic-feed-head');
+  const feedCount = document.getElementById('ic-feed-count');
+  const hasCards = wrap.childElementCount > 0;
+  if (feedHead) feedHead.style.display = hasCards ? 'flex' : 'none';
+  if (feedCount) feedCount.textContent = String(all.length);
+  wrap.style.display = hasCards ? 'block' : 'none';
+
+  const aff = document.getElementById('ic-affected');
+  const meta = document.getElementById('ic-meta');
+  if (aff) aff.style.display = hasCards ? 'none' : '';
+  if (meta) meta.style.display = hasCards ? 'none' : '';
+}

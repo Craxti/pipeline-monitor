@@ -1,0 +1,23 @@
+                        merged_names = list(explicit_by_name.keys())
+                        for n in discovered_sel:
+                            if n not in explicit_by_name:
+                                merged_names.append(n)
+                        console_jobs_cap = int(inst.get("console_jobs_cap", 50) or 50)
+                        if console_jobs_cap > 0 and len(merged_names) > console_jobs_cap:
+                            logger.info(
+                                "Jenkins [%s] console: capping jobs %d -> %d (console_jobs_cap)",
+                                label,
+                                len(merged_names),
+                                console_jobs_cap,
+                            )
+                            merged_names = merged_names[:console_jobs_cap]
+                        jobs_for_console = [
+                            {
+                                "name": n,
+                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "parse_console": True,
+                            }
+                            for n in merged_names
+                        ]
+                        logger.info(
+                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),

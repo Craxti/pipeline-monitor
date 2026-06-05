@@ -1,0 +1,6 @@
+    _gitlab_collect.collect_gitlab_builds(
+        cfg=cfg,
+        since=since,
+        snapshot=snapshot,
+        progress=progress,
+        merge_build_records=merge_build_records,

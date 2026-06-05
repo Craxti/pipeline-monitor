@@ -179,7 +179,7 @@ def test_deep_links_services_filters_keep_panels_visible_and_data_non_empty(
     assert page.status_code == 200
     assert 'id="tab-panel-services"' in page.text
     assert 'id="panel-svcs"' in page.text
-    assert 'id="panel-timeline"' in page.text
+    assert 'id="ic-cards"' in page.text
     assert 'id="incident-center"' in page.text
 
     svc = client.get("/api/services?status=down")

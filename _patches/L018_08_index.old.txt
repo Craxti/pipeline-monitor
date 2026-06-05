@@ -1,0 +1,18 @@
+      <div class="dhar-two-col">
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_statuses">Top HTTP statuses</div>
+          <div id="har-statuses" class="dhar-list"></div>
+        </div>
+        <div>
+          <div class="dhar-title" data-i18n="dash.har_top_hosts">Top hosts</div>
+          <div id="har-hosts" class="dhar-list"></div>
+        </div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_failed_requests">Requests with errors</div>
+        <div id="har-failed" class="dhar-list"></div>
+      </div>
+      <div>
+        <div class="dhar-title" data-i18n="dash.har_slow_requests">Slow requests</div>
+        <div id="har-slow" class="dhar-list"></div>
+      </div>

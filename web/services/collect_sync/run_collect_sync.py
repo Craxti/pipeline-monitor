@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from web.services.collect_sync import docker_collect as _docker_collect
 from web.services.collect_sync import gitlab_collect as _gitlab_collect
+from web.services.collect_sync import github_collect as _github_collect
 from web.services.collect_sync import jenkins_collect as _jenkins_collect
 from web.services.collect_sync import local_parsers as _local_parsers
 from web.services.collect_sync import merge as _merge
@@ -39,17 +41,21 @@ def run_collect_sync(
     """Full collection — runs in a thread-pool executor (blocking)."""
     j_enabled = sum(1 for i in cfg.get("jenkins_instances", []) if i.get("enabled", True))
     g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))
+    gh_enabled = sum(1 for i in cfg.get("github_instances", []) if i.get("enabled", True))
     dm_enabled = bool(cfg.get("docker_monitor", {}).get("enabled"))
+    parallel_sources = bool(cfg.get("general", {}).get("parallel_collect_sources", True))
     incremental_collect = (
         (not force_full) and sqlite_available and bool(cfg.get("general", {}).get("incremental_collect", True))
     )
     logger.info(
-        "Collect cycle started (force_full=%s, incremental=%s, lookback_days=%s, jenkins=%d, gitlab=%d, docker=%s)",
+        "Collect cycle started (force_full=%s, incremental=%s, parallel_sources=%s, lookback_days=%s, jenkins=%d, gitlab=%d, github=%d, docker=%s)",
         force_full,
         incremental_collect,
+        parallel_sources,
         cfg.get("general", {}).get("default_lookback_days", 7),
         j_enabled,
         g_enabled,
+        gh_enabled,
         "on" if dm_enabled else "off",
     )
     since = datetime.now(tz=timezone.utc) - timedelta(days=cfg.get("general", {}).get("default_lookback_days", 7))
@@ -97,32 +103,116 @@ def run_collect_sync(
             raise CollectCancelled("Stopped by user")
 
     def merge_build_records(new_records: list) -> None:
-        return _merge.merge_build_records(snapshot, new_records)
+        with snap_lock:
+            return _merge.merge_build_records(snapshot, new_records)
 
-    _jenkins_collect.collect_jenkins(
-        cfg=cfg,
-        since=since,
-        force_full=force_full,
-        snapshot=snapshot,
-        progress=progress,
-        merge_build_records=merge_build_records,
-        maybe_save_partial=maybe_save_partial,
-        push_collect_log=push_collect_log,
-        collect_slow=collect_slow,
-        health=health,
-        config_instance_label=config_instance_label,
-        logger=logger,
-        sqlite_available=sqlite_available,
-        get_collector_state_int=get_collector_state_int,
-        set_collector_state_int=set_collector_state_int,
-        incremental_collect=incremental_collect,
-        TestRecord=TestRecord,
-        append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
-        check_cancelled=check_cancelled,
-        incremental_stats=incremental_stats,
-    )
-    logger.info("Jenkins phase completed: builds=%d tests=%d", len(snapshot.builds), len(snapshot.tests))
-    # Always merge Jenkins build + Allure + console into ``jenkins_unified`` (not configurable via YAML/DB).
+    def _collect_gitlab_phase() -> None:
+        _gitlab_collect.collect_gitlab_builds(
+            cfg=cfg,
+            since=since,
+            snapshot=snapshot,
+            progress=progress,
+            merge_build_records=merge_build_records,
+            health=health,
+            config_instance_label=config_instance_label,
+            logger=logger,
+            incremental_collect=incremental_collect,
+            get_collector_state_int=get_collector_state_int,
+            set_collector_state_int=set_collector_state_int,
+            sqlite_available=sqlite_available,
+            check_cancelled=check_cancelled,
+            incremental_stats=incremental_stats,
+        )
+        logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
+
+    def _collect_github_phase() -> None:
+        _github_collect.collect_github_builds(
+            cfg=cfg,
+            since=since,
+            progress=progress,
+            merge_build_records=merge_build_records,
+            health=health,
+            config_instance_label=config_instance_label,
+            logger=logger,
+            check_cancelled=check_cancelled,
+        )
+        logger.info("GitHub phase completed: builds=%d", len(snapshot.builds))
+
+    def _collect_docker_phase() -> None:
+        _docker_collect.collect_docker_services(
+            cfg=cfg,
+            snapshot=snapshot,
+            progress=progress,
+            health=health,
+            logger=logger,
+            check_cancelled=check_cancelled,
+            snap_lock=snap_lock,
+            maybe_save_partial=maybe_save_partial,
+        )
+        logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
+
+    def _collect_jenkins_phase() -> None:
+        _jenkins_collect.collect_jenkins(
+            cfg=cfg,
+            since=since,
+            force_full=force_full,
+            snapshot=snapshot,
+            progress=progress,
+            merge_build_records=merge_build_records,
+            maybe_save_partial=maybe_save_partial,
+            push_collect_log=push_collect_log,
+            collect_slow=collect_slow,
+            health=health,
+            config_instance_label=config_instance_label,
+            logger=logger,
+            sqlite_available=sqlite_available,
+            get_collector_state_int=get_collector_state_int,
+            set_collector_state_int=set_collector_state_int,
+            incremental_collect=incremental_collect,
+            TestRecord=TestRecord,
+            append_synth_tests_from_builds=_synth_tests.append_synthetic_tests_from_builds,
+            check_cancelled=check_cancelled,
+            incremental_stats=incremental_stats,
+            snap_lock=snap_lock,
+        )
+        logger.info(
+            "Jenkins phase completed: builds=%d tests=%d",
+            len(snapshot.builds),
+            len(snapshot.tests),
+        )
+
+    # GitLab, GitHub, Jenkins and Docker/HTTP are independent — run in parallel when enabled.
+    docker_in_parallel = bool(parallel_sources and dm_enabled)
+    if parallel_sources:
+        workers = 4 if dm_enabled else 3
+        phases = "GitLab + GitHub + Jenkins"
+        if dm_enabled:
+            phases += " + Docker/HTTP"
+        logger.info("Collect: %s in parallel threads", phases)
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="collect-ci") as pool:
+            futures = [
+                pool.submit(_collect_gitlab_phase),
+                pool.submit(_collect_github_phase),
+                pool.submit(_collect_jenkins_phase),
+            ]
+            if dm_enabled:
+                futures.append(pool.submit(_collect_docker_phase))
+            for fut in futures:
+                fut.result()
+    else:
+        _collect_gitlab_phase()
+        _between_phases()
+        _collect_github_phase()
+        _between_phases()
+        _collect_jenkins_phase()
+    _between_phases()
+
+    try:
+        maybe_save_partial(snapshot, force=True)
+    except TypeError:
+        maybe_save_partial(snapshot)
+
+    # Jenkins unified merge must run after Jenkins parsing finishes.
     try:
         _jenkins_merge_unified.merge_jenkins_unified_tests(snapshot, TestRecord=TestRecord, logger=logger)
         logger.info("Jenkins unified merge applied: tests=%d", len(snapshot.tests))
@@ -130,37 +220,12 @@ def run_collect_sync(
         logger.warning("Jenkins unified merge skipped: %s", exc)
     _between_phases()
 
-    _gitlab_collect.collect_gitlab_builds(
-        cfg=cfg,
-        since=since,
-        progress=progress,
-        merge_build_records=merge_build_records,
-        health=health,
-        config_instance_label=config_instance_label,
-        logger=logger,
-        incremental_collect=incremental_collect,
-        get_collector_state_int=get_collector_state_int,
-        set_collector_state_int=set_collector_state_int,
-        sqlite_available=sqlite_available,
-        check_cancelled=check_cancelled,
-        incremental_stats=incremental_stats,
-    )
-    logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
-    _between_phases()
-
     _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger, check_cancelled=check_cancelled)
     logger.info("Local parsers phase completed: tests=%d", len(snapshot.tests))
     _between_phases()
 
-    _docker_collect.collect_docker_services(
-        cfg=cfg,
-        snapshot=snapshot,
-        progress=progress,
-        health=health,
-        logger=logger,
-        check_cancelled=check_cancelled,
-    )
-    logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
+    if not docker_in_parallel:
+        _collect_docker_phase()
     collect_state["incremental_stats"] = dict(incremental_stats)
 
     # Guard against transient source outages: if this pass produced zero tests
@@ -170,7 +235,7 @@ def run_collect_sync(
         had_prev_tests = len(getattr(prev_snapshot, "tests", None) or []) > 0
         has_current_tests = len(getattr(snapshot, "tests", None) or []) > 0
         source_errors = any(
-            (not bool(h.get("ok", True))) and str(h.get("kind", "")).lower() in {"jenkins", "gitlab"}
+            (not bool(h.get("ok", True))) and str(h.get("kind", "")).lower() in {"jenkins", "gitlab", "github"}
             for h in (health or [])
             if isinstance(h, dict)
         )

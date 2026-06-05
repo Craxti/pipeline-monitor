@@ -1,0 +1,2 @@
+      builds_intro: 'Только пайплайны GitLab CI/CD — фильтры по инстансу, статусу и имени джоба.',
+      builds_scope_gitlab: 'GitLab',

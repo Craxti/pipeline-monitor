@@ -256,6 +256,13 @@ class JenkinsConsoleParser:
     def _should_retry_status(self, status_code: int | None) -> bool:
         return status_code in (408, 425, 429, 500, 502, 503, 504)
 
+    def _is_auth_failure(self, status_code: int | None) -> bool:
+        return status_code in (401, 403, 407)
+
+    def _request_timeout(self) -> tuple[int, int]:
+        read_sec = max(5, int(self.timeout or 20))
+        return (5, read_sec)
+
     def _check_cancelled(self) -> None:
         if self.should_cancel and bool(self.should_cancel()):
             raise RuntimeError("collect cancelled")
@@ -274,10 +281,17 @@ class JenkinsConsoleParser:
                 r = requests.get(
                     url,
                     auth=self.auth,
-                    timeout=self.timeout,
+                    timeout=self._request_timeout(),
                     verify=self.verify_ssl,
                 )
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
+                if self._is_auth_failure(r.status_code):
+                    logger.warning(
+                        "ConsoleParser: %s -> %d (auth failed — check Jenkins token, skip)",
+                        url,
+                        r.status_code,
+                    )
+                    return None
                 if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:
                     delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
@@ -298,6 +312,13 @@ class JenkinsConsoleParser:
                 return r
             except requests.HTTPError as exc:
                 code = getattr(getattr(exc, "response", None), "status_code", None)
+                if self._is_auth_failure(code):
+                    logger.warning(
+                        "ConsoleParser: %s -> %d (auth failed — check Jenkins token, skip)",
+                        url,
+                        code,
+                    )
+                    return None
                 if code is not None and self._should_retry_status(code) and attempt < self.retries:
                     delay = self.backoff_seconds * (2**attempt)
                     logger.warning("ConsoleParser: HTTP %s (%s), retry in %.1fs", url, code, delay)
@@ -310,6 +331,48 @@ class JenkinsConsoleParser:
                         pass
                     attempt += 1
                     continue
+                return None
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "ConsoleParser: GET unreachable (%s), retry in %.1fs: %s",
+                        type(exc).__name__,
+                        delay,
+                        url,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("ConsoleParser: GET unreachable, skip %s: %s", url, exc)
+                return None
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "ConsoleParser: GET unreachable (%s), retry in %.1fs: %s",
+                        type(exc).__name__,
+                        delay,
+                        url,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("ConsoleParser: GET unreachable, skip %s: %s", url, exc)
                 return None
             except Exception as exc:
                 if attempt < self.retries:

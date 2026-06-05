@@ -1,0 +1,4 @@
+    <button type="button" class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <img class="snav-icon-img" src="/static/icons/gitlab.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_gitlab">GitLab</span>
+    </button>
+    <div class="snav-divider"></div>

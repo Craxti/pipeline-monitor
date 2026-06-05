@@ -1,0 +1,25 @@
+    except Exception as exc:
+        return {"ok": False, "message": f"GitLab response is invalid: {_safe_error(exc)}"}
+
+
+def _test_github(payload: dict[str, Any]) -> dict[str, Any]:
+    from clients.github_client import GitHubClient, normalize_github_api_base
+
+    base = _clean_url(payload.get("url")) or "https://github.com"
+    token = str(payload.get("token") or "").strip()
+    verify_ssl = _bool(payload.get("verify_ssl"), default=True)
+
+    if not token:
+        return {"ok": False, "message": "GitHub token is required."}
+
+    api_base = normalize_github_api_base(base)
+    try:
+        client = GitHubClient(url=base, token=token, verify_ssl=verify_ssl)
+        login = client.fetch_user_login()
+        if login:
+            return {"ok": True, "message": f"GitHub connected as '{login}' ({api_base})."}
+        return {"ok": True, "message": f"GitHub API reachable ({api_base})."}
+    except requests.RequestException as exc:
+        return {"ok": False, "message": f"GitHub connection failed: {_safe_error(exc)}"}
+    except Exception as exc:
+        return {"ok": False, "message": f"GitHub response is invalid: {_safe_error(exc)}"}

@@ -1,0 +1,4 @@
+      wz_guide_gitlab: 'Add an instance below, enter <b>GitLab URL</b> and <b>Access Token</b>, run <b>Test connection</b>, then click <b>Save Settings</b>.',
+      wz_guide_github: 'Add an instance below, enter <b>GitHub URL</b> and <b>Personal Access Token</b> (repo + workflow scope), run <b>Test connection</b>, then click <b>Save Settings</b>.',
+      github_integration: 'GitHub Actions Integration',
+      github_integration_sub: 'Configure and manage GitHub Actions workflow run monitoring.',

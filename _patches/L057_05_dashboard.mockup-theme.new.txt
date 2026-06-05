@@ -1,0 +1,60 @@
+.chat-send::before { content: "→"; font-size: 1rem; line-height: 1; }
+.chat-send { font-size: 0; }
+
+/* Header action buttons (mockup: Collect + Full rescan + Refresh) */
+.btn-header-secondary {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.38rem 0.7rem;
+  white-space: nowrap;
+}
+
+.btn-collect-full {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.btn-collect-full:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+#btn-collect .btn-ico {
+  margin-right: 0.25rem;
+  opacity: 0.9;
+}
+
+body.ui-modern .app-header-actions {
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+}
+
+body.ui-modern #notif-btn {
+  display: inline-flex !important;
+}
+
+body.ui-modern .lang-toggle {
+  display: inline-flex !important;
+}
+
+#btn-theme.theme-ico-dark::before,
+#btn-theme.theme-ico-light::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+
+#btn-theme.theme-ico-dark::before {
+  background: #1e293b;
+  box-shadow: inset -0.15rem -0.1rem 0 0 #f8fafc;
+}
+
+#btn-theme.theme-ico-light::before {
+  background: #fbbf24;
+  box-shadow: 0 0 0 2px #f59e0b;
+}

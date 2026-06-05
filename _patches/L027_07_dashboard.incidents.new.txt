@@ -1,0 +1,1 @@
+      <div class="incident-title">${inc.count} ${esc(t('incident.within_10'))} — ${_tlAgo(inc.start)}</div>

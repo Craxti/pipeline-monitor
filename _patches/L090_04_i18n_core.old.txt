@@ -1,0 +1,1 @@
+      log_intel_no_graph: 'Correlation graph needs more events.',

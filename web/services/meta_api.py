@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable
 
 from web.services import collect_interval_policy as _cip
+from web.services import correlation as _correlation
 from web.services import freshness as _freshness
 
 
@@ -13,7 +14,7 @@ async def meta_payload(
     load_yaml_config: Callable[[], dict],
     load_snapshot_async: Callable[[], Awaitable[Any]],
     job_build_analytics: Callable[[Any], dict],
-    correlation_last_hour: Callable[[], dict],
+    load_events: Callable[[int], list[dict[str, Any]]],
     collect_state: dict,
     data_revision: int,
 ) -> dict[str, Any]:
@@ -43,7 +44,7 @@ async def meta_payload(
             "last_error": collect_state["last_error"],
             "interval_seconds": interval,
         },
-        "correlation": correlation_last_hour(),
+        "correlation": _correlation.correlation_last_hour(snap=snap, load_events=load_events),
         "job_analytics": job_analytics,
         "parse_coverage": (getattr(snap, "collect_meta", None) if snap else None) or {},
         "web_ui": {

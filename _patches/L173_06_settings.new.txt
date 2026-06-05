@@ -1,0 +1,4 @@
+  renderJInsts();
+  renderGInsts();
+  renderGhInsts();
+  renderTgBots();

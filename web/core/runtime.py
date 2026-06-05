@@ -28,7 +28,6 @@ from web.services import revision_state as _revision_state
 from web.services import sse_runtime as _sse_runtime
 from web.services import auto_collect_runtime as _auto_collect_runtime
 
-
 # ---- Constants from core modules
 EVENT_FEED_MAX = _event_feed_mod.EVENT_FEED_MAX
 HISTORY_MAX_DAYS = _trends_mod.HISTORY_MAX_DAYS

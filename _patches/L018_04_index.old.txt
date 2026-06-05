@@ -1,0 +1,1 @@
+    <h2>&#128421; <span data-i18n="dash.system_title">System monitor</span></h2>

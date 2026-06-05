@@ -1,0 +1,30 @@
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "AllureParser: GET %s unreachable, retry in %.1fs: %s",
+                        path,
+                        delay,
+                        exc,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("AllureParser: GET %s unreachable, skip: %s", path, exc)
+                return None
+            except Exception as exc:
+                if attempt < self.retries:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "AllureParser: GET %s failed, retry in %.1fs: %s",
+                        path,
+                        delay,
+                        exc,
+                    )

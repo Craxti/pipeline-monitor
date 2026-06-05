@@ -1,0 +1,14 @@
+  const sel = document.getElementById('f-source');
+  if (!sel) return;
+  // Builds tab is GitLab-only; keep hidden input locked.
+  const want = _desiredBuildSourceFilter();
+  if (sel.tagName === 'SELECT') {
+    while (sel.options.length > 1) sel.remove(1);
+    if (sources.includes('gitlab')) {
+      const opt = document.createElement('option');
+      opt.value = 'gitlab';
+      opt.textContent = _sourceOptionLabel('gitlab');
+      sel.appendChild(opt);
+    }
+  }
+  sel.value = want;

@@ -1,0 +1,1 @@
+        <h2>&#128276; <span data-i18n="st.nav_notifications">Notifications</span></h2>

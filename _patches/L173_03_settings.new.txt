@@ -1,0 +1,11 @@
+    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
+    <div id="sec-gitlab" class="section">
+      <div id="gitlab-instances"></div>
+    </div>
+
+    <!-- ═══ GITHUB ═════════════════════════════════════════════ -->
+    <div id="sec-github" class="section">
+      <div id="github-instances"></div>
+    </div>
+
+    <!-- ═══ GENERAL ════════════════════════════════════════════ -->

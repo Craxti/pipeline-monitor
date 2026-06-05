@@ -1,16 +1,16 @@
 {# AI chat FAB + panel — shared by index.html and settings.html. Use onclick so Settings works without dashboard.helpers delegated actions. #}
 <button type="button" id="ai-chat-fab" onclick="toggleChat()" data-i18n-title="dash.chat_fab_title" title="" style="display:none">
-  <span id="fab-icon">&#129302;</span>
+  <span id="fab-icon"></span>
   <span class="fab-badge" id="fab-badge"></span>
 </button>
 
 <div id="ai-chat-panel">
   <div class="chat-hdr">
-    <span style="font-size:1.1rem">&#129302;</span>
+    <span class="chat-hdr-ico" aria-hidden="true"></span>
     <span class="chat-hdr-title" data-i18n="dash.chat_title">AI Assistant</span>
     <span class="chat-hdr-model" id="chat-model-badge"></span>
     <button type="button" class="chat-hdr-clear" onclick="clearChat()" data-i18n-title="dash.chat_clear" title="">
-      <span class="chat-clear-ico" aria-hidden="true">&#128465;</span>
+      <span class="chat-clear-ico" aria-hidden="true"></span>
       <span data-i18n="dash.chat_clear">Clear history</span>
     </button>
     <button type="button" onclick="toggleChat()" data-i18n-title="dash.chat_close" title="">&times;</button>
@@ -25,6 +25,6 @@
   </div>
   <div class="chat-input-row">
     <textarea class="chat-input" id="chat-input" data-i18n-placeholder="dash.chat_placeholder" placeholder="" rows="1"></textarea>
-    <button type="button" class="chat-send" id="chat-send-btn" onclick="sendChat()" data-i18n-title="dash.chat_send" title="">&#10148;</button>
+    <button type="button" class="chat-send" id="chat-send-btn" onclick="sendChat()" data-i18n-title="dash.chat_send" title=""></button>
   </div>
 </div>

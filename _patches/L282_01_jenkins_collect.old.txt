@@ -1,0 +1,14 @@
+                        merged_names = list(explicit_by_name.keys())
+                        for n in discovered_sel:
+                            if n not in explicit_by_name:
+                                merged_names.append(n)
+                        jobs_for_console = [
+                            {
+                                "name": n,
+                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "parse_console": True,
+                            }
+                            for n in merged_names
+                        ]
+                        logger.info(
+                            ("Jenkins [%s] console: discovered %d jobs, parsing %d " "(limit=%s, explicit=%d)"),

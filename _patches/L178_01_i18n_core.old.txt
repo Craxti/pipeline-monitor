@@ -1,0 +1,1 @@
+      wz_guide_gitlab: 'Add an instance below, enter <b>GitLab URL</b> and <b>Access Token</b>, run <b>Test connection</b>, then click <b>Save Settings</b>.',

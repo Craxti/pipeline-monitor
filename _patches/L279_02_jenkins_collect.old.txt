@@ -1,0 +1,8 @@
+                        jobs_for_allure = [
+                            {
+                                "name": n,
+                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "parse_allure": True,
+                            }
+                            for n in merged_names
+                        ]

@@ -1,0 +1,17 @@
+function resetBuilds(soft=false, force=false) {
+  const s = _state.builds; s.page=1; s.done=false;
+  // Always cancel an in-flight /api/builds chain so filter changes apply immediately.
+  try { abortFetchKey('builds'); } catch { /* ignore */ }
+  s.loading = false;
+  if (force || !soft) _lastBuildsPageSig = '';
+  const tb = document.getElementById('tbody-builds');
+  // During collect, keep visible rows unless the user explicitly forced a hard reset.
+  if (!soft && !force && typeof _collectGraceActive === 'function' && _collectGraceActive() && tbodyHasDataRows(tb)) {
+    soft = true;
+  }
+  // Soft reset keeps current rows visible until the refreshed data arrives.
+  if (!soft && tb) {
+    tb.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_loading'))}</td></tr>`;
+  }
+  loadBuilds();
+}

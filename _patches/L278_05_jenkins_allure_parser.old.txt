@@ -1,0 +1,9 @@
+            except Exception as exc:
+                if attempt < self.retries:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "AllureParser: GET %s failed, retry in %.1fs: %s",
+                        path,
+                        delay,
+                        exc,
+                    )

@@ -16,10 +16,14 @@ async function refreshAll() {
     for (;;) {
       if (++_refreshPasses > 8) break;
       _refreshAllPending = false;
-      // Reset all panels to page 1
+      // Reset all panels to page 1; cancel in-flight fetches so reload is not skipped.
       Object.values(_state).forEach((s) => {
         s.page = 1;
         s.done = false;
+        s.loading = false;
+      });
+      ['builds', 'failures', 'tests', 'services'].forEach((k) => {
+        try { abortFetchKey(k); } catch { /* ignore */ }
       });
       // Do not blank tables on refresh; keep current rows until new data arrives.
 
@@ -46,10 +50,13 @@ document.addEventListener('DOMContentLoaded', () => {
   applyUITexts();
   _loadCollapsedBuildGroups();
   initDashboardTabs();
+  initDashSidebarNav();
   initBackToTop();
   document.getElementById('ic-open-logs')?.addEventListener('click', icOpenFirstFailureLog);
   [
     ['btn-collect', 'dash.collect'],
+    ['btn-collect-full', 'dash.collect_full'],
+    ['btn-collect-full', 'dash.collect_full'],
     ['btn-theme', 'dash.theme'],
     ['btn-compact', 'dash.compact'],
     ['notif-btn', 'dash.notif_btn'],
@@ -106,14 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch { /* ignore */ }
 
-  const tcm = document.getElementById('trends-chart-modal');
-  if (tcm) {
-    tcm.addEventListener('click', (e) => { if (e.target === tcm) closeTrendsChartModal(); });
-  }
-  document.getElementById('trends-modal-close')?.addEventListener('click', closeTrendsChartModal);
-  document.getElementById('trends-modal-cancel')?.addEventListener('click', closeTrendsChartModal);
-  document.getElementById('trends-modal-save')?.addEventListener('click', addCustomTrendChart);
-  document.getElementById('tc-kind')?.addEventListener('change', tcSyncTrendModalKindUI);
   document.addEventListener('keydown', (e) => {
     // Hotkeys (avoid interfering with typing)
     const tEl = e.target;
@@ -142,15 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (e.key !== 'Escape') return;
-    const ov = document.getElementById('trends-chart-modal');
-    if (ov && ov.classList.contains('open')) closeTrendsChartModal();
     const rb = document.getElementById('runbook-modal');
     if (rb && rb.classList.contains('open')) closeRunbook();
   });
 
-  const _normLegacyTab = (t) => (t === 'tests' ? 'test-failures' : t);
+  const _normLegacyTab = (t) => {
+    if (t === 'tests') return 'test-failures';
+    if (t === 'logs') return 'overview';
+    return t;
+  };
   const pTabRaw = new URLSearchParams(location.search).get('tab');
-  const pTab = _normLegacyTab(pTabRaw);
+  const pTab = pTabRaw === 'log-intel' ? 'log-intel' : _normLegacyTab(pTabRaw);
   let storedRaw = localStorage.getItem('cimon-dash-tab');
   if (storedRaw === 'tests') {
     try {
@@ -158,38 +159,35 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { /* ignore */ }
     storedRaw = 'test-failures';
   }
+  if (storedRaw === 'logs') {
+    try {
+      localStorage.setItem('cimon-dash-tab', 'overview');
+    } catch { /* ignore */ }
+    storedRaw = 'overview';
+  }
   const stored = _normLegacyTab(storedRaw);
   let initTab = (pTab && DASH_TABS.includes(pTab)) ? pTab : (stored && DASH_TABS.includes(stored) ? stored : 'overview');
   if (!DASH_TABS.includes(initTab)) initTab = 'overview';
   setDashboardTab(initTab, { skipUrl: true });
-
-  // Set up IntersectionObserver for each panel's scroll sentinel
-  _initObserver('builds',   loadBuilds);
-  _initObserver('failures', loadFailures);
-  _initObserver('tests',    loadTests);
-  _initObserver('svcs',     loadServices);
+  if (initTab === 'log-intel' && typeof loadLogIntelList === 'function') loadLogIntelList();
 
   // Render starred builds panel
   _renderFavPanel();
 
-  // Initial data load (dropdowns restore filters from localStorage — run before table loads)
+  // Initial data load: dropdowns + URL filters before table loads; observers after options exist.
   pollCollect();
   loadUptimeData().then(() => loadServices()); // load uptime before services render
   loadSummary();
   loadSystemStats();
   populateSourcesAndInstances().then(() => {
+    _initObserver('builds', loadBuilds);
+    _initObserver('failures', loadFailures);
+    _initObserver('tests', loadTests);
+    _initObserver('svcs', loadServices);
     loadBuilds();
     loadFailures();
     loadTests();
   });
-  // Trends: size first, then load data (charts pick up --trend-chart-h)
-  const tsz = localStorage.getItem('cimon-trends-size') || 'm';
-  const szBtn = document.querySelector(`.trends-size-btn[data-size="${tsz}"]`);
-  setTrendsSize(tsz, szBtn || document.querySelector('.trends-size-btn[data-size="m"]'));
-  initTrendsFiltersFromStorage();
-  populateTrendsInstanceFilters();
-  loadTrends(_trendsViewDays, null);
-
   // LIVE-style refresh is always on; background collect runs via server config (no UI toggle).
   setLiveMode(true, { skipInitialFullRefresh: true }, false);
   restartSystemMonitorPolling();

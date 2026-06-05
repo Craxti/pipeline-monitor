@@ -1,0 +1,2 @@
+from parsers.jenkins_console_parser import JenkinsConsoleParser
+from parsers.pytest_parser import PytestXMLParser

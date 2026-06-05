@@ -1,0 +1,4 @@
+.topbar-right,
+.topbar-legend {
+  display: none !important;
+}

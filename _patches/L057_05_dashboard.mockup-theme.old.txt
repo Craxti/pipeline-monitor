@@ -1,0 +1,2 @@
+.chat-send::before { content: "→"; font-size: 1rem; line-height: 1; }
+.chat-send { font-size: 0; }

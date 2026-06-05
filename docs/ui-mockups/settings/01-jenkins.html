@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Jenkins — Settings Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — Settings · static preview</span>
+  <nav><a href="../index.html">Gallery</a><a href="../dashboard/01-overview.html">Dashboard</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>Settings — CI/CD Monitor</h1></div>
+  <div class="m-actions"><a href="../dashboard/01-overview.html" class="m-btn m-btn-ghost">← Dashboard</a></div>
+</header>
+<div class="m-settings-page">
+  <nav class="m-sidenav"><a href="01-jenkins.html" class="m-snav-item active">Jenkins</a>
+<a href="02-gitlab.html" class="m-snav-item">GitLab</a>
+<a href="03-general.html" class="m-snav-item">General</a>
+<a href="04-notifications.html" class="m-snav-item">Notifications</a>
+<a href="05-docker.html" class="m-snav-item">Docker / HTTP</a>
+<a href="06-ai.html" class="m-snav-item">AI Assistant</a>
+</nav>
+  <main>
+<div class="m-wizard">
+  <div class="m-wizard-head"><h2>Jenkins Integration</h2><p>Configure and manage your Jenkins CI/CD instance connections.</p></div>
+  <div class="m-steps">
+    <div class="m-step active"><span class="m-step-num">1</span><span class="m-step-label">Connection Setup</span><span class="m-step-sub">URL &amp; API Token</span></div>
+    <div class="m-step"><span class="m-step-num">2</span><span class="m-step-label">Select Projects</span><span class="m-step-sub">Choose jobs to monitor</span></div>
+    <div class="m-step"><span class="m-step-num">3</span><span class="m-step-label">Finalize &amp; Sync</span><span class="m-step-sub">Save and collect</span></div>
+  </div>
+  <div class="m-form">
+    <div class="m-field"><label>Jenkins Server URL</label><input type="url" value="https://jenkins.example.com" placeholder="https://jenkins.example.com"/><p class="hint">Base URL of your Jenkins instance</p></div>
+    <div class="m-field"><label>API Token</label><input type="password" value="••••••••••••"/><p class="hint">Enter your Jenkins user API token</p></div>
+    <div class="m-form-actions">
+      <button class="m-btn m-btn-ghost">Test Connection</button>
+      <button class="m-btn m-btn-primary">Save Settings</button>
+    </div>
+  </div>
+</div></main>
+</div>
+</body>
+</html>

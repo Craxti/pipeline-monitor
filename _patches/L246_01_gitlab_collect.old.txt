@@ -1,0 +1,19 @@
+from urllib.parse import quote_plus
+
+
+def collect_gitlab_builds(
+    *,
+    cfg: dict,
+    since,
+    progress,
+    merge_build_records,
+    health: list,
+    config_instance_label,
+    logger,
+    incremental_collect: bool,
+    get_collector_state_int,
+    set_collector_state_int,
+    sqlite_available: bool,
+    check_cancelled,
+    incremental_stats: dict | None = None,
+) -> None:

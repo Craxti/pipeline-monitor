@@ -1,0 +1,3 @@
+      add_gitlab: '+ Добавить GitLab',
+      add_github: '+ Добавить GitHub',
+      wz_title: 'Быстрый старт',

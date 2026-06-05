@@ -1,0 +1,5 @@
+<div id="tab-panel-overview" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-overview">
+<section id="sec-overview" class="dash-section">
+<p class="dash-section-intro" data-i18n="dash.overview_intro">Snapshot of CI health: key metrics, status map, and recent events. Click a metric to jump to the related tab.</p>
+<!-- ── Stats ── -->
+  <div class="stats" id="stats">

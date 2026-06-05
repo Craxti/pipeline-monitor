@@ -1,0 +1,154 @@
+function removeGInst(gi) {
+  if (!confirm(tf('st.g_confirm_remove', { name: _gi[gi].name }))) return;
+  _gi.splice(gi, 1);
+  renderGInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GITHUB INSTANCES
+// ══════════════════════════════════════════════════════════════════════════════
+
+function ghRepoHtml(gi) {
+  const repos = _ghi[gi].repos || [];
+  if (!repos.length) return `<tr class="empty-row"><td colspan="3">${esc(t('st.gh_empty_repo'))}</td></tr>`;
+  return repos.map((p, pi) => `
+    <tr>
+      <td><input class="tbl-input" value="${esc(p.id)}" placeholder="${esc(t('st.gh_placeholder_repo'))}"
+          oninput="_ghi[${gi}].repos[${pi}].id=this.value"></td>
+      <td class="c st-col-tight"><input type="checkbox" ${p.critical ? 'checked' : ''}
+          onchange="_ghi[${gi}].repos[${pi}].critical=this.checked"></td>
+      <td class="st-col-actions"><button class="btn-icon" onclick="removeGhRepo(${gi},${pi})" title="${esc(t('st.remove'))}">&#10005;</button></td>
+    </tr>`).join('');
+}
+
+function renderGhRepos(gi) {
+  const tb = $(`ghp-${gi}`);
+  if (tb) tb.innerHTML = ghRepoHtml(gi);
+}
+
+function addGhRepo(gi) {
+  if (!_ghi[gi].repos) _ghi[gi].repos = [];
+  _ghi[gi].repos.push({ id: '', critical: true });
+  renderGhRepos(gi);
+  $(`ghp-${gi}`)?.querySelector('tr:last-child .tbl-input')?.focus();
+}
+
+function removeGhRepo(gi, pi) { _ghi[gi].repos.splice(pi, 1); renderGhRepos(gi); }
+
+function ghInstHtml(gi) {
+  const inst = _ghi[gi];
+  return `
+  <div class="inst-card" id="ghi-card-${gi}">
+    <div class="inst-hdr">
+      <span class="inst-badge gh">GitHub</span>
+      <input class="inst-name-inp" value="${esc(inst.name)}" placeholder="${esc(t('st.gh_inst_placeholder'))}"
+             oninput="_ghi[${gi}].name=this.value">
+      <label class="toggle" style="margin-left:auto;margin-right:.5rem">
+        <input type="checkbox" ${inst.enabled !== false ? 'checked' : ''}
+               onchange="_ghi[${gi}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+        <span style="font-size:.8rem;color:var(--muted)">${esc(t('st.active'))}</span>
+      </label>
+      <button class="btn-icon" onclick="removeGhInst(${gi})" title="${esc(t('st.remove'))}">&#10005;</button>
+    </div>
+    <div class="inst-body">
+      <div class="field-row">
+        <div class="field-label">${esc(t('st.gh_url'))}</div>
+        <input type="url" class="field-input sensitive" value="${esc(inst.url||'')}" placeholder="https://github.com"
+               oninput="_ghi[${gi}].url=this.value">
+        <div class="field-hint">${esc(t('st.gh_url_hint'))}</div>
+      </div>
+      <div class="two-col">
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.gh_token'))}</div>
+          <div class="pw-wrap">
+            <input type="password" class="field-input sensitive" value="${esc(inst.token||'')}" data-secret-path="github_instances[${gi}].token"
+                   autocomplete="new-password" oninput="_ghi[${gi}].token=this.value">
+          </div>
+          <div class="field-hint">${esc(t('st.gh_token_hint'))}</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">${esc(t('st.gh_max_runs'))}</div>
+          <input type="number" class="field-input" value="${inst.max_runs??10}" min="1" max="100"
+                 oninput="_ghi[${gi}].max_runs=parseInt(this.value)">
+        </div>
+      </div>
+      <div class="inst-test-row">
+        <button type="button" class="btn btn-sm btn-ghost" id="ghi-test-btn-${gi}" onclick="testInstanceConnection('github', ${gi})">${esc(t('st.test_connection_btn'))}</button>
+        <span class="test-status" id="ghi-test-status-${gi}"></span>
+      </div>
+      <div class="field-row">
+        <label class="toggle">
+          <input type="checkbox" ${inst.verify_ssl !== false ? 'checked' : ''}
+                 onchange="_ghi[${gi}].verify_ssl=this.checked">
+          <div class="toggle-track"><div class="toggle-knob"></div></div>
+          <span>${esc(t('st.verify_ssl'))}</span>
+        </label>
+      </div>
+      <div class="sub-sec">
+        <div class="field-row" style="margin-bottom:.6rem">
+          <label class="toggle">
+            <input type="checkbox" id="gh-show-all-${gi}" ${inst.show_all_repos ? 'checked' : ''}
+                   onchange="_ghi[${gi}].show_all_repos=this.checked;toggleGhRepos(${gi})">
+            <div class="toggle-track"><div class="toggle-knob"></div></div>
+            ${esc(t('st.gh_show_all'))}
+          </label>
+          <div class="field-hint" id="gh-all-hint-${gi}">
+            ${inst.show_all_repos ? esc(t('st.gh_hint_all')) : esc(t('st.gh_hint_list'))}
+          </div>
+        </div>
+        <div id="gh-repos-panel-${gi}" style="display:${inst.show_all_repos ? 'none' : ''}">
+          <div class="sub-sec-hdr">
+            <span class="field-label">${esc(t('st.gh_repos_monitor'))}</span>
+            <button class="btn btn-sm" onclick="addGhRepo(${gi})">${esc(t('st.gh_add_repo'))}</button>
+          </div>
+          <div class="st-table-wrap">
+            <table>
+              <thead><tr>
+                <th>${esc(t('st.th_repo'))}</th>
+                <th class="c st-col-tight">${esc(t('st.th_critical'))}</th>
+                <th class="st-col-actions" aria-label=""></th>
+              </tr></thead>
+              <tbody id="ghp-${gi}">${ghRepoHtml(gi)}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleGhRepos(gi) {
+  const showAll = _ghi[gi].show_all_repos;
+  const panel = $('gh-repos-panel-' + gi);
+  const hint  = $('gh-all-hint-' + gi);
+  if (panel) panel.style.display = showAll ? 'none' : '';
+  if (hint)  hint.textContent = showAll ? t('st.gh_hint_all') : t('st.gh_hint_list');
+}
+
+function renderGhInsts() {
+  const c = $('github-instances');
+  if (!c) return;
+  if (!_ghi.length) {
+    c.innerHTML = `<div class="empty-card">${esc(t('st.gh_empty'))}</div>`;
+    return;
+  }
+  c.innerHTML = _ghi.map((_, i) => ghInstHtml(i)).join('');
+}
+
+function addGithubInst() {
+  _ghi.push({ name: `GitHub ${_ghi.length + 1}`, enabled: true, url: 'https://github.com', token: '',
+             repos: [], max_runs: 10, verify_ssl: true, show_all_repos: false });
+  renderGhInsts();
+  $(`ghi-card-${_ghi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
+}
+
+function removeGhInst(gi) {
+  if (!confirm(tf('st.gh_confirm_remove', { name: _ghi[gi].name }))) return;
+  _ghi.splice(gi, 1);
+  renderGhInsts();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TELEGRAM BOTS (multiple)
+// ══════════════════════════════════════════════════════════════════════════════

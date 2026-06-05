@@ -1,0 +1,5 @@
+  #tab-panel-trends .trends-grid,
+  #tab-panel-trends #trends-default-grid {
+    grid-template-columns: 1fr;
+  }
+}

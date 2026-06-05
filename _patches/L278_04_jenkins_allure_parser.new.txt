@@ -1,0 +1,10 @@
+            except requests.HTTPError as exc:
+                code = getattr(getattr(exc, "response", None), "status_code", None)
+                if self._is_auth_failure(code):
+                    logger.warning(
+                        "AllureParser: GET %s -> %d (auth failed — check Jenkins token, skip)",
+                        path,
+                        code,
+                    )
+                    return None
+                if code == 404:

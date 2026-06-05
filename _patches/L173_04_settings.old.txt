@@ -1,0 +1,2 @@
+let _ji = [];   // jenkins instances
+let _gi = [];   // gitlab instances

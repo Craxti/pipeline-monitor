@@ -1,0 +1,25 @@
+      <div class="lintel-graph-panel">
+        <div class="lintel-graph-head">
+          <div>
+            <h3 class="lintel-title" data-i18n="dash.log_intel_correlation">Event correlations</h3>
+            <p class="lintel-graph-hint" data-i18n="dash.log_intel_list_hint">Events that often follow each other in time. Stronger links appear first.</p>
+          </div>
+          <div class="lintel-view-toggle" role="group">
+            <button type="button" class="btn btn-ghost lintel-view-btn active" id="lintel-view-list" data-dash-action="setLogIntelCorrView" data-dash-args='["list"]' data-i18n="dash.log_intel_view_list">List</button>
+            <button type="button" class="btn btn-ghost lintel-view-btn" id="lintel-view-graph" data-dash-action="setLogIntelCorrView" data-dash-args='["graph"]' data-i18n="dash.log_intel_view_graph">Graph</button>
+          </div>
+        </div>
+        <div id="log-intel-corr-list" class="lintel-corr-list"></div>
+        <div id="log-intel-graph-wrap" class="lintel-graph-wrap" hidden>
+          <div class="lintel-graph-tools">
+            <div class="lintel-legend" aria-hidden="true">
+              <span class="lintel-legend-item lintel-legend-root"><span class="lintel-legend-dot"></span><span data-i18n="dash.log_intel_role_root">Root</span></span>
+              <span class="lintel-legend-item lintel-legend-hub"><span class="lintel-legend-dot"></span><span data-i18n="dash.log_intel_role_hub">Hub</span></span>
+              <span class="lintel-legend-item lintel-legend-leaf"><span class="lintel-legend-dot"></span><span data-i18n="dash.log_intel_role_leaf">Leaf</span></span>
+            </div>
+            <button type="button" class="btn btn-ghost lintel-graph-btn" data-dash-action="fitLogIntelGraph" data-i18n="dash.log_intel_graph_fit">Fit</button>
+            <button type="button" class="btn btn-ghost lintel-graph-btn" data-dash-action="resetLogIntelGraphLayout" data-i18n="dash.log_intel_graph_reset">Reset layout</button>
+          </div>
+          <div id="log-intel-graph" class="lintel-graph"></div>
+        </div>
+      </div>

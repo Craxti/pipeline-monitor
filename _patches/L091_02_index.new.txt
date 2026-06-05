@@ -1,0 +1,2 @@
+<link rel="stylesheet" href="/static/dashboard.css?v=20260606l"/>
+<link rel="stylesheet" href="/static/dashboard.mockup-theme.css?v=20260606l"/>

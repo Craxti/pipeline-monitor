@@ -1,0 +1,4 @@
+        if (fsrc) {
+          const src = String(b.source || '').toLowerCase();
+          fsrc.value = (src === 'github' || src === 'gitlab') ? src : 'gitlab';
+        }

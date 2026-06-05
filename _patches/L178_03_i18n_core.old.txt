@@ -1,0 +1,2 @@
+      add_gitlab: '+ Add GitLab',
+      wz_title: 'Quick Start Wizard',

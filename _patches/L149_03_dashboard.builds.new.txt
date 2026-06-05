@@ -1,0 +1,8 @@
+    const tbody = document.getElementById('tbody-builds');
+    if (res === FETCH_ABORTED) {
+      if (keepTableOnTransientApiError(tbody, null, s, 'builds')) return;
+      s.loading = false;
+      return;
+    }
+    if (!res || !res.ok) {
+      if (keepTableOnTransientApiError(tbody, res, s, 'builds')) return;

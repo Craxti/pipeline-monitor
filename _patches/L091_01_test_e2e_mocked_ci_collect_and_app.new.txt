@@ -1,0 +1,1 @@
+    assert 'id="ic-cards"' in page.text

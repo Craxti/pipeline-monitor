@@ -1,0 +1,1 @@
+      <button type="button" class="btn btn-ghost" id="log-btn-copy" style="font-size:.8rem" data-dash-action="copyLogToClipboard" data-i18n-title="dash.log_copy_title" title=""><span data-i18n="common.copy">Copy</span></button>

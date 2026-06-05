@@ -1,0 +1,1 @@
+    <h2><span class="panel-icon panel-icon--services" aria-hidden="true"></span><span data-i18n="dash.svcs_title">Services / Containers</span></h2>

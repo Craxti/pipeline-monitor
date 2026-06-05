@@ -1,0 +1,4 @@
+    def test_github_requires_token(self) -> None:
+        from web.services.settings_connection_test import check_connection
+
+        out = check_connection({"kind": "github", "url": "https://github.com", "token": ""})

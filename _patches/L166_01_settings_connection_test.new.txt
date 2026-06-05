@@ -1,0 +1,8 @@
+    if kind not in {"jenkins", "gitlab", "github"}:
+        return {"ok": False, "message": "Unsupported kind. Use 'jenkins', 'gitlab', or 'github'."}
+
+    if kind == "jenkins":
+        return _test_jenkins(payload)
+    if kind == "gitlab":
+        return _test_gitlab(payload)
+    return _test_github(payload)

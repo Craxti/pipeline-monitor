@@ -4,6 +4,42 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ALL TEST RUNS
 // ─────────────────────────────────────────────────────────────────────────────
+const _TEST_PIPELINE_RE = /\b(test|tests|testing|e2e|spec|pytest|unittest|unit-?test|integration)\b/i;
+
+function _isGitlabTestPipeline(row) {
+  const pipeline = String((row && (row.suite || row.job_name)) || '').toLowerCase();
+  return _TEST_PIPELINE_RE.test(pipeline);
+}
+
+function _mapTestSourceForApi(uiSource) {
+  const s = String(uiSource || '').trim().toLowerCase();
+  if (s === 'pipelines' || s === 'gitlab_test') return 'real';
+  if (s === 'jenkins') return 'jenkins';
+  return s || 'real';
+}
+
+function _filterTestRunsScope(rows, uiSource) {
+  const s = String(uiSource || '').trim().toLowerCase();
+  if (!s || s === 'pipelines') {
+    return (rows || []).filter((r) => {
+      const src = String(r.source || '').toLowerCase();
+      if (src === 'jenkins_unified' || src.startsWith('jenkins')) return true;
+      if (src === 'gitlab') return _isGitlabTestPipeline(r);
+      return false;
+    });
+  }
+  if (s === 'gitlab_test') {
+    return (rows || []).filter((r) => String(r.source || '').toLowerCase() === 'gitlab' && _isGitlabTestPipeline(r));
+  }
+  if (s === 'jenkins') {
+    return (rows || []).filter((r) => {
+      const src = String(r.source || '').toLowerCase();
+      return src === 'jenkins_unified' || src.startsWith('jenkins');
+    });
+  }
+  return rows || [];
+}
+
 let _lastTestsPageSig = '';
 let _testsSort = { key: 'timestamp', dir: 'desc' };
 let _testsSortInit = false;
@@ -641,7 +677,7 @@ function resetTestsSoft(soft=false) {
 }
 function clearTestFilters() {
   document.getElementById('f-tstatus').value = '';
-  document.getElementById('f-tsource').value = 'real';
+  document.getElementById('f-tsource').value = 'pipelines';
   document.getElementById('f-tname').value   = '';
   document.getElementById('f-tsuite').value  = '';
   _testsHours = 0;
@@ -654,7 +690,8 @@ function clearTestFilters() {
 }
 
 function updateTestsExportLinks() {
-  const src = document.getElementById('f-tsource')?.value || '';
+  const uiSrc = document.getElementById('f-tsource')?.value || '';
+  const src = _mapTestSourceForApi(uiSrc);
   const a1 = document.getElementById('exp-tests-csv');
   const a2 = document.getElementById('exp-tests-xlsx');
   const a3 = document.getElementById('exp-tests-failed-csv');
@@ -696,10 +733,11 @@ async function loadTests() {
   try {
     _syncTestSourceQuickButtons();
     const status = document.getElementById('f-tstatus').value;
-    const source = document.getElementById('f-tsource').value;
+    const uiSource = document.getElementById('f-tsource').value;
+    const apiSource = _mapTestSourceForApi(uiSource);
     const name   = document.getElementById('f-tname').value;
     const suite  = document.getElementById('f-tsuite').value;
-    const url = apiUrl(`api/tests?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}&source=${encodeURIComponent(source)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`);
+    const url = apiUrl(`api/tests?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}&source=${encodeURIComponent(apiSource)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`);
 
     const res = await fetchKeyed('tests', url).catch(()=>null);
 
@@ -718,14 +756,25 @@ async function loadTests() {
     }
     const data = await res.json();
     s.total = data.total;
-    document.getElementById('tests-count').textContent = data.total;
+    const scoped = _filterTestRunsScope(data.items || [], uiSource);
+    const countEl = document.getElementById('tests-count');
+    if (countEl) {
+      countEl.textContent = (uiSource === 'pipelines' || uiSource === 'gitlab_test')
+        ? String(scoped.length) + (s.page === 1 && data.total > scoped.length ? '+' : '')
+        : String(data.total);
+    }
     if (data.breakdown) {
       const b = data.breakdown;
       const el = document.getElementById('tests-breakdown');
-      if (el) el.textContent = `Real: ${b.real_total || 0} (${b.real_failed || 0} failed) · Synthetic: ${b.synthetic_total || 0} (${b.synthetic_failed || 0} failed)`;
+      if (el) el.textContent = `Jenkins: ${b.real_total || 0} (${b.real_failed || 0} failed)`;
     }
 
-    const rows = _sortTestsRows(data.items || []);
+    const rows = _sortTestsRows(scoped);
+    if (!rows.length && data.has_more && (uiSource === 'pipelines' || uiSource === 'gitlab_test')) {
+      s.page++;
+      window.requestAnimationFrame(() => { loadTests(); });
+      return;
+    }
     if (s.page === 1 && !rows.length) {
       if (keepTableOnTransientEmpty(tbody, rows, s)) return;
       tbody.innerHTML = `<tr class="empty-row"><td colspan="7"><div>${esc(t('dash.table_no_tests'))}</div><div class="empty-hint">${t('dash.empty_tests_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;

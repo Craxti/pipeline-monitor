@@ -1,0 +1,3 @@
+            except requests.HTTPError as exc:
+                code = getattr(getattr(exc, "response", None), "status_code", None)
+                if code == 404:

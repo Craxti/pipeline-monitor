@@ -37,14 +37,15 @@ class JenkinsAllureParser:
         jobs: list[dict],
         max_builds: int = 1,
         workers: int = 6,
-        timeout: int = 30,
+        timeout: int = 20,
         verify_ssl: bool = True,
         progress_cb: callable | None = None,
-        retries: int = 3,
+        retries: int = 2,
         backoff_seconds: float = 0.8,
         records_cb: callable | None = None,
         timing_cb: callable | None = None,
         should_cancel: callable | None = None,
+        per_task_timeout_sec: int = 90,
     ) -> None:
         self.base_url = url.rstrip("/")
         self.auth = (username, token)
@@ -59,6 +60,7 @@ class JenkinsAllureParser:
         self.records_cb = records_cb
         self.timing_cb = timing_cb
         self.should_cancel = should_cancel
+        self.per_task_timeout_sec = max(10, int(per_task_timeout_sec or 90))
 
     def _check_cancelled(self) -> None:
         if self.should_cancel and bool(self.should_cancel()):
@@ -66,6 +68,14 @@ class JenkinsAllureParser:
 
     def _should_retry_status(self, status_code: int | None) -> bool:
         return status_code in (408, 425, 429, 500, 502, 503, 504)
+
+    def _is_auth_failure(self, status_code: int | None) -> bool:
+        return status_code in (401, 403, 407)
+
+    def _request_timeout(self) -> tuple[int, int]:
+        """(connect_sec, read_sec) — fail fast on dead hosts instead of blocking collect."""
+        read_sec = max(5, int(self.timeout or 20))
+        return (5, read_sec)
 
     def _get_json(self, path: str) -> dict | list | None:
         url = f"{self.base_url}{path}"
@@ -79,10 +89,17 @@ class JenkinsAllureParser:
                 r = requests.get(
                     url,
                     auth=self.auth,
-                    timeout=self.timeout,
+                    timeout=self._request_timeout(),
                     verify=self.verify_ssl,
                 )
                 elapsed_ms = int((time.monotonic() - t0) * 1000)
+                if self._is_auth_failure(r.status_code):
+                    logger.warning(
+                        "AllureParser: GET %s -> %d (auth failed — check Jenkins token, skip)",
+                        path,
+                        r.status_code,
+                    )
+                    return None
                 if r.status_code >= 400 and self._should_retry_status(r.status_code) and attempt < self.retries:
                     delay = self.backoff_seconds * (2**attempt)
                     logger.warning(
@@ -103,6 +120,13 @@ class JenkinsAllureParser:
                 return r.json()
             except requests.HTTPError as exc:
                 code = getattr(getattr(exc, "response", None), "status_code", None)
+                if self._is_auth_failure(code):
+                    logger.warning(
+                        "AllureParser: GET %s -> %d (auth failed — check Jenkins token, skip)",
+                        path,
+                        code,
+                    )
+                    return None
                 if code == 404:
                     # Allure report may legitimately be missing for a build.
                     logger.debug("AllureParser: GET %s -> 404 (no report)", path)
@@ -120,6 +144,48 @@ class JenkinsAllureParser:
                     attempt += 1
                     continue
                 logger.warning("AllureParser: GET %s failed: %s", path, exc)
+                return None
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "AllureParser: GET %s unreachable, retry in %.1fs: %s",
+                        path,
+                        delay,
+                        exc,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("AllureParser: GET %s unreachable, skip: %s", path, exc)
+                return None
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                conn_cap = min(self.retries, 1)
+                if attempt < conn_cap:
+                    delay = self.backoff_seconds * (2**attempt)
+                    logger.warning(
+                        "AllureParser: GET %s unreachable, retry in %.1fs: %s",
+                        path,
+                        delay,
+                        exc,
+                    )
+                    try:
+                        self._check_cancelled()
+                        import time
+
+                        time.sleep(delay)
+                    except Exception:
+                        pass
+                    attempt += 1
+                    continue
+                logger.warning("AllureParser: GET %s unreachable, skip: %s", path, exc)
                 return None
             except Exception as exc:
                 if attempt < self.retries:
@@ -332,7 +398,13 @@ class JenkinsAllureParser:
             for fut in as_completed(futs):
                 self._check_cancelled()
                 try:
-                    recs = fut.result()
+                    recs = fut.result(timeout=self.per_task_timeout_sec)
+                except TimeoutError:
+                    logger.warning(
+                        "AllureParser: job/build timed out after %ds, skip",
+                        self.per_task_timeout_sec,
+                    )
+                    continue
                 except Exception as exc:
                     logger.warning("AllureParser: worker failed: %s", exc)
                     continue

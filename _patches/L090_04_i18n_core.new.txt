@@ -1,0 +1,5 @@
+      log_intel_no_graph: 'Correlation graph needs more events.',
+      log_intel_list_hint: 'Events that often follow each other in time. Stronger links appear first.',
+      log_intel_view_list: 'List',
+      log_intel_view_graph: 'Graph',
+      log_intel_no_corr: 'Not enough correlated transitions yet.',

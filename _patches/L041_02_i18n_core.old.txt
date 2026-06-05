@@ -1,0 +1,1 @@
+      tests_intro: 'Jenkins test jobs and GitLab pipelines whose name contains test-related keywords (test, e2e, spec, pytest, etc.).',

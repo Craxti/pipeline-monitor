@@ -5,6 +5,7 @@ Extracted from ``web.app`` to reduce module size and keep state handling isolate
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from collections import deque
@@ -13,7 +14,7 @@ from typing import Any, Deque, Dict
 
 @dataclass
 class CollectState:
-    """Mutable collect state + rolling logs for UI endpoints."""
+    """Mutable collect state + rolling logs (stdout + optional in-memory buffer)."""
 
     state: Dict[str, Any] = field(
         default_factory=lambda: {
@@ -37,6 +38,21 @@ class CollectState:
     auto_collect_enabled: bool = False
     auto_collect_enabled_at_iso: str | None = None
 
+    def _emit_stdout(self, phase: str, main: str, sub: str | None, level: str) -> None:
+        """Write a collect log line to the running process stdout/stderr."""
+        try:
+            lvl = (level or "info").strip().lower()
+            tag = lvl.upper()
+            msg = (main or "").strip()
+            s = (sub or "").strip()
+            if s:
+                msg = f"{msg} · {s}"
+            line = f"[collect] {tag} {phase}: {msg}"
+            stream = sys.stderr if lvl == "error" else sys.stdout
+            print(line, file=stream, flush=True)
+        except Exception:
+            pass
+
     def push_log(
         self,
         phase: str,
@@ -44,11 +60,12 @@ class CollectState:
         sub: str | None = None,
         level: str = "info",
     ) -> None:
-        """Append a structured log record."""
+        """Append a structured log record and mirror it to process stdout."""
         try:
             lvl = (level or "info").strip().lower()
             if lvl not in ("info", "warn", "error"):
                 lvl = "info"
+            self._emit_stdout(phase, main, sub, lvl)
             instance: str | None = None
             job: str | None = None
             m = (main or "").strip()

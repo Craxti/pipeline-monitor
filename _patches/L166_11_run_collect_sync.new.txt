@@ -1,0 +1,17 @@
+    logger.info("GitLab phase completed: builds=%d", len(snapshot.builds))
+    _between_phases()
+
+    _github_collect.collect_github_builds(
+        cfg=cfg,
+        since=since,
+        progress=progress,
+        merge_build_records=merge_build_records,
+        health=health,
+        config_instance_label=config_instance_label,
+        logger=logger,
+        check_cancelled=check_cancelled,
+    )
+    logger.info("GitHub phase completed: builds=%d", len(snapshot.builds))
+    _between_phases()
+
+    _local_parsers.parse_local_test_dirs(cfg=cfg, snapshot=snapshot, logger=logger, check_cancelled=check_cancelled)

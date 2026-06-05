@@ -1,0 +1,17 @@
+                        allure_jobs_cap = int(inst.get("allure_jobs_cap", 50) or 50)
+                        if allure_jobs_cap > 0 and len(merged_names) > allure_jobs_cap:
+                            logger.info(
+                                "Jenkins [%s] allure: capping jobs %d -> %d (allure_jobs_cap)",
+                                label,
+                                len(merged_names),
+                                allure_jobs_cap,
+                            )
+                            merged_names = merged_names[:allure_jobs_cap]
+                        jobs_for_allure = [
+                            {
+                                "name": n,
+                                "critical": bool(explicit_by_name.get(n, {}).get("critical", False)),
+                                "parse_allure": True,
+                            }
+                            for n in merged_names
+                        ]

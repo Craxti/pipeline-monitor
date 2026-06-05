@@ -1,0 +1,423 @@
+  #tab-panel-trends .trends-grid,
+  #tab-panel-trends #trends-default-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2026 refresh — icons, section intros, incident KPIs, scoped tabs
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Tab subtitles on wide screens */
+@media (min-width: 900px) {
+  .dash-tab-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-right: 0.15rem;
+  }
+
+  .dash-tab-sub {
+    display: block !important;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 0 0.95rem 0.35rem;
+    margin-top: -0.2rem;
+    line-height: 1.25;
+    max-width: 11rem;
+    white-space: normal;
+  }
+
+  .dash-tab-cell:has(.dash-tab.active) .dash-tab-sub,
+  .dash-tab-cell:has(.dash-tab[aria-selected="true"]) .dash-tab-sub {
+    color: rgba(96, 165, 250, 0.85);
+  }
+}
+
+/* Section intros */
+.dash-section-intro {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dash-section-intro strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* Panel heading icons (replace emoji) */
+.panel-head h2,
+.panel-head-minimal h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.4rem;
+  flex-shrink: 0;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.panel-icon::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 0.15rem;
+  background: var(--accent);
+}
+
+.panel-icon--overview::before { background: var(--info); border-radius: 50%; }
+.panel-icon--map::before { width: 0.7rem; height: 0.45rem; border-radius: 0.1rem; background: var(--info); }
+.panel-icon--timeline::before { width: 0.5rem; height: 0.5rem; border-radius: 50%; border: 2px solid var(--purple); background: transparent; }
+.panel-icon--star::before { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); width: 0.65rem; height: 0.65rem; border-radius: 0; background: var(--warn); }
+.panel-icon--gitlab::before { width: 0.65rem; height: 0.65rem; border-radius: 50% 50% 0 50%; transform: rotate(-45deg); background: #fc6d26; }
+.panel-icon--failures::before { background: var(--fail); border-radius: 50%; }
+.panel-icon--tests::before { background: var(--ok); border-radius: 0.12rem; }
+.panel-icon--services::before { width: 0.75rem; height: 0.5rem; border-radius: 0.12rem; background: var(--chart-teal); }
+.panel-icon--system::before { width: 0.7rem; height: 0.45rem; border-radius: 0.08rem; border: 2px solid var(--muted); background: transparent; }
+.panel-icon--incidents::before { width: 0; height: 0; border-left: 0.32rem solid transparent; border-right: 0.32rem solid transparent; border-bottom: 0.55rem solid var(--warn); border-radius: 0; background: transparent; }
+.panel-icon--logs::before { width: 0.55rem; height: 0.7rem; border-radius: 0.08rem; background: var(--purple); }
+.panel-icon--har::before { width: 0.65rem; height: 0.45rem; border-radius: 0.1rem; background: linear-gradient(90deg, var(--info) 50%, var(--ok) 50%); }
+
+/* Toolbar / header icon buttons */
+.ico-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.ico-btn--bell::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.7rem;
+  border: 2px solid currentColor;
+  border-radius: 0.35rem 0.35rem 0.1rem 0.1rem;
+  position: relative;
+}
+
+.ico-btn--bell::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  width: 0.35rem;
+  height: 0.2rem;
+  border: 2px solid currentColor;
+  border-bottom: none;
+  border-radius: 0.2rem 0.2rem 0 0;
+}
+
+.ico-btn--doc::before {
+  content: "";
+  display: block;
+  width: 0.55rem;
+  height: 0.7rem;
+  border: 2px solid currentColor;
+  border-radius: 0.08rem;
+}
+
+.ico-btn--gear::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px dotted currentColor;
+  border-radius: 50%;
+}
+
+.theme-ico-dark::before,
+.theme-ico-light::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+
+.theme-ico-dark::before {
+  background: #1e293b;
+  box-shadow: inset -0.15rem -0.1rem 0 0 #f8fafc;
+}
+
+.theme-ico-light::before {
+  background: #fbbf24;
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+
+/* Source scope badge (GitLab-only builds tab) */
+.source-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(252, 109, 38, 0.35);
+  background: rgba(252, 109, 38, 0.1);
+  color: #fb923c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.source-scope-badge::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50% 50% 0 50%;
+  transform: rotate(-45deg);
+  background: #fc6d26;
+}
+
+/* Overview stats polish */
+#sec-overview .stats {
+  gap: 0.65rem;
+}
+
+#sec-overview .stat {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.85rem 1rem;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+#sec-overview .stat:hover {
+  border-color: rgba(96, 165, 250, 0.4);
+  transform: translateY(-1px);
+}
+
+#sec-overview .stat .n {
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.status-legend-inline {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+
+/* Incident center KPI summary */
+.ic-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
+  margin: 0.85rem 0 0.25rem;
+}
+
+.ic-kpi {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+
+.ic-kpi-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.ic-kpi-val {
+  display: block;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.ic-kpi-val.c-fail { color: var(--fail); }
+.ic-kpi-val.c-ok { color: var(--ok); }
+.ic-kpi-val.c-warn { color: var(--warn); }
+.ic-kpi-val.c-info { color: var(--info); }
+
+.ic-affected {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+/* Log intelligence intro card */
+.lintel-intro {
+  margin: 0 1rem 0.85rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), var(--surface2));
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.lintel-intro strong { color: var(--text); }
+
+/* HAR layout polish */
+.dhar-intro {
+  margin: 0 1rem 0.85rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), var(--surface2));
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.dhar-section {
+  margin-top: 0.5rem;
+}
+
+.dhar-section .dhar-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.45rem;
+}
+
+/* Footer watermark */
+.app-watermark {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.app-watermark:hover {
+  opacity: 0.9;
+}
+
+.btn-back-top {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* Modal source icons */
+.modal-icon.jenkins,
+.modal-icon.gitlab,
+.modal-icon.docker {
+  font-size: 0;
+  background-size: 1.25rem 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.modal-icon.jenkins {
+  background-image: url("/static/icons/jenkins.svg");
+}
+
+.modal-icon.gitlab {
+  background-image: url("/static/icons/gitlab.svg");
+}
+
+.modal-icon.docker {
+  background: rgba(59, 130, 246, 0.15);
+  border: 2px solid var(--info);
+  border-radius: 0.35rem;
+}
+
+.modal-icon.docker::after {
+  content: "";
+  display: block;
+  width: 0.75rem;
+  height: 0.5rem;
+  margin: 0.2rem auto;
+  background: var(--info);
+  border-radius: 0.1rem;
+}
+
+/* Action buttons: text labels instead of emoji */
+.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
+.act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
+.act-btn.lintel-btn { font-size: 0; min-width: 2rem; }
+
+/* Settings nav icons */
+.snav-icon-img {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.snav-item.active .snav-icon-img {
+  opacity: 1;
+}
+
+.sec-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.4rem;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sec-icon img {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* Chat FAB — no emoji */
+#ai-chat-fab #fab-icon {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+#ai-chat-fab #fab-icon::before {
+  content: "AI";
+}
+
+.chat-hdr-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.4rem;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--purple);
+  flex-shrink: 0;
+}
+
+.chat-hdr-ico::before { content: "AI"; }
+
+.chat-clear-ico::before { content: "×"; font-size: 1rem; line-height: 1; }
+.chat-clear-ico { font-size: 0; }
+
+.chat-send::before { content: "→"; font-size: 1rem; line-height: 1; }
+.chat-send { font-size: 0; }

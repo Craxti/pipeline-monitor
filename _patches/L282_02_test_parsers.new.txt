@@ -1,0 +1,5 @@
+from unittest.mock import MagicMock, patch
+
+from parsers.jenkins_allure_parser import JenkinsAllureParser
+from parsers.jenkins_console_parser import JenkinsConsoleParser
+from parsers.pytest_parser import PytestXMLParser

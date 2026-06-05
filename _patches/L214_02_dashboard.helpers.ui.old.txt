@@ -1,0 +1,6 @@
+function cacheStaleTableHtml(key, tbody) {
+  try {
+    if (!key || !tbody || !tbodyHasDataRows(tbody)) return;
+    _staleTableHtml[key] = tbody.innerHTML;
+  } catch { /* ignore */ }
+}

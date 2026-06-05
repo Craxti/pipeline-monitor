@@ -90,11 +90,16 @@ def save_snapshot_partial(
     except Exception:
         snapshot_to_save = snapshot
 
+    try:
+        body = snapshot_to_save.model_dump_json()
+    except Exception:
+        return
+
     from web.db import ensure_database_initialized, set_latest_snapshot_json
 
     with snapshot_write_lock:
         if not ensure_database_initialized(data_dir=data_dir):
             return
-        seq = set_latest_snapshot_json(snapshot_to_save.model_dump_json())
+        seq = set_latest_snapshot_json(body)
         bump_revision()
         prime_snapshot_cache(snapshot_to_save, seq)

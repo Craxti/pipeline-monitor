@@ -1,0 +1,9 @@
+  _collectStartedAt = null;
+  btn.disabled = false;
+  if (fullBtn) fullBtn.disabled = false;
+  if (stopBtn) {
+    stopBtn.classList.add('collect-stop-hidden');
+    stopBtn.disabled = true;
+  }
+
+  if (hasErr) {

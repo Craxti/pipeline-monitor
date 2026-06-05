@@ -1,0 +1,1 @@
+<script src="/static/dashboard.init.js?v=20260605a" defer></script>

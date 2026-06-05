@@ -1,0 +1,4 @@
+      builds_intro: 'GitLab and GitHub Actions pipelines — filter by source, instance, status, and job name.',
+      builds_scope_gitlab: 'GitLab',
+      builds_source_gitlab: 'GitLab',
+      builds_source_github: 'GitHub Actions',

@@ -1,0 +1,7 @@
+  if (fs && fs.value) {
+    const src = String(fs.value).toLowerCase();
+    const label = src === 'gitlab' ? t('dash.builds_source_gitlab')
+      : src === 'github' ? t('dash.builds_source_github')
+      : fs.value;
+    fb.push(`${t('dash.th_source')}: ${label}`);
+  }

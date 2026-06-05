@@ -1,0 +1,2 @@
+      nav_gitlab: 'GitLab',
+      nav_general: 'Общее',

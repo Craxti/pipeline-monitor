@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Trends — UI Mockup</title>
+<link rel="stylesheet" href="../shared/design-system.css"/>
+</head>
+<body>
+<div class="mockup-banner">
+  <span><strong>UI Mockup</strong> — static preview, not connected to app</span>
+  <nav><a href="../index.html">Gallery</a><a href="01-overview.html">Overview</a><a href="08-incidents.html">Incidents</a><a href="../settings/01-jenkins.html">Settings</a></nav>
+</div>
+<header class="m-header">
+  <div class="m-logo">∞</div>
+  <div class="m-brand"><h1>CI/CD Monitor</h1></div>
+  <div class="m-collect"><span class="dot"></span> Collect: OK · 42s</div>
+  <div class="m-actions">
+    <button class="m-btn m-btn-primary">↻ Collect</button>
+    <button class="m-btn m-btn-ghost">Refresh</button>
+    <a href="../settings/01-jenkins.html" class="m-btn m-btn-ghost">⚙ Settings</a>
+  </div>
+</header>
+<div class="m-topbar">
+  <div class="m-pills">
+    <span class="m-pill"><span class="m-dot ok"></span> Collect: OK</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Age: 42s</span>
+    <span class="m-pill"><span class="m-dot fail"></span> Builds: 3 · Tests: 12 · Svcs: 1</span>
+    <span class="m-pill"><span class="m-dot ok"></span> Sources: 2/2</span>
+  </div>
+  <div class="m-legend">
+    <span><span class="m-dot ok"></span> OK</span>
+    <span><span class="m-dot warn"></span> Unstable</span>
+    <span><span class="m-dot fail"></span> Failed</span>
+  </div>
+</div>
+<nav class="m-tabs"><div class="m-tab-cell"><a href="01-overview.html" class="m-tab">Overview</a><span class="m-tab-sub">Metrics, map & situation</span></div>
+<div class="m-tab-cell"><a href="02-builds.html" class="m-tab">Builds</a><span class="m-tab-sub">Pipelines, filters & starred</span></div>
+<div class="m-tab-cell"><a href="03-top-failures.html" class="m-tab">Top failures</a><span class="m-tab-sub">Aggregated failing tests</span></div>
+<div class="m-tab-cell"><a href="04-test-runs.html" class="m-tab">Test runs</a><span class="m-tab-sub">All runs, filters & export</span></div>
+<div class="m-tab-cell"><a href="05-services.html" class="m-tab">Services</a><span class="m-tab-sub">Containers & timeline</span></div>
+<div class="m-tab-cell"><a href="06-system.html" class="m-tab">System</a><span class="m-tab-sub">Host CPU, memory & processes</span></div>
+<div class="m-tab-cell"><a href="07-trends.html" class="m-tab active">Trends</a><span class="m-tab-sub">Charts over time</span></div>
+<div class="m-tab-cell"><a href="08-incidents.html" class="m-tab">Incidents</a><span class="m-tab-sub">Summary & correlated failures</span></div>
+<div class="m-tab-cell"><a href="09-log-intelligence.html" class="m-tab">Log intelligence</a><span class="m-tab-sub">Clusters & correlation</span></div>
+<div class="m-tab-cell"><a href="10-har.html" class="m-tab">HAR</a><span class="m-tab-sub">Request diagnostics</span></div>
+</nav>
+<main class="m-main">
+<div class="m-panel">
+  <div class="m-panel-head">
+    <h2>📈 Trends</h2>
+    <button class="m-chip">3d</button><button class="m-chip">7d</button><button class="m-chip active">14d</button>
+  </div>
+  <div class="m-stats" style="padding:0 1.1rem 1rem">
+    <div class="m-stat"><div class="n c-fail">2.4</div><div class="l">Crash freq / day</div></div>
+    <div class="m-stat"><div class="n c-info">18m</div><div class="l">Avg recovery</div></div>
+    <div class="m-stat"><div class="n c-warn">api-build</div><div class="l">Top problem job</div></div>
+  </div>
+  <div class="m-charts">
+    <div class="m-chart-card"><h3>Builds: Failed vs Total</h3><div class="m-chart-placeholder"><div class="m-chart-bars"><div class="m-bar-group"><div class="m-bar ok" style="height:70%"></div><div class="m-bar fail" style="height:8%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:85%"></div><div class="m-bar fail" style="height:12%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:60%"></div><div class="m-bar fail" style="height:5%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:90%"></div><div class="m-bar fail" style="height:15%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:75%"></div><div class="m-bar fail" style="height:10%"></div></div></div></div></div>
+    <div class="m-chart-card"><h3>Tests: Failed vs Total</h3><div class="m-chart-placeholder"><div class="m-chart-bars"><div class="m-bar-group"><div class="m-bar ok" style="height:90%"></div><div class="m-bar fail" style="height:5%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:88%"></div><div class="m-bar fail" style="height:8%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:92%"></div><div class="m-bar fail" style="height:4%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:85%"></div><div class="m-bar fail" style="height:12%"></div></div><div class="m-bar-group"><div class="m-bar ok" style="height:90%"></div><div class="m-bar fail" style="height:6%"></div></div></div></div></div>
+    <div class="m-chart-card"><h3>Services Down</h3><div class="m-chart-placeholder"><div class="m-chart-bars"><div class="m-bar fail" style="height:10%;width:16px"></div><div class="m-bar fail" style="height:0%;width:16px"></div><div class="m-bar fail" style="height:5%;width:16px"></div><div class="m-bar fail" style="height:20%;width:16px"></div><div class="m-bar fail" style="height:0%;width:16px"></div></div></div></div>
+    <div class="m-chart-card"><h3>Top Failing Tests</h3><div class="m-chart-placeholder"><div class="m-chart-bars"><div class="m-bar fail" style="height:90%;width:20px"></div><div class="m-bar fail" style="height:70%;width:20px"></div><div class="m-bar fail" style="height:55%;width:20px"></div><div class="m-bar fail" style="height:40%;width:20px"></div><div class="m-bar fail" style="height:30%;width:20px"></div></div></div></div>
+  </div>
+</div></main>
+</body>
+</html>

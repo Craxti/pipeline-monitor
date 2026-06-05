@@ -1,0 +1,102 @@
+<body data-page="settings" class="ui-modern settings-app">
+
+{% include 'partials/i18n_core.html' %}
+
+<div class="settings-shell">
+  <aside class="settings-sidebar" aria-label="Settings navigation">
+    <div class="settings-sidebar-brand">
+      <img src="/static/logo-mark.png?v=20260417i" width="28" height="28" alt="" decoding="async"/>
+      <span data-i18n="dash.app_title">CI/CD Monitor</span>
+    </div>
+    <div class="snav-group-label" data-i18n="st.nav_configuration">Configuration</div>
+    <a href=".." class="snav-link">
+      <span class="snav-link-ico snav-ico-dash" aria-hidden="true"></span>
+      <span data-i18n="st.nav_dashboard">Dashboard</span>
+    </a>
+    <div class="snav-group-label" data-i18n="st.nav_integrations">Integrations</div>
+    <button type="button" class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
+      <img class="snav-icon-img" src="/static/icons/jenkins.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_jenkins">Jenkins</span>
+    </button>
+    <button type="button" class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
+      <img class="snav-icon-img" src="/static/icons/gitlab.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_gitlab">GitLab</span>
+    </button>
+    <div class="snav-divider"></div>
+    <button type="button" class="snav-item" data-sec="general" onclick="showSec('general')">
+      <span class="snav-link-ico snav-ico-gear" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span>
+    </button>
+    <button type="button" class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
+      <span class="snav-link-ico snav-ico-bell" aria-hidden="true"></span><span data-i18n="st.nav_notifications">Notifications</span>
+    </button>
+    <button type="button" class="snav-item" data-sec="docker" onclick="showSec('docker')">
+      <span class="snav-link-ico snav-ico-docker" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span>
+    </button>
+    <button type="button" class="snav-item" data-sec="ai" onclick="showSec('ai')">
+      <span class="snav-link-ico snav-ico-ai" aria-hidden="true"></span><span data-i18n="st.nav_ai">AI Assistant</span>
+    </button>
+  </aside>
+
+  <div class="settings-main">
+    <header class="settings-topbar">
+      <div class="settings-topbar-left">
+        <span class="settings-topbar-ico" aria-hidden="true"></span>
+        <h1 data-i18n="st.topbar_title">Settings — CI/CD Monitor</h1>
+      </div>
+      <div class="settings-topbar-actions">
+        <button type="button" class="btn btn-ghost btn-icon-round" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" data-i18n-aria-label="dash.theme" aria-label=""></button>
+        <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
+          <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
+          <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
+        </div>
+        <span id="save-status-hdr" class="save-status-hdr"></span>
+        <button type="button" class="btn" id="save-btn-hdr" onclick="saveSettings()">
+          <span data-i18n="st.save">Save Settings</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="settings-content">
+      <main>
+        <div class="integration-header">
+          <h2 id="settings-section-title" data-i18n="st.jenkins_integration">Jenkins Integration</h2>
+          <p id="settings-section-sub" data-i18n="st.jenkins_integration_sub">Configure and manage your Jenkins CI/CD instance connections.</p>
+        </div>
+
+        <div id="integration-wizard" class="wizard-card panel">
+          <div class="wizard-card-head panel-header">
+            <h2 data-i18n="st.wz_title">Quick Start Wizard</h2>
+          </div>
+          <div class="form-body">
+            <div class="wizard-stepper" aria-hidden="true">
+              <div class="wizard-step-item active">
+                <span class="wizard-step-num">1</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step1_short">Connection Setup</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step1_sub">URL &amp; API Token</span>
+              </div>
+              <div class="wizard-step-item">
+                <span class="wizard-step-num">2</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step2_short">Select Projects</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step2_sub">Choose jobs to monitor</span>
+              </div>
+              <div class="wizard-step-item">
+                <span class="wizard-step-num">3</span>
+                <span class="wizard-step-label" data-i18n="st.wz_step3_short">Finalize &amp; Sync</span>
+                <span class="wizard-step-sub" data-i18n="st.wz_step3_sub">Save and collect</span>
+              </div>
+            </div>
+            <p class="wizard-guide" id="settings-wizard-guide" data-i18n-html="st.wz_guide_jenkins">Add an instance below, enter <b>Jenkins Server URL</b> and <b>API Token</b>, run <b>Test connection</b>, then click <b>Save Settings</b>.</p>
+            <div class="wizard-form-actions" id="settings-wizard-actions">
+              <button type="button" class="btn btn-ghost" id="wizard-add-btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
+              <button type="button" class="btn" onclick="saveSettings()" data-i18n="st.save">Save Settings</button>
+            </div>
+          </div>
+        </div>
+
+    <!-- ═══ JENKINS ════════════════════════════════════════════ -->
+    <div id="sec-jenkins" class="section active">
+      <div id="jenkins-instances"></div>
+    </div>
+
+    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
+    <div id="sec-gitlab" class="section">
+      <div id="gitlab-instances"></div>
+    </div>

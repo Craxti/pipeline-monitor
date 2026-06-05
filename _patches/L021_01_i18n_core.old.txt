@@ -1,0 +1,4 @@
+      builds_title: 'Builds / Pipelines',
+      starred_title: 'Starred Builds',
+      top_fail_title: 'Top Failing Tests',
+      tests_runs_title: 'All Test Runs',

@@ -1,0 +1,7 @@
+function showSec(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  document.querySelectorAll('.snav-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.sec === name)
+  );
+}

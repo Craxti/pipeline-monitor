@@ -1,0 +1,32 @@
+function startQuickSetup(kind) {
+  if (kind === 'jenkins') {
+    if (!_ji.length) addJenkinsInst();
+    showSec('jenkins');
+    const idx = Math.max(0, _ji.length - 1);
+    $(`ji-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_jenkins'), 'ok');
+    return;
+  }
+  if (kind === 'gitlab') {
+    if (!_gi.length) addGitlabInst();
+    showSec('gitlab');
+    const idx = Math.max(0, _gi.length - 1);
+    $(`gi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_gitlab'), 'ok');
+    return;
+  }
+  if (kind === 'github') {
+    if (!_ghi.length) addGithubInst();
+    showSec('github');
+    const idx = Math.max(0, _ghi.length - 1);
+    $(`ghi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
+    showToast(t('st.wz_toast_github'), 'ok');
+  }
+}
+
+async function testInstanceConnection(kind, idx) {
+  const isJenkins = kind === 'jenkins';
+  const isGitlab = kind === 'gitlab';
+  const inst = isJenkins ? (_ji[idx] || {}) : (isGitlab ? (_gi[idx] || {}) : (_ghi[idx] || {}));
+  const btn = $(isJenkins ? `ji-test-btn-${idx}` : (isGitlab ? `gi-test-btn-${idx}` : `ghi-test-btn-${idx}`));
+  const status = $(isJenkins ? `ji-test-status-${idx}` : (isGitlab ? `gi-test-status-${idx}` : `ghi-test-status-${idx}`));

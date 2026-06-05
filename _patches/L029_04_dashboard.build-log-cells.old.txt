@@ -1,0 +1,1 @@
+      <button type="button" class="act-btn log-btn" onclick='openLogViewer("gitlab",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.pipeline_job_logs'))}">&#128466;</button>

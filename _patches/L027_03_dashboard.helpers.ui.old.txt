@@ -1,0 +1,3 @@
+  const aff = document.getElementById('ic-affected');
+  if (aff) {
+    const failedJobs = [...new Set(builds.filter((b) => isBuildProblemStatus(b.status)).map((b) => b.job_name))].slice(0, 8);

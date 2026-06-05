@@ -1,0 +1,2 @@
+/** Last rendered tbody HTML per table — restored when collect briefly returns empty/API errors. */
+const _staleTableHtml = { builds: '', tests: '', failures: '', svcs: '' };

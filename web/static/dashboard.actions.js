@@ -28,7 +28,7 @@ function openActionConfirm(opts) {
 
     const kind = opts.kind || 'jenkins';
     icon.className = 'modal-icon ' + kind;
-    icon.innerHTML = kind === 'jenkins' ? '&#128296;' : kind === 'gitlab' ? '&#129347;' : '&#128051;';
+    icon.innerHTML = '';
 
     title.textContent = opts.title || t('dash.action_confirm');
     sub.textContent = opts.subtitle || '';
@@ -601,39 +601,7 @@ function toggleFav(jobName, buildData) {
 }
 
 function _buildFavRow(b) {
-  const src = (b.source || '').toLowerCase();
-  let actionBtn = '';
-  if (src === 'jenkins') {
-    actionBtn = `<button class="act-btn" data-dash-action="triggerJenkinsBuild" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(jenkinsBaseFromBuildUrl(b.url))}]'>&#9654; ${esc(t('dash.act_run'))}</button>`;
-  } else if (src === 'gitlab') {
-    const ref = b.branch || 'main';
-    const glUrl = gitlabBaseFromPipelineUrl(b.url);
-    actionBtn = `<button class="act-btn" data-dash-action="triggerGitlabPipeline" data-dash-args='[${JSON.stringify(b.job_name)},${JSON.stringify(ref)},${JSON.stringify(glUrl)}]'>&#9654; ${esc(t('dash.act_run'))}</button>`;
-  }
-  const ctx = _fmtBuildContext(_jobAnalytics[b.job_name]);
-  const jt = _svgTitleAttr(b.job_name);
-  const bt = _svgTitleAttr(b.branch || '');
-  const cpyTitle = _svgTitleAttr(t('dash.copy_id_title'));
-  const bn = b.build_number;
-  const numHtml = (bn != null && bn !== '')
-    ? `<span class="num-copy-wrap"><span>${esc(String(bn))}</span><button type="button" class="btn-copy-ref" title="${cpyTitle}" aria-label="${cpyTitle}" onclick="copyBuildRef(event,${JSON.stringify(b.job_name)},${JSON.stringify(bn)})">&#128203;</button></span>`
-    : '—';
-  return `<tr data-fav-job="${esc(b.job_name)}" data-job="${encodeURIComponent(b.job_name)}">
-    <td class="col-pin-star"><button type="button" class="fav-btn starred" data-fav-job="${encodeURIComponent(String(b.job_name ?? ''))}" onclick="toggleFavBtn(this)" title="${_svgTitleAttr(t('dash.fav_remove'))}">&#11088;</button></td>
-    <td class="col-pin-src"><span class="b b-dim">${esc(b.source)}</span></td>
-    <td class="col-pin-job" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${jt}">
-      ${b.critical ? `<strong>${esc(b.job_name)}</strong>` : esc(b.job_name)}
-    </td>
-    <td class="mono col-pin-num">${numHtml}</td>
-    <td class="col-pin-st">${badge(b.status)}</td>
-    <td class="mono context-cell col-compact-hide" style="font-size:.76rem;color:var(--muted);max-width:140px">${ctx}</td>
-    <td class="mono col-compact-hide" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${bt}">${esc(b.branch)}</td>
-    <td style="white-space:nowrap">${fmt(b.started_at)}</td>
-    <td class="td-duration" style="white-space:nowrap"><span class="dur-val">${dur(b.duration_seconds)}</span>${_sparkSVG(b.job_name, b.status)}</td>
-    <td>${b.url ? `<a href="${esc(safeUrl(b.url))}" target="_blank" rel="noopener">&#8599;</a>` : '—'}</td>
-    <td>${_buildLogCell(b)}</td>
-    <td>${actionBtn}</td>
-  </tr>`;
+  return _buildMockupRow(b, { starred: true, favRow: true });
 }
 
 function _renderFavPanel() {
@@ -747,7 +715,7 @@ function applyBuildPreset(preset) {
     updateFilterSummary();
     goToInTab('builds', 'panel-builds');
   } else if (preset === 'starred') {
-    document.getElementById('f-source').value = '';
+    document.getElementById('f-source').value = _defaultBuildSourceValue();
     document.getElementById('f-bstatus').value = '';
     document.getElementById('f-job').value = '';
     _buildsHours = 0;

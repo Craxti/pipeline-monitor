@@ -1,0 +1,3 @@
+  const btn = document.getElementById('btn-collect');
+  const stopBtn = document.getElementById('btn-collect-stop');
+  if (!dot || !btn) return;

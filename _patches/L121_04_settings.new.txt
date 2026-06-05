@@ -1,0 +1,5 @@
+.snav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 0.35rem;
+}

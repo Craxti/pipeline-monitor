@@ -1,0 +1,8 @@
+function cacheStaleTableHtml(key, tbody) {
+  try {
+    if (!key || !tbody || !tbodyHasDataRows(tbody)) return;
+    const html = tbody.innerHTML;
+    _staleTableHtml[key] = html;
+    if (key === 'builds') _writeStaleSessionEntry('builds', html, _buildsFilterSig());
+  } catch { /* ignore */ }
+}

@@ -5,7 +5,11 @@ function _applyTheme(theme) {
   document.documentElement.classList.toggle('light', theme === 'light');
   const btn = document.getElementById('btn-theme');
   if (btn) btn.setAttribute('title', theme === 'light' ? t('dash.theme_light_hint') : t('dash.theme_dark_hint'));
-  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀';
+  if (btn) {
+    btn.textContent = '';
+    btn.classList.remove('theme-ico-dark', 'theme-ico-light');
+    btn.classList.add(theme === 'light' ? 'theme-ico-dark' : 'theme-ico-light');
+  }
 }
 function toggleTheme() {
   const next = document.documentElement.classList.contains('light') ? 'dark' : 'light';

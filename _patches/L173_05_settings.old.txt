@@ -1,0 +1,9 @@
+  gitlab: {
+    titleKey: 'st.gitlab_integration',
+    subKey: 'st.gitlab_integration_sub',
+    guideKey: 'st.wz_guide_gitlab',
+    addFn: 'addGitlabInst()',
+    addKey: 'st.add_gitlab',
+    wizard: true,
+  },
+  general: {
