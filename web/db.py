@@ -83,7 +83,8 @@ def _conn() -> Generator[sqlite3.Connection, None, None]:
 
 
 def _apply_schema(conn: sqlite3.Connection) -> None:
-    conn.executescript("""
+    conn.executescript(
+        """
         CREATE TABLE IF NOT EXISTS meta (
             key   TEXT PRIMARY KEY,
             value TEXT
@@ -193,7 +194,8 @@ def _apply_schema(conn: sqlite3.Connection) -> None:
             UNIQUE(domain, value)
         );
         CREATE INDEX IF NOT EXISTS idx_dim_domain_value ON dim_values(domain, value);
-    """)
+    """
+    )
     _ensure_compact_columns(conn)
     _backfill_epoch_columns(conn)
     _migrate_meta_blobs_to_tables(conn)
@@ -514,7 +516,8 @@ def _build_test_dedup_key(
 
 def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
     # Builds: keep one row per logical build record.
-    conn.execute("""
+    conn.execute(
+        """
         DELETE FROM builds
         WHERE id NOT IN (
             SELECT MIN(id)
@@ -522,7 +525,8 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
             WHERE source IS NOT NULL AND job_name IS NOT NULL AND build_number IS NOT NULL
             GROUP BY source, job_name, build_number
         )
-        """)
+        """
+    )
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_build_unique " "ON builds(source, job_name, build_number)")
 
     # Tests: add stable hash key and deduplicate old rows before creating unique index.
@@ -546,7 +550,8 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
                 r["id"],
             ),
         )
-    conn.execute("""
+    conn.execute(
+        """
         DELETE FROM tests
         WHERE id NOT IN (
             SELECT MIN(id)
@@ -554,7 +559,8 @@ def _migrate_dedup_keys(conn: sqlite3.Connection) -> None:
             WHERE dedup_key IS NOT NULL AND dedup_key <> ''
             GROUP BY dedup_key
         )
-        """)
+        """
+    )
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_tests_dedup_key " "ON tests(dedup_key)")
 
 

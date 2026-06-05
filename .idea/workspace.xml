@@ -4,65 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="fix">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ci_monitor.py" beforeDir="false" afterPath="$PROJECT_DIR$/ci_monitor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config.example.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_allure_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parsers/jenkins_console_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_clients.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_clients.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_e2e_mocked_ci_collect_and_app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_filters_frontend_contracts.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_parsers.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_parsers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/db.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/dashboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/tests.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_composer.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_composer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/app_lifespan_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/build_filters.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/build_filters.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_entrypoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_entrypoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_loop.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_loop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/docker_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/gitlab_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/jenkins_collect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/collect_sync/run_collect_sync.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/correlation.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/correlation.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/dashboard_summary.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/dashboard_summary.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/dashboard_summary_wiring.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/dashboard_summary_wiring.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/instances_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/instances_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/lifespan_factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/lifespan_factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/meta_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/meta_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/service_logs_bridge.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/service_logs_bridge.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/settings_connection_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/settings_connection_test.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/snapshot_store.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/snapshot_store.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/sources_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/sources_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/services/tests_endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/services/tests_endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/app.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/app.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.actions.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.actions.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.build-log-cells.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.builds.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.builds.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.collect-bar.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.collect-panel.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.collect-panel.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.filters.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.filters.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.formatters.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.formatters.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.state.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.helpers.ui.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.incidents.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.incidents.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.init.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.init.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.load-summary.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.services.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.services.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.sources.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.sources.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.tests.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.tests.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.theme-export.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.theme-export.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/dashboard.trends.js" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/dashboard.trends.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/chat_widget.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/chat_widget.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/partials/i18n_core.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/settings.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/settings.html" afterDir="false" />
-    </list>
+    <list default="true" id="5f8180c3-a672-421e-a7b0-64f5f95eb585" name="Changes" comment="ver 2" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -183,13 +125,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1776344768766</updated>
-    </task>
-    <task id="LOCAL-00017" summary="fix moduls arch">
-      <created>1776445098001</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1776445098001</updated>
     </task>
     <task id="LOCAL-00018" summary="pep8 + docs + unittests">
       <created>1776449581222</created>
@@ -527,7 +462,14 @@
       <option name="project" value="LOCAL" />
       <updated>1779102772574</updated>
     </task>
-    <option name="localTasksCounter" value="66" />
+    <task id="LOCAL-00066" summary="ver 2">
+      <created>1780686714863</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1780686714864</updated>
+    </task>
+    <option name="localTasksCounter" value="67" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -542,7 +484,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="add docker" />
     <MESSAGE value="fix dashboard.js split for moduls" />
     <MESSAGE value="fix  Flaky jobs" />
     <MESSAGE value="fix  filters" />
@@ -567,6 +508,7 @@
     <MESSAGE value="fix life time + stop" />
     <MESSAGE value="fix life time + stop + system status" />
     <MESSAGE value="fix" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix" />
+    <MESSAGE value="ver 2" />
+    <option name="LAST_COMMIT_MESSAGE" value="ver 2" />
   </component>
 </project>
