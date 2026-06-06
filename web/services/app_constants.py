@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 
 # Bumped when API surface changes; visible in /api/chat/status so you know the process reloaded.
 APP_BUILD = "2026-04-03+multi-telegram-ollama"
