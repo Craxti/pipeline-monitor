@@ -194,4 +194,9 @@ async def load_snapshot_async() -> CISnapshot | None:
                     return peeked
         except Exception:
             pass
-    return await asyncio.to_thread(load_snapshot)
+    try:
+        from web.core.api_executor import run_api_thread
+
+        return await run_api_thread(load_snapshot)
+    except ImportError:
+        return await asyncio.to_thread(load_snapshot)

@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Awaitable, Callable
 
 from fastapi import HTTPException
 
 
-async def api_services(
+def _api_services_sync(
+    snap: Any,
     *,
-    load_snapshot_async: Callable[[], Awaitable[Any]],
     normalize_service_status: Callable[[str], str],
     page: int,
     per_page: int,
     status: str,
 ) -> dict:
-    """Return a filtered, paginated list of services from the last snapshot."""
-    snap = await load_snapshot_async()
-    if snap is None:
-        raise HTTPException(404, "No snapshot data found.")
-
     items = snap.services
     if status:
         raw = (status or "").strip().lower()
@@ -40,3 +36,29 @@ async def api_services(
         "total": total,
         "has_more": end < total,
     }
+
+
+async def api_services(
+    *,
+    load_snapshot_async: Callable[[], Awaitable[Any]],
+    normalize_service_status: Callable[[str], str],
+    page: int,
+    per_page: int,
+    status: str,
+) -> dict:
+    """Return a filtered, paginated list of services from the last snapshot."""
+    snap = await load_snapshot_async()
+    if snap is None:
+        raise HTTPException(404, "No snapshot data found.")
+
+    from web.core.api_executor import run_api_thread
+
+    return await run_api_thread(
+        lambda: _api_services_sync(
+            snap,
+            normalize_service_status=normalize_service_status,
+            page=page,
+            per_page=per_page,
+            status=status,
+        )
+    )

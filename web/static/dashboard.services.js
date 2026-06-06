@@ -13,7 +13,7 @@ function resetServices(soft=false, force=false) {
     s.loading = false;
   }
   const tb = document.getElementById('tbody-svcs');
-  if (!soft) tb.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_loading'))}</td></tr>`;
+  if (!soft) tb.innerHTML = tableLoadingRowHtml(8);
   loadServices();
 }
 function clearSvcFilters() {

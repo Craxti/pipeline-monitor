@@ -52,7 +52,9 @@ def make_lifespan(
             await shutdown_proxy()
             await stop_collect_task(collect_task)
             from web.services.collect_executor import shutdown_collect_executor
+            from web.core.api_executor import shutdown_api_executor
 
             await asyncio.to_thread(shutdown_collect_executor)
+            await asyncio.to_thread(shutdown_api_executor)
 
     return _lifespan

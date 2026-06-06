@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
@@ -10,10 +9,10 @@ from typing import Any, Awaitable, Callable
 from fastapi import HTTPException
 
 
-async def api_builds(
+def _api_builds_sync(
+    snap: Any,
+    cfg: dict,
     *,
-    load_snapshot_async: Callable[[], Awaitable[Any]],
-    load_yaml_config: Callable[[], dict],
     is_snapshot_build_enabled: Callable[[Any, dict], bool],
     inst_label_for_build_with_cfg: Callable[[Any, dict], str],
     normalize_build_status: Callable[[str], str],
@@ -26,14 +25,6 @@ async def api_builds(
     job: str,
     hours: int,
 ) -> dict:
-    """Return paginated build list plus analytics and group counters."""
-    page = max(1, int(page or 1))
-    per_page = min(max(1, int(per_page or 20)), 200)
-    snap = await load_snapshot_async()
-    if snap is None:
-        raise HTTPException(404, "No snapshot data found.")
-    cfg = await asyncio.to_thread(load_yaml_config)
-
     items = [b for b in (snap.builds or []) if is_snapshot_build_enabled(b, cfg)]
     if source:
         items = [b for b in items if (b.source or "").lower() == source.lower()]
@@ -92,3 +83,48 @@ async def api_builds(
         "has_more": end < total,
         "group_counts": group_counts,
     }
+
+
+async def api_builds(
+    *,
+    load_snapshot_async: Callable[[], Awaitable[Any]],
+    load_yaml_config: Callable[[], dict],
+    is_snapshot_build_enabled: Callable[[Any, dict], bool],
+    inst_label_for_build_with_cfg: Callable[[Any, dict], str],
+    normalize_build_status: Callable[[str], str],
+    job_build_analytics: Callable[[Any], dict[str, dict]],
+    page: int,
+    per_page: int,
+    source: str,
+    instance: str,
+    status: str,
+    job: str,
+    hours: int,
+) -> dict:
+    """Return paginated build list plus analytics and group counters."""
+    page = max(1, int(page or 1))
+    per_page = min(max(1, int(per_page or 20)), 200)
+    snap = await load_snapshot_async()
+    if snap is None:
+        raise HTTPException(404, "No snapshot data found.")
+    from web.core.api_executor import run_api_thread
+
+    cfg = await run_api_thread(load_yaml_config)
+
+    return await run_api_thread(
+        lambda: _api_builds_sync(
+            snap,
+            cfg,
+            is_snapshot_build_enabled=is_snapshot_build_enabled,
+            inst_label_for_build_with_cfg=inst_label_for_build_with_cfg,
+            normalize_build_status=normalize_build_status,
+            job_build_analytics=job_build_analytics,
+            page=page,
+            per_page=per_page,
+            source=source,
+            instance=instance,
+            status=status,
+            job=job,
+            hours=hours,
+        )
+    )

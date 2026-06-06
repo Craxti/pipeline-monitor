@@ -12,12 +12,16 @@ def _read(rel: str) -> str:
 def test_populate_sources_reapplies_url_filters_after_dropdown_rebuild() -> None:
     sources_js = _read("web/static/dashboard.sources.js")
     init_js = _read("web/static/dashboard.init.js")
+    panel_js = _read("web/static/dashboard.panel-state.js")
     assert "_readURLFilters()" in sources_js
     assert "_populateSourcesPromise" in sources_js
     assert "_pickBuildSourceValue" in sources_js
     assert "abortFetchKey(k)" in init_js
     assert "populateSourcesAndInstances().then(() => {" in init_js
-    assert "_initObserver('builds', loadBuilds)" in init_js
+    assert "_initAllTableObservers()" in init_js
+    assert "loadBuilds();" in init_js
+    assert "builds: ['builds', loadBuilds]" in panel_js
+    assert "_initObserver(key, loadFn)" in panel_js
 
 
 def test_url_filter_params_include_test_and_service_status() -> None:
@@ -131,6 +135,12 @@ def test_live_sse_partial_refresh_contract() -> None:
     assert "snapshot_partial" in ui_js
     assert "COLLECT_INCREMENTAL_PER_PAGE" in collect_js
     assert "isCollectIncrementalRefresh" in collect_js
+    assert "_collectIncrementalRefresh" in collect_js
+    assert "loadBuilds" in collect_js
+    assert "loadFailures" in collect_js
+    assert "loadTests" in collect_js
+    assert "loadServices" in collect_js
+    assert "renderIncidentCenter" in collect_js
     assert "guardPanelLoadDuringCollect" in ui_js
 
 
@@ -171,9 +181,15 @@ def test_trends_scope_module_is_loaded_before_trends_script() -> None:
 
 def test_refresh_all_skips_during_collect_contract() -> None:
     init_js = _read("web/static/dashboard.init.js")
+    collect_js = _read("web/static/dashboard.collect-bar.js")
+    ui_js = _read("web/static/dashboard.helpers.ui.js")
     assert "_dashIsCollecting" in init_js
     assert "pollCollect();" in init_js
     assert "return;" in init_js
+    assert "pauseTableLoadsForCollect" in ui_js
+    assert "schedulePostCollectRefresh" in ui_js
+    assert "refreshAllStaggered" in init_js
+    assert "schedulePostCollectRefresh()" in collect_js
 
 
 def test_chat_prompt_is_not_hardcoded_in_helpers_ui() -> None:

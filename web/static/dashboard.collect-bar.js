@@ -19,6 +19,7 @@ let _collectElapsedTimer = null;
 let _collectStartedAt = null;
 
 function updateCollectBar(state) {
+  const wasCollecting = _dashIsCollecting;
   const dot = document.getElementById('cdot');
   const errEl = document.getElementById('collect-err');
   const btn = document.getElementById('btn-collect');
@@ -27,6 +28,9 @@ function updateCollectBar(state) {
   if (!dot || !btn) return;
 
   _dashIsCollecting = !!(state && state.is_collecting);
+  if (_dashIsCollecting && !wasCollecting) {
+    try { pauseTableLoadsForCollect(); } catch { /* ignore */ }
+  }
 
   const hasErr = state.last_error != null && String(state.last_error).trim() !== '';
 
@@ -148,11 +152,10 @@ async function pollCollect() {
     _ivCollectFastPoll = null;
   }
   if (_prevCollecting && !state.is_collecting) {
-    // Same moment is_collecting flips false, refreshAll runs — keepTable grace needs this even without SSE.
     try {
       _lastCollectFinishedAt = Date.now();
     } catch { /* ignore */ }
-    refreshAll();
+    schedulePostCollectRefresh();
   }
   _prevCollecting = state.is_collecting;
 }
@@ -178,6 +181,9 @@ async function stopCollect() {
 
 async function triggerCollect(forceFull = false) {
   if (_ticker) { clearInterval(_ticker); _ticker = null; }
+  _dashIsCollecting = true;
+  _prevCollecting = true;
+  try { pauseTableLoadsForCollect(); } catch { /* ignore */ }
   const btn = document.getElementById('btn-collect');
   const fullBtn = document.getElementById('btn-collect-full');
   if (btn) btn.disabled = true;
@@ -199,7 +205,11 @@ async function triggerCollect(forceFull = false) {
     body: JSON.stringify({ force_full: !!forceFull }),
   }).catch(()=>null);
   if (cr && cr.ok) _dashIsCollecting = true;
-  _prevCollecting = true;
+  else if (!cr || !cr.ok) {
+    _dashIsCollecting = false;
+    _prevCollecting = false;
+    try { resumeTableLoadsAfterCollect(); } catch { /* ignore */ }
+  }
   pollCollect();
 }
 

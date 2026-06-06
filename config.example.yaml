@@ -4,6 +4,11 @@ general:
   # When true (default): after the first collect, reuse SQLite watermarks to skip unchanged
   # Jenkins jobs / GitLab projects (fewer API calls). Ignored on force_full or without SQLite.
   incremental_collect: true
+  # Collect GitLab, GitHub, Jenkins and Docker/HTTP in parallel threads (default: true).
+  parallel_collect_sources: true
+  # Within each CI source, collect multiple instances in parallel (default: true).
+  parallel_collect_instances: true
+  parallel_collect_instance_workers: 6
   data_dir: data
   log_level: INFO
 jenkins_instances:

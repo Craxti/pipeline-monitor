@@ -19,6 +19,57 @@
   margin-top: 0;
 }
 
+/* Hidden tabs: skip layout/paint until opened (lighter page, smoother switching). */
+.tab-panel[hidden] {
+  content-visibility: hidden;
+  contain-intrinsic-size: auto 720px;
+}
+
+.tab-panel.tab-panel-active {
+  animation: dash-tab-in 0.18s ease;
+}
+
+@keyframes dash-tab-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Inline loading hint (tables, graph viewer). */
+.table-loading-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.table-loading-hint::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--info);
+  border-radius: 50%;
+  animation: dash-spin 0.65s linear infinite;
+}
+
+@keyframes dash-spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-row.is-loading td {
+  color: var(--muted);
+}
+
+.empty-row.is-loading td .table-loading-hint {
+  font-size: 0.84rem;
+}
+
+/* Collect in progress: keep UI interactive; only pause table churn via JS. */
+body.dashboard-collecting .dash-topbar-collect .dot.collecting {
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+}
+
 /* ── Shared toolbars & filters ───────────────────────────────────────────── */
 .builds-toolbar,
 .filters,

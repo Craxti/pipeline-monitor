@@ -150,7 +150,7 @@ function resetFailures(soft=false) {
   if (!soft && typeof _collectGraceActive === 'function' && _collectGraceActive() && tbodyHasDataRows(tb)) {
     soft = true;
   }
-  if (!soft && tb) tb.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_loading'))}</td></tr>`;
+  if (!soft && tb) tb.innerHTML = tableLoadingRowHtml(5);
   loadFailures();
 }
 function clearFailureFilters() {

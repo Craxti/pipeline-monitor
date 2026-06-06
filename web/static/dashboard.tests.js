@@ -776,7 +776,7 @@ function resetTestsSoft(soft=false) {
   _testsLoadGen++;
   const s = _state.tests; s.page=1; s.done=false; s.loading = false;
   const tb = document.getElementById('tbody-tests');
-  if (!soft && tb) tb.innerHTML = `<tr class="empty-row"><td colspan="7">${esc(t('dash.table_loading'))}</td></tr>`;
+  if (!soft && tb) tb.innerHTML = tableLoadingRowHtml(7);
   loadTests();
 }
 function clearTestFilters() {

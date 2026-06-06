@@ -1603,6 +1603,15 @@ async function loadTrends(days, btn) {
     errEl.style.display = 'none';
     errEl.innerHTML = '';
   }
+  try {
+    if (typeof ensureChartJs === 'function') await ensureChartJs();
+  } catch {
+    if (errEl) {
+      errEl.style.display = 'flex';
+      errEl.innerHTML = `<span>${esc(t('trends_err'))}</span>`;
+    }
+    return;
+  }
   renderTrendsChartsFromData(getTrendsViewData());
   loadTrendsHistorySummary(_trendsApiDaysFetch());
 }

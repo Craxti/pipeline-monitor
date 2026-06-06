@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 _COLLECT_SSE_TS_REF: dict[str, float] = {"ts": 0.0}
-_COLLECT_SSE_MIN_INTERVAL_S = 3.0
+_COLLECT_SSE_MIN_INTERVAL_S = 2.0
 
 
 def _patch_snapshot_for_collect_publish(snapshot: Any, collect_state: dict) -> Any:
@@ -34,14 +34,14 @@ def _patch_snapshot_for_collect_publish(snapshot: Any, collect_state: dict) -> A
     patch_services = len(cur_services) == 0 and len(prev_services) > 0
     if not (patch_builds or patch_tests or patch_services):
         return snapshot
-    snapshot_to_save = snapshot.model_copy(deep=True)
+    patch: dict[str, list] = {}
     if patch_builds:
-        snapshot_to_save.builds = prev_builds
+        patch["builds"] = prev_builds
     if patch_tests:
-        snapshot_to_save.tests = prev_tests
+        patch["tests"] = prev_tests
     if patch_services:
-        snapshot_to_save.services = prev_services
-    return snapshot_to_save
+        patch["services"] = prev_services
+    return snapshot.model_copy(update=patch)
 
 
 def _sse_broadcast_collect_sync(payload: dict) -> None:

@@ -74,6 +74,65 @@ function _initObserver(key, loadFn) {
   _obs[key].observe(sentinel);
 }
 
+const TAB_TBODY_IDS = {
+  builds: 'tbody-builds',
+  failures: 'tbody-failures',
+  tests: 'tbody-tests',
+  svcs: 'tbody-svcs',
+};
+
+const TAB_FETCH_KEYS = {
+  builds: 'builds',
+  failures: 'failures',
+  tests: 'tests',
+  svcs: 'services',
+};
+
+function _tableKeyForTab(tab) {
+  if (tab === 'builds') return 'builds';
+  if (tab === 'test-failures') return 'failures';
+  if (tab === 'test-runs') return 'tests';
+  if (tab === 'services') return 'svcs';
+  return null;
+}
+
+/** Wire infinite-scroll observers for all CI tables (background preload). */
+function _initAllTableObservers() {
+  if (!_obs.builds) _initObserver('builds', loadBuilds);
+  if (!_obs.failures) _initObserver('failures', loadFailures);
+  if (!_obs.tests) _initObserver('tests', loadTests);
+  if (!_obs.svcs) _initObserver('svcs', loadServices);
+}
+
+function _disconnectAllTableObservers() {
+  Object.keys(_obs).forEach((k) => {
+    try { _obs[k].disconnect(); } catch { /* ignore */ }
+    delete _obs[k];
+  });
+}
+
+/** Wire infinite-scroll observer for one tab (used on tab switch if observer missing). */
+function _ensureTabObservers(tab) {
+  const map = {
+    builds: ['builds', loadBuilds],
+    'test-failures': ['failures', loadFailures],
+    'test-runs': ['tests', loadTests],
+    services: ['svcs', loadServices],
+  };
+  const row = map[tab];
+  if (!row) return;
+  const [key, loadFn] = row;
+  if (!_obs[key]) _initObserver(key, loadFn);
+}
+
+function _resetPanelStateForKey(key) {
+  const s = _state[key];
+  if (!s) return;
+  s.page = 1;
+  s.done = false;
+  s.loading = false;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Expand / collapse
 // ─────────────────────────────────────────────────────────────────────────────

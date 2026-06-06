@@ -1251,10 +1251,26 @@ function _liBindGraphEvents(net, usePhysics) {
 function renderLogIntelGraph(corr) {
   const el = document.getElementById('log-intel-graph');
   if (!el) return;
-  if (typeof vis === 'undefined') {
-    el.innerHTML = `<div class="muted" style="padding:1rem">${esc(_liT('dash.log_intel_graph_unavailable', 'Graph viewer failed to load (vis-network). Refresh the page.'))}</div>`;
+  const draw = () => {
+    if (typeof vis === 'undefined') {
+      el.innerHTML = `<div class="muted" style="padding:1rem">${esc(_liT('dash.log_intel_graph_unavailable', 'Graph viewer failed to load (vis-network). Refresh the page.'))}</div>`;
+      return;
+    }
+    _renderLogIntelGraphVis(corr, el);
+  };
+  if (typeof vis !== 'undefined') {
+    draw();
     return;
   }
+  if (typeof ensureVisNetwork !== 'function') {
+    draw();
+    return;
+  }
+  el.innerHTML = `<div class="table-loading-hint muted" style="padding:1rem">${esc(_liT('dash.table_loading', 'Loading…'))}</div>`;
+  ensureVisNetwork().then(draw).catch(draw);
+}
+
+function _renderLogIntelGraphVis(corr, el) {
   const rawEdges = Array.isArray(corr.edges) ? corr.edges : [];
   const rawNodes = Array.isArray(corr.nodes) ? corr.nodes : [];
   const hasStoredLayout = !!(_logIntelLayoutPositions || _liLoadLayoutFromStorage(_logIntelSelectedKey));

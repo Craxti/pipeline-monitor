@@ -75,7 +75,7 @@ function resetBuilds(soft=false, force=false) {
     soft = true;
   }
   if (!soft && tb) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_loading'))}</td></tr>`;
+    tb.innerHTML = tableLoadingRowHtml(BUILDS_TBL_COLS);
   }
   loadBuilds();
 }

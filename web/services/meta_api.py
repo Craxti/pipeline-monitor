@@ -32,15 +32,19 @@ async def meta_payload(
     )
 
     snap = await load_snapshot_async()
+    is_collecting = bool(collect_state.get("is_collecting"))
     job_analytics: dict = {}
-    if snap:
-        job_analytics = job_build_analytics(snap)
+    if snap and not is_collecting:
+        job_analytics = await asyncio.to_thread(job_build_analytics, snap)
 
-    correlation = await asyncio.to_thread(
-        _correlation.correlation_last_hour,
-        snap=snap,
-        load_events=load_events,
-    )
+    if is_collecting:
+        correlation = {"pipelines_started_last_hour": 0, "service_events_last_hour": 0}
+    else:
+        correlation = await asyncio.to_thread(
+            _correlation.correlation_last_hour,
+            snap=snap,
+            load_events=load_events,
+        )
 
     return {
         "data_revision": data_revision,

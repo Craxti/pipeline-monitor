@@ -4,9 +4,49 @@
 let _refreshAllRunning = false;
 let _refreshAllPending = false;
 
-/** Full dashboard reload. Single-flight: overlapping calls (SSE collect_done + pollCollect, rapid R key) coalesce. */
-async function refreshAll() {
-  // While collect runs, only refresh the collect bar — table/API reloads freeze the UI.
+async function _reloadAllTablePanelsStaggered() {
+  const skipBuilds = typeof shouldSkipTableReloadDuringCollect === 'function'
+    && shouldSkipTableReloadDuringCollect('builds', document.getElementById('tbody-builds'));
+  const skipTests = typeof shouldSkipTableReloadDuringCollect === 'function'
+    && shouldSkipTableReloadDuringCollect('tests', document.getElementById('tbody-tests'));
+  const skipFailures = typeof shouldSkipTableReloadDuringCollect === 'function'
+    && shouldSkipTableReloadDuringCollect('failures', document.getElementById('tbody-failures'));
+  const skipSvcs = typeof shouldSkipTableReloadDuringCollect === 'function'
+    && shouldSkipTableReloadDuringCollect('svcs', document.getElementById('tbody-svcs'));
+  ['builds', 'failures', 'tests', 'services'].forEach((k) => {
+    if (k === 'builds' && skipBuilds) return;
+    if (k === 'tests' && skipTests) return;
+    if (k === 'failures' && skipFailures) return;
+    if (k === 'services' && skipSvcs) return;
+    try { abortFetchKey(k); } catch { /* ignore */ }
+  });
+  if (skipBuilds) { _state.builds.done = true; _state.builds.loading = false; }
+  if (skipTests) { _state.tests.done = true; _state.tests.loading = false; }
+  if (skipFailures) { _state.failures.done = true; _state.failures.loading = false; }
+  if (skipSvcs) { _state.svcs.done = true; _state.svcs.loading = false; }
+
+  const steps = [];
+  if (_dashTab === 'system' && typeof loadSystemStats === 'function') {
+    steps.push(() => loadSystemStats());
+  }
+  if (!skipBuilds) steps.push(() => loadBuilds());
+  if (!skipFailures) steps.push(() => loadFailures());
+  if (!skipTests) steps.push(() => loadTests());
+  if (!skipSvcs) steps.push(() => loadUptimeData().then(() => loadServices()));
+  else steps.push(() => loadUptimeData());
+
+  for (const step of steps) {
+    await step();
+    if (typeof yieldToBrowser === 'function') await yieldToBrowser(48);
+  }
+}
+
+async function _reloadAllTablePanels() {
+  return _reloadAllTablePanelsStaggered();
+}
+
+/** Full dashboard reload with yields between panels (UI stays clickable). */
+async function refreshAllStaggered() {
   if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) {
     pollCollect();
     return;
@@ -21,45 +61,16 @@ async function refreshAll() {
     for (;;) {
       if (++_refreshPasses > 8) break;
       _refreshAllPending = false;
-      // Reset all panels to page 1; cancel in-flight fetches so reload is not skipped.
       Object.values(_state).forEach((s) => {
         s.page = 1;
         s.done = false;
         s.loading = false;
       });
-      const skipBuilds = typeof shouldSkipTableReloadDuringCollect === 'function'
-        && shouldSkipTableReloadDuringCollect('builds', document.getElementById('tbody-builds'));
-      const skipTests = typeof shouldSkipTableReloadDuringCollect === 'function'
-        && shouldSkipTableReloadDuringCollect('tests', document.getElementById('tbody-tests'));
-      const skipFailures = typeof shouldSkipTableReloadDuringCollect === 'function'
-        && shouldSkipTableReloadDuringCollect('failures', document.getElementById('tbody-failures'));
-      const skipSvcs = typeof shouldSkipTableReloadDuringCollect === 'function'
-        && shouldSkipTableReloadDuringCollect('svcs', document.getElementById('tbody-svcs'));
-      ['builds', 'failures', 'tests', 'services'].forEach((k) => {
-        if (k === 'builds' && skipBuilds) return;
-        if (k === 'tests' && skipTests) return;
-        if (k === 'failures' && skipFailures) return;
-        if (k === 'services' && skipSvcs) return;
-        try { abortFetchKey(k); } catch { /* ignore */ }
-      });
-      // Do not blank tables on refresh; keep current rows until new data arrives.
-      if (skipBuilds) { _state.builds.done = true; _state.builds.loading = false; }
-      if (skipTests) { _state.tests.done = true; _state.tests.loading = false; }
-      if (skipFailures) { _state.failures.done = true; _state.failures.loading = false; }
-      if (skipSvcs) { _state.svcs.done = true; _state.svcs.loading = false; }
 
-      // Update dropdowns (can change after Collect / settings updates).
       await populateSourcesAndInstances();
-      const reloads = [
-        loadSummary(),
-        loadSystemStats(),
-      ];
-      if (!skipBuilds) reloads.push(loadBuilds());
-      if (!skipFailures) reloads.push(loadFailures());
-      if (!skipTests) reloads.push(loadTests());
-      if (!skipSvcs) reloads.push(loadUptimeData().then(() => loadServices()));
-      else reloads.push(loadUptimeData());
-      await Promise.all(reloads);
+      await loadSummary();
+      if (typeof yieldToBrowser === 'function') await yieldToBrowser(0);
+      await _reloadAllTablePanelsStaggered();
       if (!_refreshAllPending) break;
     }
     if (_dashTab === 'trends' && typeof loadTrends === 'function') {
@@ -70,6 +81,11 @@ async function refreshAll() {
   } finally {
     _refreshAllRunning = false;
   }
+}
+
+/** Full dashboard reload. Single-flight: overlapping calls (SSE collect_done + pollCollect, rapid R key) coalesce. */
+async function refreshAll() {
+  return refreshAllStaggered();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -214,19 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render starred builds panel
   _renderFavPanel();
 
-  // Initial data load: dropdowns + URL filters before table loads; observers after options exist.
-  pollCollect();
-  loadUptimeData().then(() => loadServices()); // load uptime before services render
-  loadSummary();
-  loadSystemStats();
-  populateSourcesAndInstances().then(() => {
-    _initObserver('builds', loadBuilds);
-    _initObserver('failures', loadFailures);
-    _initObserver('tests', loadTests);
-    _initObserver('svcs', loadServices);
-    loadBuilds();
-    loadFailures();
-    loadTests();
+  // Initial data load: all CI tables in background unless collect is already running.
+  pollCollect().finally(() => {
+    if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) return;
+    loadUptimeData().then(() => loadServices());
+    loadSummary();
+    loadSystemStats();
+    populateSourcesAndInstances().then(() => {
+      if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) return;
+      if (typeof _initAllTableObservers === 'function') _initAllTableObservers();
+      loadBuilds();
+      loadFailures();
+      loadTests();
+    });
   });
   // LIVE-style refresh is always on; background collect runs via server config (no UI toggle).
   setLiveMode(true, { skipInitialFullRefresh: true }, false);

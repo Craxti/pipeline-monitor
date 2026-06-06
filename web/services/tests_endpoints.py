@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
@@ -9,9 +10,9 @@ from typing import Any, Awaitable, Callable
 from fastapi import HTTPException
 
 
-async def api_tests(
+def _api_tests_sync(
+    snap: Any,
     *,
-    load_snapshot_async: Callable[[], Awaitable[Any]],
     normalize_test_status: Callable[[str], str],
     tests_breakdown_real_vs_synth: Callable[[list[Any]], dict[str, int]],
     filter_tests_by_source: Callable[[list[Any], str], list[Any]],
@@ -23,11 +24,6 @@ async def api_tests(
     hours: int,
     source: str,
 ) -> dict:
-    """Return paginated tests list with breakdown and top failures."""
-    snap = await load_snapshot_async()
-    if snap is None:
-        raise HTTPException(404, "No snapshot data found.")
-
     items = snap.tests
     if status:
         want = normalize_test_status(status)
@@ -77,9 +73,9 @@ async def api_tests(
     }
 
 
-async def api_top_failures(
+def _api_top_failures_sync(
+    snap: Any,
     *,
-    load_snapshot_async: Callable[[], Awaitable[Any]],
     filter_tests_by_lookback_hours: Callable[..., list[Any]],
     filter_tests_by_source: Callable[[list[Any], str], list[Any]],
     aggregate_top_failing_tests: Callable[..., list[dict[str, Any]]],
@@ -92,11 +88,6 @@ async def api_top_failures(
     hours: int,
     days: int,
 ) -> dict:
-    """Return aggregated top failing tests (paged)."""
-    snap = await load_snapshot_async()
-    if snap is None:
-        raise HTTPException(404, "No snapshot data found.")
-
     tests_items = filter_tests_by_lookback_hours(snap.tests, hours=int(hours or 0), days=int(days or 0))
 
     src = (source or "").strip().lower()
@@ -192,3 +183,81 @@ async def api_top_failures(
         "total": total,
         "has_more": end < total,
     }
+
+
+async def api_tests(
+    *,
+    load_snapshot_async: Callable[[], Awaitable[Any]],
+    normalize_test_status: Callable[[str], str],
+    tests_breakdown_real_vs_synth: Callable[[list[Any]], dict[str, int]],
+    filter_tests_by_source: Callable[[list[Any], str], list[Any]],
+    page: int,
+    per_page: int,
+    status: str,
+    suite: str,
+    name: str,
+    hours: int,
+    source: str,
+) -> dict:
+    """Return paginated tests list with breakdown and top failures."""
+    snap = await load_snapshot_async()
+    if snap is None:
+        raise HTTPException(404, "No snapshot data found.")
+
+    from web.core.api_executor import run_api_thread
+
+    return await run_api_thread(
+        lambda: _api_tests_sync(
+            snap,
+            normalize_test_status=normalize_test_status,
+            tests_breakdown_real_vs_synth=tests_breakdown_real_vs_synth,
+            filter_tests_by_source=filter_tests_by_source,
+            page=page,
+            per_page=per_page,
+            status=status,
+            suite=suite,
+            name=name,
+            hours=hours,
+            source=source,
+        )
+    )
+
+
+async def api_top_failures(
+    *,
+    load_snapshot_async: Callable[[], Awaitable[Any]],
+    filter_tests_by_lookback_hours: Callable[..., list[Any]],
+    filter_tests_by_source: Callable[[list[Any], str], list[Any]],
+    aggregate_top_failing_tests: Callable[..., list[dict[str, Any]]],
+    n: int,
+    page: int,
+    per_page: int,
+    suite: str,
+    name: str,
+    source: str,
+    hours: int,
+    days: int,
+) -> dict:
+    """Return aggregated top failing tests (paged)."""
+    snap = await load_snapshot_async()
+    if snap is None:
+        raise HTTPException(404, "No snapshot data found.")
+
+    from web.core.api_executor import run_api_thread
+
+    return await run_api_thread(
+        lambda: _api_top_failures_sync(
+            snap,
+            filter_tests_by_lookback_hours=filter_tests_by_lookback_hours,
+            filter_tests_by_source=filter_tests_by_source,
+            aggregate_top_failing_tests=aggregate_top_failing_tests,
+            n=n,
+            page=page,
+            per_page=per_page,
+            suite=suite,
+            name=name,
+            source=source,
+            hours=hours,
+            days=days,
+        )
+    )

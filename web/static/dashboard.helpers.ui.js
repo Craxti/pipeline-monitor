@@ -18,6 +18,10 @@ function srAnnounce(msg, mode) {
   requestAnimationFrame(() => { el.textContent = String(msg); });
 }
 
+function tableLoadingRowHtml(cols) {
+  return `<tr class="empty-row is-loading"><td colspan="${cols}"><span class="table-loading-hint">${esc(t('dash.table_loading'))}</span></td></tr>`;
+}
+
 /** Copy `job #build` (or job only) for tickets / chat — used from builds tables. */
 function copyBuildRef(ev, jobName, buildNum) {
   try {
@@ -174,6 +178,67 @@ function _finishKeepTableState(state) {
   try { _applyGlobalSearch(); } catch { /* ignore */ }
 }
 
+const _TABLE_FETCH_KEYS = ['builds', 'failures', 'tests', 'services'];
+
+function yieldToBrowser(ms) {
+  const n = ms == null ? 0 : ms;
+  return new Promise((resolve) => {
+    if (n <= 16 && typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => resolve());
+    } else {
+      setTimeout(resolve, n);
+    }
+  });
+}
+
+/** Pause table/API churn while collect runs — keeps UI responsive. */
+function pauseTableLoadsForCollect() {
+  document.body.classList.add('dashboard-collecting');
+  _TABLE_FETCH_KEYS.forEach((k) => {
+    try { abortFetchKey(k); } catch { /* ignore */ }
+  });
+  ['summary.status', 'summary.events', 'summary.meta', 'summary.summary'].forEach((k) => {
+    try { abortFetchKey(k); } catch { /* ignore */ }
+  });
+  try {
+    Object.values(_state).forEach((s) => {
+      s.loading = false;
+      s.done = true;
+    });
+  } catch { /* ignore */ }
+  if (typeof _disconnectAllTableObservers === 'function') {
+    _disconnectAllTableObservers();
+  }
+}
+
+function resumeTableLoadsAfterCollect() {
+  document.body.classList.remove('dashboard-collecting');
+  try {
+    Object.values(_state).forEach((s) => {
+      s.page = 1;
+      s.done = false;
+      s.loading = false;
+    });
+  } catch { /* ignore */ }
+  if (typeof _initAllTableObservers === 'function') {
+    _initAllTableObservers();
+  }
+}
+
+let _postCollectRefreshTimer = null;
+
+/** Debounced staggered refresh after collect — avoids a single main-thread freeze. */
+function schedulePostCollectRefresh() {
+  if (_postCollectRefreshTimer) clearTimeout(_postCollectRefreshTimer);
+  _postCollectRefreshTimer = setTimeout(() => {
+    _postCollectRefreshTimer = null;
+    try { resumeTableLoadsAfterCollect(); } catch { /* ignore */ }
+    if (typeof refreshAllStaggered === 'function') refreshAllStaggered();
+    else if (typeof refreshAll === 'function') refreshAll();
+    pollCollect();
+  }, 150);
+}
+
 /**
  * In LIVE mode, keep the previous table when page-1 API returns zero rows (transient during/after collect).
  * Returns true if the caller should skip blanking the tbody.
@@ -212,12 +277,8 @@ function guardPanelLoadDuringCollect(tableKey, tbody, state) {
   try {
     if (typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh()) return false;
     if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
-    if (state) state.loading = false;
-    if (
-      state && state.page === 1
-      && typeof shouldSkipTableReloadDuringCollect === 'function'
-      && shouldSkipTableReloadDuringCollect(tableKey, tbody)
-    ) {
+    if (state) {
+      state.loading = false;
       state.done = true;
     }
     return true;
@@ -378,11 +439,7 @@ function initEventSource() {
           try {
             if (typeof _resetPartialLiveRefreshState === 'function') _resetPartialLiveRefreshState();
           } catch { /* ignore */ }
-          // Defer so the SSE handler returns quickly; coalesce with pollCollect via refreshAll single-flight.
-          setTimeout(() => {
-            refreshAll();
-            pollCollect();
-          }, 0);
+          schedulePostCollectRefresh();
         } else if (d.type === 'snapshot_partial') {
           if (typeof refreshLivePanelsDuringCollect === 'function') {
             refreshLivePanelsDuringCollect(d);
@@ -670,16 +727,30 @@ function initDashFormControlBindings() {
 function refreshActivePanel() {
   if (_dashTab === 'overview') { loadSummary(); return; }
   const softCollect = typeof _collectGraceActive === 'function' && _collectGraceActive();
-  if (_dashTab === 'builds') { resetBuilds(softCollect); return; }
+  if (_dashTab === 'builds') {
+    if (typeof _ensureTabObservers === 'function') _ensureTabObservers('builds');
+    resetBuilds(softCollect);
+    return;
+  }
   if (_dashTab === 'test-failures') {
+    if (typeof _ensureTabObservers === 'function') _ensureTabObservers('test-failures');
     resetFailures(softCollect);
     return;
   }
   if (_dashTab === 'test-runs') {
+    if (typeof _ensureTabObservers === 'function') _ensureTabObservers('test-runs');
     resetTestsSoft(softCollect);
     return;
   }
-  if (_dashTab === 'services') { resetServices(softCollect); return; }
+  if (_dashTab === 'services') {
+    if (typeof _ensureTabObservers === 'function') _ensureTabObservers('services');
+    if (typeof loadUptimeData === 'function') {
+      loadUptimeData().then(() => resetServices(softCollect));
+    } else {
+      resetServices(softCollect);
+    }
+    return;
+  }
   if (_dashTab === 'system') { loadSystemStats(); return; }
   if (_dashTab === 'trends') {
     if (typeof initTrendsFiltersFromStorage === 'function') initTrendsFiltersFromStorage();

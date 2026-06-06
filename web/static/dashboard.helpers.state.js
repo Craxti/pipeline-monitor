@@ -79,7 +79,10 @@ function setDashboardTab(name, opts) {
   _dashTab = name;
   DASH_TABS.forEach((id) => {
     const panel = document.getElementById('tab-panel-' + id);
-    if (panel) panel.hidden = (id !== name);
+    if (panel) {
+      panel.hidden = (id !== name);
+      panel.classList.toggle('tab-panel-active', id === name);
+    }
   });
   document.querySelectorAll('#dash-page-tabs .dash-nav-item').forEach((btn) => {
     const sel = btn.dataset.tab === name;
