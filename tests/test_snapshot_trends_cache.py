@@ -87,9 +87,7 @@ class TestSnapshotCache:
         out = asyncio.run(sc.load_snapshot_async())
         assert isinstance(out, CISnapshot)
 
-    def test_load_snapshot_fresh_cache_skips_db_probe(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_load_snapshot_fresh_cache_skips_db_probe(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         from web.core import snapshot_cache as sc
         from web.core import config as cfg_mod
         from web.db import init_db, set_latest_snapshot_json

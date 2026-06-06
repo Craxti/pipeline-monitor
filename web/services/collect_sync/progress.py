@@ -18,6 +18,7 @@ def progress_update(
     state_lock=None,
 ) -> None:
     """Update `collect_state` fields based on snapshot state and phase."""
+
     def _apply() -> None:
         if collect_state.get("cancel_requested"):
             raise CollectCancelled("Stopped by user")

@@ -55,11 +55,7 @@ def _cached_if_fresh() -> CISnapshot | None:
     """Return in-memory snapshot when TTL + revision still valid (no SQLite)."""
     mon = time.monotonic()
     rev = _current_revision()
-    if (
-        _snapshot_cache_snap is not None
-        and _snapshot_cache_rev == rev
-        and mon < _snapshot_cache_expires_mono
-    ):
+    if _snapshot_cache_snap is not None and _snapshot_cache_rev == rev and mon < _snapshot_cache_expires_mono:
         return _snapshot_cache_snap
     return None
 

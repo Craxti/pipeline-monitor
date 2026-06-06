@@ -42,9 +42,7 @@ PAIRS: list[tuple[str, str]] = [
         'resetTests();"',
         ' data-dash-action="runbookFocusTestFailures"',
     ),
-    (
-        ' data-dash-action="runbookFocusServicesProblems"',
-    ),
+    (' data-dash-action="runbookFocusServicesProblems"',),
 ]
 
 
