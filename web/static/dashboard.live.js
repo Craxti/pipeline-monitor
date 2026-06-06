@@ -29,6 +29,11 @@ function applyLivePollingIntervals(opts) {
   pollCollect();
   const period = typeof liveDashboardPollMs === 'function' ? liveDashboardPollMs() : 20000;
   _ivAutoRefresh = setInterval(() => {
+    // During collect, only poll progress — full refreshAll hammers snapshot APIs and freezes the UI.
+    if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) {
+      pollCollect();
+      return;
+    }
     refreshAll();
     pollCollect();
   }, period);

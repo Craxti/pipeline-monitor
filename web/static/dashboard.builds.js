@@ -70,6 +70,10 @@ function resetBuilds(soft=false, force=false) {
   s.loading = false;
   if (force || !soft) _lastBuildsPageSig = '';
   const tb = document.getElementById('tbody-builds');
+  // During collect, keep visible rows unless the user explicitly forced a hard reset.
+  if (!soft && !force && typeof _collectGraceActive === 'function' && _collectGraceActive() && tbodyHasDataRows(tb)) {
+    soft = true;
+  }
   if (!soft && tb) {
     tb.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_loading'))}</td></tr>`;
   }
@@ -82,7 +86,7 @@ function clearBuildFilters() {
   document.getElementById('f-bstatus').value = '';
   document.getElementById('f-job').value     = '';
   _buildsHours = 0;
-  document.querySelectorAll('.time-filter-btn').forEach(b => b.classList.remove('active'));
+  _clearTimeFilterBtns('builds');
   try { localStorage.setItem('cimon-builds-hours', '0'); } catch { /* ignore */ }
   try { _persistFiltersFromForm(); } catch { /* ignore */ }
   _renderInstanceOptions?.();
@@ -104,18 +108,25 @@ async function loadBuilds() {
   _initBuildSort();
   const s = _state.builds;
   if (s.loading || s.done) return;
+  const tbody = document.getElementById('tbody-builds');
+  if (guardPanelLoadDuringCollect('builds', tbody, s)) return;
   s.loading = true;
   try {
     const source  = document.getElementById('f-source').value;
     const inst    = document.getElementById('f-instance').value;
     const status  = document.getElementById('f-bstatus').value;
     const job     = document.getElementById('f-job').value;
-    const url = apiUrl(`api/builds?page=${s.page}&per_page=${s.per_page}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
+    const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
+    const perPage = incr && typeof collectIncrementalPerPage === 'function'
+      ? collectIncrementalPerPage(s.per_page)
+      : s.per_page;
+    const url = apiUrl(`api/builds?page=${s.page}&per_page=${perPage}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
 
     const res = await fetchKeyed('builds', url).catch(()=>null);
     const tbody = document.getElementById('tbody-builds');
     if (res === FETCH_ABORTED) return;
     if (!res || !res.ok) {
+      if (keepTableOnTransientApiError(tbody, res, s, 'builds')) return;
       const detail = await fetchApiErrorDetail(res);
       srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
       const extra = detail ? ` — ${esc(detail)}` : '';
@@ -157,6 +168,7 @@ async function loadBuilds() {
       if (_liveMode && pageSig && pageSig === _lastBuildsPageSig) {
         updateFilterSummary();
         _applyGlobalSearch();
+        if (incr) { s.done = true; return; }
         if (!data.has_more) { s.done = true; return; }
         s.page++;
         window.requestAnimationFrame(() => { loadBuilds(); });
@@ -171,6 +183,7 @@ async function loadBuilds() {
 
     _applyGlobalSearch();
     updateFilterSummary();
+    if (incr) { s.done = true; return; }
     if (!data.has_more) { s.done = true; return; }
     s.page++;
     window.requestAnimationFrame(() => { loadBuilds(); });

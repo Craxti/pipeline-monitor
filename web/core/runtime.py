@@ -70,6 +70,7 @@ collect_rt_state = _collect_runtime_state.make_collect_runtime_state(_CollectSta
 collect_state = collect_rt_state.state
 collect_logs = collect_rt_state.logs
 collect_slow = collect_rt_state.slow
+_snapshot_cache_mod.set_collecting_accessor(lambda: bool(collect_state.get("is_collecting")))
 
 
 # ---- Instance health (last collect per-source status)

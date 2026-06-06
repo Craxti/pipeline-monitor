@@ -200,11 +200,11 @@ body.dash-nav-open .dash-nav-group-label {
 
 .dash-nav-item.active,
 .dash-nav-item[aria-selected="true"] {
-  background: rgba(59, 130, 246, 0.18);
+  background: rgba(59, 130, 246, 0.16);
   color: #93c5fd;
   font-weight: 650;
-  border-color: rgba(59, 130, 246, 0.28);
-  box-shadow: none;
+  border: none;
+  box-shadow: inset 3px 0 0 #60a5fa;
 }
 
 .dash-nav-item.active .dash-nav-desc {

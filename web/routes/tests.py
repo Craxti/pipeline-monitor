@@ -40,7 +40,7 @@ async def api_tests_route(
 
 @router.get("/api/tests/top-failures", response_class=JSONResponse)
 async def api_tests_top_failures_route(
-    n: int = Query(50, ge=1, le=500),
+    n: int = Query(500, ge=1, le=10000),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=200),
     suite: str = "",

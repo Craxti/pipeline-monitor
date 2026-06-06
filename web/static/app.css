@@ -1,14 +1,22 @@
 /* CI/CD Monitor — UI stylesheet entry (dashboard bundle). */
 
-@import "dashboard.css?v=20260608b";
+@import "tokens.css?v=20260610a";
+
+@import "dashboard.css?v=20260610h";
 
 @import "dashboard.shell.css?v=20260508d";
 
 @import "dashboard.mockup-theme.css?v=20260609a";
 
-@import "dashboard.sidebar.css?v=20260609d";
+@import "dashboard.sidebar.css?v=20260610g";
 
 @import "dashboard.modern.css?v=20260610f";
 
-@import "dashboard.modern-tabs.css?v=20260610f";
+@import "dashboard.modern-tabs.css?v=20260610h";
+
+@import "dashboard.utilities.css?v=20260610b";
+
+@import "dashboard.pages-unified.css?v=20260610h";
+
+@import "dashboard.trends-ui.css?v=20260610e";
 

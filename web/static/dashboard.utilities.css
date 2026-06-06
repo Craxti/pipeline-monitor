@@ -1,0 +1,238 @@
+/* CI/CD Monitor — layout & sizing utilities (replaces inline styles in templates) */
+
+.text-muted { color: var(--muted); }
+
+/* ── Spacing ─────────────────────────────────────────────────────────────── */
+.u-mb-1 { margin-bottom: 1rem; }
+.u-mb-1-25 { margin-bottom: 1.25rem; }
+.u-ml-auto { margin-left: auto; }
+.u-mt-75 { margin-top: 0.75rem; }
+.u-mt-25 { margin-top: 0.25rem; }
+.u-mt-35 { margin-top: 0.35rem; }
+.u-mt-50 { margin-top: 0.5rem; }
+.u-mb-50 { margin-bottom: 0.5rem; }
+.u-mb-65 { margin-bottom: 0.65rem; }
+
+/* ── Panel chrome ────────────────────────────────────────────────────────── */
+.panel-subhint {
+  flex-basis: 100%;
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1.35;
+  margin: -0.15rem 0 0.15rem;
+  font-style: italic;
+}
+
+.panel-count--plain {
+  border-color: transparent;
+  padding: 0.05rem 0.15rem;
+}
+
+.panel-count--meta {
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.panel-note--tests {
+  display: none;
+  font-size: 0.72rem;
+  padding: 0 1rem 0.4rem;
+  color: var(--muted);
+}
+
+.system-stats-grid {
+  margin: 0 1rem 1rem;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.btn-export-sm {
+  font-size: 0.76rem;
+  padding: 0.3rem 0.65rem;
+}
+
+.btn-ui-sm {
+  font-size: 0.78rem;
+  padding: 0.28rem 0.55rem;
+}
+
+.btn-har-preset {
+  font-size: 0.75rem;
+  padding: 0.24rem 0.55rem;
+}
+
+.btn-modal-close {
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.25rem 0.45rem;
+}
+
+.btn-log-sm {
+  font-size: 0.8rem;
+}
+
+.btn-save-green {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.btn-save-green:hover {
+  filter: brightness(1.08);
+}
+
+/* ── Filter field widths ───────────────────────────────────────────────────── */
+.f-select--source { min-width: 140px; }
+.f-select--instance { min-width: 190px; }
+.f-input--job { width: 180px; }
+
+/* ── Trends tab ────────────────────────────────────────────────────────────── */
+.trends-days--head {
+  margin-bottom: 0;
+  margin-left: 0.75rem;
+}
+
+.trends-f-select--source { max-width: 11rem; }
+.trends-f-select--instance { width: auto; min-width: 220px; }
+.trends-f-select--smooth { max-width: 11rem; }
+.trends-topn-input { width: 4.25rem; }
+.trends-range-sep { color: var(--muted); font-size: 0.8rem; }
+.trends-scope-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+#tab-panel-trends .trends-filters-advanced {
+  grid-column: 1 / -1;
+}
+
+#wrap-trends.trends-wrap {
+  padding: 1rem;
+  max-height: none;
+}
+
+.trends-error-banner {
+  display: none;
+  margin: 0 0 0.75rem;
+}
+
+.trends-inst-select {
+  width: auto;
+  min-width: 220px;
+}
+
+.trends-inst-select--svcs { min-width: 200px; }
+.trends-inst-select--top-src { min-width: 140px; }
+
+.trends-custom-heading {
+  display: none;
+  margin-top: 1.25rem;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────────── */
+.th-col-log { min-width: 72px; }
+.th-col-actions-wide { min-width: 200px; text-align: right; }
+.th-col-actions { text-align: right; }
+
+/* ── HAR ───────────────────────────────────────────────────────────────────── */
+.har-file-input { width: min(460px, 100%); }
+.har-status-meta { color: var(--muted); font-size: 0.75rem; }
+.har-filter-meta { margin-left: auto; }
+
+/* ── Modals & overlays ─────────────────────────────────────────────────────── */
+.log-modal-card--wide { max-width: min(1060px, 96vw); }
+.log-modal-card--medium { max-width: min(920px, 96vw); }
+.log-modal-card--log { max-width: min(1000px, 97vw); }
+.log-modal-toolbar--start { justify-content: flex-start; }
+.har-raw-mode-select { width: auto; min-width: 230px; }
+.har-raw-search { width: 280px; max-width: 100%; }
+.har-raw-pre { max-height: min(68vh, 620px); }
+
+.allure-meta-sub {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.allure-meta-body {
+  padding: 0 1rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  max-height: min(62vh, 520px);
+  overflow: auto;
+}
+
+.runbook-sub {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.65rem;
+}
+
+.runbook-notes-body {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.modal-branch-label {
+  font-size: 0.74rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modal-branch-input {
+  width: 100%;
+  margin-top: 0.35rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+  outline: none;
+}
+
+.modal-branch-wrap { margin: 0 1.35rem 0.5rem; }
+
+.log-tail-controls {
+  display: none;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.log-tail-wrap,
+.log-tail-lines-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.log-tail-lines-wrap { gap: 0.3rem; }
+.log-tail-lines-input { width: 88px; }
+
+.log-lvl-row {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.log-intel-detail-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sit-sep { color: var(--border); }
+
+.tc-y-max-input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tc-opt-click { cursor: pointer; }

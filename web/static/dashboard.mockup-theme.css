@@ -5,10 +5,6 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --ok: #10b981;
-  --fail: #f43f5e;
-  --warn: #f59e0b;
-  --info: #3b82f6;
   --purple: #8b5cf6;
   --st-success: var(--ok);
   --st-failure: var(--fail);
@@ -16,24 +12,10 @@
   --st-unstable: var(--warn);
   --st-unknown: #64748b;
 
-  --bg: #0a1120;
-  --surface: #111d2f;
-  --surface2: #162236;
-  --surface3: #1c2a42;
-  --text: #f1f5f9;
-  --muted: #8b9cb8;
-  --border: #243044;
-  --chart-teal: #2dd4bf;
-  --chart-fail: #fb7185;
-
   --radius: 0.75rem;
   --radius-sm: 0.5rem;
-  --accent: #60a5fa;
-  --shell-line: rgba(148, 163, 184, 0.1);
   --shell-radius: 0.75rem;
   --header-sticky-offset: 52px;
-  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.35);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 16px rgba(0, 0, 0, 0.18);
   --page-pad: 1.25rem;
   --page-max: 1440px;
 }
@@ -2934,29 +2916,7 @@ body.ui-modern .dash-page-tabs {
   display: none !important;
 }
 
-#tab-panel-trends .trends-filters-bar {
-  position: static;
-  top: auto;
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: center;
-  padding: 0.45rem 1rem 0.65rem !important;
-  gap: 0.5rem 0.65rem !important;
-  background: var(--surface) !important;
-  border-bottom: none !important;
-}
-
-#tab-panel-trends .trends-filter-group {
-  min-width: 0;
-}
-
-#tab-panel-trends .trends-filter-group select,
-#tab-panel-trends .trends-filter-group input[type="number"],
-#tab-panel-trends #trends-instance-all {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: none !important;
-}
+/* Trends filter bar layout — see dashboard.trends-ui.css */
 
 #tab-panel-trends .trends-days,
 #tab-panel-trends .trends-toolbar {
@@ -2980,43 +2940,9 @@ body.ui-modern .dash-page-tabs {
   box-shadow: none !important;
 }
 
-#tab-panel-trends .trends-filters-advanced {
-  display: none !important;
-}
-
-#tab-panel-trends .trends-filters-bar.trends-filters-advanced-open .trends-filters-advanced {
-  display: flex !important;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-#tab-panel-trends .btn-trends-more {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin-top: 0.15rem;
-  font-size: 0.72rem !important;
-  padding: 0.28rem 0.55rem !important;
-  color: var(--muted) !important;
-}
-
 #tab-panel-trends #chart-card-builds > div:not(.chart-zoom-btn),
 #tab-panel-trends #chart-card-tests > div:not(.chart-zoom-btn) {
   display: none !important;
-}
-
-#tab-panel-trends .trends-filter-group .trends-toolbar-label {
-  display: none;
-}
-
-#tab-panel-trends .trends-filter-group select,
-#tab-panel-trends .trends-filter-group input[type="number"] {
-  min-width: 9.5rem;
-  padding: 0.42rem 0.65rem !important;
-  font-size: 0.76rem !important;
-  border-radius: var(--radius-sm) !important;
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
 }
 
 #tab-panel-trends #wrap-trends {

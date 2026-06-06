@@ -2,24 +2,9 @@
    CI/CD Monitor — Settings page (mockup-aligned, 2026)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+@import "tokens.css?v=20260610a";
+
 :root {
-  --ok: #4ade80;
-  --fail: #f87171;
-  --warn: #fbbf24;
-  --info: #3b82f6;
-  --purple: #8b5cf6;
-  --bg: #121826;
-  --surface: #1f2937;
-  --surface2: #1a2234;
-  --surface3: #243044;
-  --text: #f3f4f6;
-  --muted: #9ca3af;
-  --border: #2a3548;
-  --radius: 0.75rem;
-  --radius-sm: 0.5rem;
-  --accent: #60a5fa;
-  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.35);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 16px rgba(0, 0, 0, 0.18);
   --page-max: 1300px;
   --page-pad: 1.25rem;
 }
@@ -681,10 +666,11 @@ html.light .snav-item:hover {
 }
 
 .snav-item.active {
-  background: rgba(59, 130, 246, 0.18);
+  background: rgba(59, 130, 246, 0.16);
   color: #93c5fd;
   font-weight: 650;
-  border: 1px solid rgba(59, 130, 246, 0.28);
+  border: none;
+  box-shadow: inset 3px 0 0 #60a5fa;
 }
 
 .snav-icon-img {

@@ -13,6 +13,7 @@ from web.services.collect_sync import github_collect as _github_collect
 from web.services.collect_sync import jenkins_collect as _jenkins_collect
 from web.services.collect_sync import local_parsers as _local_parsers
 from web.services.collect_sync import merge as _merge
+from web.services.collect_sync import parallel_util
 from web.services.collect_sync import progress as _progress
 from web.services.collect_sync import jenkins_merge_unified_tests as _jenkins_merge_unified
 from web.services.collect_sync import synth_tests as _synth_tests
@@ -68,6 +69,10 @@ def run_collect_sync(
         snapshot = prev_snapshot.model_copy(update={"tests": [], "collect_meta": {}, "collected_at": now})
 
     snap_lock = threading.Lock()
+    progress_lock = threading.Lock()
+    health_lock = threading.Lock()
+    stats_lock = threading.Lock()
+    slow_lock = threading.Lock()
     health: list[dict[str, Any]] = []
     incremental_stats = {
         "jenkins_checked": 0,
@@ -83,6 +88,17 @@ def run_collect_sync(
         with snap_lock:
             snapshot.tests.extend(recs)
         maybe_save_partial(snapshot)
+        try:
+            from web.core import runtime as rt
+            from web.services.snapshot_store import touch_collect_snapshot_live
+
+            touch_collect_snapshot_live(
+                snapshot,
+                prime_snapshot_cache=rt.prime_snapshot_cache,
+                collect_state=collect_state,
+            )
+        except Exception:
+            pass
 
     def progress(phase: str, main: str, sub: str | None = None) -> None:
         return _progress.progress_update(
@@ -92,6 +108,7 @@ def run_collect_sync(
             main=main,
             sub=sub,
             push_collect_log=push_collect_log,
+            state_lock=progress_lock,
         )
 
     def _between_phases() -> None:
@@ -114,6 +131,8 @@ def run_collect_sync(
             progress=progress,
             merge_build_records=merge_build_records,
             health=health,
+            health_lock=health_lock,
+            stats_lock=stats_lock,
             config_instance_label=config_instance_label,
             logger=logger,
             incremental_collect=incremental_collect,
@@ -132,6 +151,7 @@ def run_collect_sync(
             progress=progress,
             merge_build_records=merge_build_records,
             health=health,
+            health_lock=health_lock,
             config_instance_label=config_instance_label,
             logger=logger,
             check_cancelled=check_cancelled,
@@ -144,12 +164,26 @@ def run_collect_sync(
             snapshot=snapshot,
             progress=progress,
             health=health,
+            health_lock=health_lock,
             logger=logger,
             check_cancelled=check_cancelled,
             snap_lock=snap_lock,
             maybe_save_partial=maybe_save_partial,
         )
         logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
+
+    def _touch_live_snapshot() -> None:
+        try:
+            from web.core import runtime as rt
+            from web.services.snapshot_store import touch_collect_snapshot_live
+
+            touch_collect_snapshot_live(
+                snapshot,
+                prime_snapshot_cache=rt.prime_snapshot_cache,
+                collect_state=collect_state,
+            )
+        except Exception:
+            pass
 
     def _collect_jenkins_phase() -> None:
         _jenkins_collect.collect_jenkins(
@@ -163,6 +197,9 @@ def run_collect_sync(
             push_collect_log=push_collect_log,
             collect_slow=collect_slow,
             health=health,
+            health_lock=health_lock,
+            stats_lock=stats_lock,
+            slow_lock=slow_lock,
             config_instance_label=config_instance_label,
             logger=logger,
             sqlite_available=sqlite_available,
@@ -174,6 +211,7 @@ def run_collect_sync(
             check_cancelled=check_cancelled,
             incremental_stats=incremental_stats,
             snap_lock=snap_lock,
+            touch_live_snapshot=_touch_live_snapshot,
         )
         logger.info(
             "Jenkins phase completed: builds=%d tests=%d",
@@ -188,7 +226,14 @@ def run_collect_sync(
         phases = "GitLab + GitHub + Jenkins"
         if dm_enabled:
             phases += " + Docker/HTTP"
-        logger.info("Collect: %s in parallel threads", phases)
+        inst_parallel = parallel_util.parallel_instances_enabled(cfg)
+        inst_workers = parallel_util.instance_worker_cap(cfg, 99)
+        logger.info(
+            "Collect: %s in parallel source threads; instances per source in parallel=%s (max_workers=%d)",
+            phases,
+            inst_parallel,
+            inst_workers,
+        )
         with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="collect-ci") as pool:
             futures = [
                 pool.submit(_collect_gitlab_phase),

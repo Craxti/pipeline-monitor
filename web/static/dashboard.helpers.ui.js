@@ -207,6 +207,25 @@ function keepTableOnTransientApiError(tbody, res, state, cacheKey) {
   }
 }
 
+/** Block table/API reload while collect is in progress (keep current rows visible). */
+function guardPanelLoadDuringCollect(tableKey, tbody, state) {
+  try {
+    if (typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh()) return false;
+    if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
+    if (state) state.loading = false;
+    if (
+      state && state.page === 1
+      && typeof shouldSkipTableReloadDuringCollect === 'function'
+      && shouldSkipTableReloadDuringCollect(tableKey, tbody)
+    ) {
+      state.done = true;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Skip LIVE refreshAll reload for a tab that already shows data while collect is running. */
 function shouldSkipTableReloadDuringCollect(tableKey, tbody) {
   try {
@@ -356,11 +375,20 @@ function initEventSource() {
         if (d.type === 'collect_done') {
           showToast(t('dash.collect_done_toast'), 'ok');
           try { _lastCollectFinishedAt = Date.now(); } catch { /* ignore */ }
+          try {
+            if (typeof _resetPartialLiveRefreshState === 'function') _resetPartialLiveRefreshState();
+          } catch { /* ignore */ }
           // Defer so the SSE handler returns quickly; coalesce with pollCollect via refreshAll single-flight.
           setTimeout(() => {
             refreshAll();
             pollCollect();
           }, 0);
+        } else if (d.type === 'snapshot_partial') {
+          if (typeof refreshLivePanelsDuringCollect === 'function') {
+            refreshLivePanelsDuringCollect(d);
+          } else if (typeof refreshLiveTestsPanelsDuringCollect === 'function') {
+            refreshLiveTestsPanelsDuringCollect(d);
+          }
         }
       } catch { /* ignore */ }
     };
@@ -506,9 +534,7 @@ function runbookFocusTestFailures() {
 
 function runbookFocusServicesProblems() {
   goToInTab('services', 'panel-svcs');
-  const cb = document.getElementById('sv-problems-only');
-  if (cb) cb.checked = true;
-  toggleSvcProblemsOnly(true);
+  setSvcStatusFilter('problems');
 }
 
 const _DASH_ACTION_PASS_EL = new Set([
@@ -610,14 +636,18 @@ function initDashFormControlBindings() {
   if (fTsuite) fTsuite.addEventListener('input', () => { debounce(resetTests, 400)(); });
 
   const fSvstatus = byId('f-svstatus');
-  if (fSvstatus) fSvstatus.addEventListener('change', resetServices);
-  const svProb = byId('sv-problems-only');
-  if (svProb) {
-    svProb.addEventListener('change', (e) => {
-      const t = e.target;
-      if (t && 'checked' in t) toggleSvcProblemsOnly(!!t.checked);
+  if (fSvstatus) {
+    fSvstatus.addEventListener('change', () => {
+      try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
+      resetServices();
     });
   }
+
+  const gs = byId('global-search');
+  if (gs) gs.addEventListener('input', (e) => {
+    const t = e.target;
+    globalSearch(t && 'value' in t ? t.value : '');
+  });
 
   const logS = byId('log-search-input');
   if (logS) logS.addEventListener('input', (e) => { _onLogSearch(e.target && 'value' in e.target ? e.target.value : ''); });
@@ -639,18 +669,21 @@ function initDashFormControlBindings() {
 
 function refreshActivePanel() {
   if (_dashTab === 'overview') { loadSummary(); return; }
-  if (_dashTab === 'builds') { resetBuilds(true); return; }
+  const softCollect = typeof _collectGraceActive === 'function' && _collectGraceActive();
+  if (_dashTab === 'builds') { resetBuilds(softCollect); return; }
   if (_dashTab === 'test-failures') {
-    resetFailures();
+    resetFailures(softCollect);
     return;
   }
   if (_dashTab === 'test-runs') {
-    resetTests();
+    resetTestsSoft(softCollect);
     return;
   }
-  if (_dashTab === 'services') { resetServices(); return; }
+  if (_dashTab === 'services') { resetServices(softCollect); return; }
   if (_dashTab === 'system') { loadSystemStats(); return; }
   if (_dashTab === 'trends') {
+    if (typeof initTrendsFiltersFromStorage === 'function') initTrendsFiltersFromStorage();
+    if (typeof shouldSkipTrendsReloadDuringCollect === 'function' && shouldSkipTrendsReloadDuringCollect()) return;
     if (typeof loadTrends === 'function') loadTrends(_trendsViewDays || 14, null);
     return;
   }
@@ -886,9 +919,14 @@ function _flashTestRowByName(testName, suite) {
   const want = String(testName || '').trim();
   const su = String(suite || '').trim();
   const pick = () => {
-    const rows = document.querySelectorAll('#tbody-tests tr');
+    const rows = document.querySelectorAll('#tbody-tests tr.test-group-row, #tbody-tests tr:not(.test-run-child):not(.empty-row):not(.load-more-row)');
     for (const tr of rows) {
-      if (tr.classList.contains('empty-row') || tr.classList.contains('load-more-row')) continue;
+      if (tr.classList.contains('empty-row') || tr.classList.contains('load-more-row') || tr.classList.contains('test-run-child')) continue;
+      const dn = tr.getAttribute('data-test-name') || '';
+      const ds = tr.getAttribute('data-test-suite') || '';
+      if (want && dn && dn !== want && !dn.includes(want) && !want.includes(dn)) continue;
+      if (su && ds && ds !== su && !ds.includes(su) && !su.includes(ds)) continue;
+      if (want && dn && (dn === want || dn.includes(want))) return tr;
       const tds = tr.querySelectorAll('td');
       if (!tds.length) continue;
       const t0 = (tds[0] && tds[0].textContent) ? tds[0].textContent.trim() : '';
@@ -1031,9 +1069,7 @@ function renderIncidentCards(snap) {
       desc: _icShort(s.detail || '', 160),
       title: String(s.detail || ''),
       onClick: () => {
-        const cb = document.getElementById('sv-problems-only');
-        if (cb) cb.checked = true;
-        toggleSvcProblemsOnly(true);
+        setSvcStatusFilter('problems');
         goToInTab('services', 'panel-svcs');
         window.requestAnimationFrame(() => _flashSvcRowByName(String(s.name || '')));
       },
@@ -1057,8 +1093,8 @@ function renderIncidentCards(snap) {
       onClick: () => {
         // Make the jump resilient: widen time window so the event is likely visible.
         _buildsHours = 168;
-        document.querySelectorAll('.time-filter-btn').forEach((btn) => btn.classList.remove('active'));
-        document.getElementById('tf-7d')?.classList.add('active');
+        _clearTimeFilterBtns('builds');
+        _activateTimeFilterBtn('tf-7d');
         try { localStorage.setItem('cimon-builds-hours', String(_buildsHours)); } catch { /* ignore */ }
         goToInTab('builds', 'panel-builds');
         const fs = document.getElementById('f-bstatus');
@@ -1377,17 +1413,7 @@ function goToFailedTestsFromSituation() {
 }
 
 function goToServicesDownFromSituation() {
-  const cb = document.getElementById('sv-problems-only');
-  if (cb) {
-    cb.checked = false;
-    _svcProblemsOnly = false;
-    try { localStorage.setItem('cimon-svc-problems', '0'); } catch { /* ignore */ }
-  }
-  const sel = document.getElementById('f-svstatus');
-  if (sel) sel.value = 'down';
-  try { _persistFiltersFromForm(); } catch { /* ignore */ }
-  updateFilterSummary();
-  resetServices(false);
+  setSvcStatusFilter('down');
   goToInTab('services', 'panel-svcs');
 }
 
@@ -1405,7 +1431,7 @@ function updateSituationStrip(failB, failT, downS) {
   if (downS > 0) {
     parts.push(`<button type="button" class="sit-stat sit-bad sit-jump" onclick="goToServicesDownFromSituation()">${downS} ${esc(t('sit.services_down'))}</button>`);
   }
-  const statsHtml = parts.length ? parts.join(' <span style="color:var(--border)">|</span> ') : `<span class="sit-stat sit-ok">${esc(t('sit.no_problems'))}</span>`;
+  const statsHtml = parts.length ? parts.join(` <span class="sit-sep">|</span> `) : `<span class="sit-stat sit-ok">${esc(t('sit.no_problems'))}</span>`;
   const nextParts = [];
   if (failB > 0) {
     nextParts.push(`<a href="#" onclick="event.preventDefault();goToFailedBuildsFromSituation()">${esc(t('sit.next_failed_builds'))}</a>`);
@@ -1417,7 +1443,7 @@ function updateSituationStrip(failB, failT, downS) {
     nextParts.push(`<a href="#" onclick="event.preventDefault();goToFailedTestsFromSituation()">${esc(t('sit.next_tests'))}</a>`);
   }
   const nextHtml = nextParts.length
-    ? nextParts.join(' <span style="color:var(--border)">|</span> ')
+    ? nextParts.join(` <span class="sit-sep">|</span> `)
     : `<span class="sit-ok">${esc(t('sit.all_ok'))}</span>`;
   el.innerHTML = `<span class="sit-title">${esc(t('sit.title'))}</span><div class="sit-stats">${statsHtml}</div><div class="sit-next">${esc(t('sit.next_label'))} ${nextHtml}</div>`;
   el.style.display = '';

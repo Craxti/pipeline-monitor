@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable
@@ -31,7 +32,7 @@ async def api_builds(
     snap = await load_snapshot_async()
     if snap is None:
         raise HTTPException(404, "No snapshot data found.")
-    cfg = load_yaml_config()
+    cfg = await asyncio.to_thread(load_yaml_config)
 
     items = [b for b in (snap.builds or []) if is_snapshot_build_enabled(b, cfg)]
     if source:

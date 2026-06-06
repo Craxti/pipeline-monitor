@@ -4,14 +4,48 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Summary stats & anomalies
 // ─────────────────────────────────────────────────────────────────────────────
+let _lastTopRedCounts = { nFail: 0, nTFail: 0, nDown: 0 };
+
+/** Update hero + stat cards from /api/dashboard/summary counts (cheap during collect). */
+function _applySummaryCountsLight(counts) {
+  if (!counts || typeof counts !== 'object') return;
+  const nFail = Number(counts.failed_builds || 0);
+  const nTFail = Number(counts.failed_tests || 0);
+  const nDown = Number(counts.services_down || 0);
+  const nBuilds = Number(counts.builds || 0);
+  const nTestsTotal = Number(counts.tests_total || 0);
+  _lastTopRedCounts = { nFail, nTFail, nDown };
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+  set('s-builds', nBuilds);
+  set('s-fail', nFail);
+  set('s-tfail', nTFail);
+  const heroTestsTotal = document.getElementById('hero-tests-total');
+  const heroTestsFail = document.getElementById('hero-tests-fail');
+  const heroSvcsDown = document.getElementById('hero-svcs-down');
+  if (heroTestsTotal) heroTestsTotal.textContent = nTestsTotal;
+  if (heroTestsFail) heroTestsFail.textContent = nTFail;
+  if (heroSvcsDown) heroSvcsDown.textContent = nDown;
+
+  try { updateSituationStrip(nFail, nTFail, nDown); } catch { /* ignore */ }
+}
+
 async function loadSummary() {
   const banner = document.getElementById('no-data-banner');
-  const [res, pres, metaRes, sumRes] = await Promise.all([
-    fetchKeyed('summary.status', apiUrl('api/status')).catch(() => null),
-    fetchKeyed('summary.events', apiUrl('api/events/persisted?limit=300')).catch(() => null),
+  const lightCollect = typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+  const fetches = [
     fetchKeyed('summary.meta', apiUrl('api/meta')).catch(() => null),
     fetchKeyed('summary.summary', apiUrl('api/dashboard/summary')).catch(() => null),
-  ]);
+  ];
+  if (!lightCollect) {
+    fetches.push(fetchKeyed('summary.status', apiUrl('api/status')).catch(() => null));
+    fetches.push(fetchKeyed('summary.events', apiUrl('api/events/persisted?limit=300')).catch(() => null));
+  }
+  const results = await Promise.all(fetches);
+  const metaRes = results[0];
+  const sumRes = results[1];
+  const res = lightCollect ? null : results[2];
+  const pres = lightCollect ? null : results[3];
 
   if (res === FETCH_ABORTED || pres === FETCH_ABORTED || metaRes === FETCH_ABORTED || sumRes === FETCH_ABORTED) {
     return;
@@ -47,6 +81,25 @@ async function loadSummary() {
   } else {
     const ch = document.getElementById('correlation-hint');
     if (ch) ch.style.display = 'none';
+  }
+
+  if (lightCollect) {
+    if (banner) banner.classList.remove('visible');
+    if (summaryObj && summaryObj.counts) {
+      try { _applySummaryCountsLight(summaryObj.counts); } catch { /* ignore */ }
+    }
+    if (metaObj || summaryObj) {
+      try {
+        updateTopStatusBar(
+          metaObj,
+          summaryObj,
+          _lastTopRedCounts.nFail,
+          _lastTopRedCounts.nTFail,
+          _lastTopRedCounts.nDown,
+        );
+      } catch { /* ignore */ }
+    }
+    return;
   }
 
   if (!res || !res.ok) {
@@ -103,6 +156,7 @@ async function loadSummary() {
   const nTPass = tests.filter((t) => t.status === 'passed').length;
   const nTestsTotal = tests.length;
   const nDown = svcs.filter((s) => s.status === 'down').length;
+  _lastTopRedCounts = { nFail, nTFail, nDown };
   const passRate = nTestsTotal ? Math.round((nTPass / nTestsTotal) * 1000) / 10 : null;
 
   document.getElementById('s-builds').textContent = builds.length;

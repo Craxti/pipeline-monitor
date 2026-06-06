@@ -22,49 +22,123 @@ function _liRoleClass(role) {
   return 'lintel-role-normal';
 }
 
-function _liEdgeColor(kind) {
-  if (kind === 'out') return { color: '#34d399', highlight: '#6ee7b7', hover: '#6ee7b7' };
-  if (kind === 'in') return { color: '#fbbf24', highlight: '#fcd34d', hover: '#fcd34d' };
-  if (kind === 'dim') return { color: 'rgba(100,116,139,.22)', highlight: '#64748b', hover: '#64748b' };
-  return { color: 'rgba(148,163,184,.42)', highlight: '#93c5fd', hover: '#93c5fd' };
+const _LI_COLORS = {
+  root: { fill: '#14532d', border: '#22c55e', edge: '#22c55e' },
+  hub: { fill: '#78350f', border: '#f59e0b', edge: '#f59e0b' },
+  leaf: { fill: '#312e81', border: '#6366f1', edge: '#6366f1' },
+  error: { fill: '#7f1d1d', border: '#ef4444', edge: '#ef4444' },
+  warn: { fill: '#713f12', border: '#eab308', edge: '#eab308' },
+  normal: { fill: '#1e3a8a', border: '#3b82f6', edge: '#64748b' },
+  out: { fill: '#065f46', border: '#34d399', edge: '#34d399' },
+  in: { fill: '#78350f', border: '#fbbf24', edge: '#fbbf24' },
+};
+
+function _liNodeColors(n) {
+  const level = String(n.level || 'info');
+  const role = String(n.role || 'normal');
+  if (level === 'error') return _LI_COLORS.error;
+  if (level === 'warn') return _LI_COLORS.warn;
+  if (role === 'root') return _LI_COLORS.root;
+  if (role === 'hub') return _LI_COLORS.hub;
+  if (role === 'leaf') return _LI_COLORS.leaf;
+  return _LI_COLORS.normal;
 }
 
-function _liNodeStyle(n) {
-  let fill = '#2563eb';
-  let border = '#60a5fa';
-  if (n.role === 'root') { fill = '#15803d'; border = '#4ade80'; }
-  else if (n.role === 'hub') { fill = '#b45309'; border = '#fbbf24'; }
-  else if (n.role === 'leaf') { fill = '#4338ca'; border = '#818cf8'; }
-  if (n.level === 'error') { fill = '#b91c1c'; border = '#f87171'; }
-  else if (n.level === 'warn' && n.role === 'normal') { fill = '#a16207'; border = '#facc15'; }
+function _liEdgeColor(kind) {
+  const c = _LI_COLORS[kind] || _LI_COLORS.normal;
+  const edge = c.edge || c.border;
+  if (kind === 'dim') return { color: 'rgba(100,116,139,.18)', highlight: '#64748b', hover: '#64748b' };
+  if (kind === 'neutral') return { color: `${edge}66`, highlight: edge, hover: edge };
+  return { color: edge, highlight: edge, hover: edge };
+}
+
+function _liLegendModes() {
+  return ['all', 'root', 'hub', 'leaf', 'error', 'warn', 'out', 'in'];
+}
+
+function _liNodeMatchesLegend(n, mode) {
+  if (!mode || mode === 'all') return true;
+  const role = String(n.role || 'normal');
+  const level = String(n.level || 'info');
+  if (mode === 'root') return role === 'root';
+  if (mode === 'hub') return role === 'hub';
+  if (mode === 'leaf') return role === 'leaf';
+  if (mode === 'error') return level === 'error';
+  if (mode === 'warn') return level === 'warn';
+  if (mode === 'out') return Number(n.out_degree || 0) > 0;
+  if (mode === 'in') return Number(n.in_degree || 0) > 0;
+  return true;
+}
+
+function _liDisplayTemplate(text, maxLen) {
+  maxLen = maxLen || 0;
+  let s = String(text || '').replace(/\s+/g, ' ').trim();
+  s = s.replace(/^\[[^\]]*(?:\d{4}|\d{2}:\d{2}:\d{2})[^\]]*\]\s*/, '');
+  s = s.replace(/^\[(?:<N>|[\s<N>:,.\-+/])+\]\s*/, '');
+  s = s.replace(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\dZ+\-: ]*\s*/, '');
+  s = s.replace(/^(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL|CRITICAL)\s+/i, '');
+  if (maxLen > 0 && s.length > maxLen) return `${s.slice(0, maxLen - 1)}…`;
+  return s;
+}
+
+function _liCompactLabel(n, maxLen) {
+  return _liDisplayTemplate(String(n.label || n.id || ''), maxLen || 26);
+}
+
+function _liNodeIsLabeled(n) {
+  return n.level === 'error' || n.level === 'warn' || n.role === 'root';
+}
+
+function _liNodeStyle(n, opts) {
+  opts = opts || {};
+  const expanded = !!opts.expanded;
   const count = Number(n.count || 0);
   const inDeg = Number(n.in_degree || 0);
   const outDeg = Number(n.out_degree || 0);
   const short = String(n.label || n.id || '').replace(/\s+/g, ' ').trim();
-  const line = short.length > 36 ? `${short.slice(0, 34)}…` : short;
-  const degLine = `↙${inDeg}  ↗${outDeg}`;
-  const label = count > 0 ? `×${count}\n${degLine}\n${line}` : `${degLine}\n${line}`;
+  const display = _liDisplayTemplate(short);
+  const compact = _liCompactLabel(n, expanded ? 36 : 24);
+  const { fill, border } = _liNodeColors(n);
+
+  const showBox = expanded || _liNodeIsLabeled(n);
+  const dotSize = Math.min(22, 8 + Math.log10(count + 1) * 4.5);
+  const label = showBox && compact ? (count > 0 ? `×${count} ${compact}` : compact) : '';
+
   return {
     id: n.id,
     label,
     title: [
       _liRoleLabel(n.role),
-      short,
+      display || short,
       `${_liT('dash.log_intel_node_links', 'Links')}: ↙${inDeg} ${_liT('dash.log_intel_node_in', 'incoming')} · ↗${outDeg} ${_liT('dash.log_intel_node_out', 'outgoing')}`,
       `count: ${count}`,
     ].join('\n'),
-    shape: 'box',
-    margin: 14,
-    widthConstraint: { minimum: 108, maximum: 240 },
+    shape: showBox ? 'box' : 'dot',
+    size: showBox ? undefined : dotSize,
+    margin: showBox ? 8 : 5,
+    widthConstraint: showBox ? { minimum: 72, maximum: expanded ? 240 : 168 } : undefined,
     color: {
       background: fill,
       border,
       highlight: { background: fill, border: '#f8fafc' },
-      hover: { background: fill, border: '#f8fafc' },
+      hover: { background: fill, border: '#e2e8f0' },
     },
-    font: { color: '#f8fafc', size: 13, face: 'ui-sans-serif, system-ui, sans-serif', multi: true, vadjust: 0 },
-    borderWidth: 2,
-    shadow: false,
+    font: {
+      color: '#e2e8f0',
+      size: showBox ? 10 : 0,
+      face: 'ui-sans-serif, system-ui, sans-serif',
+      multi: false,
+      vadjust: 0,
+    },
+    borderWidth: showBox ? 2 : 1.5,
+    borderRadius: showBox ? 6 : undefined,
+    shadow: showBox ? {
+      enabled: true,
+      color: 'rgba(0,0,0,0.22)',
+      size: 6,
+      x: 0,
+      y: 1,
+    } : false,
   };
 }
 
@@ -72,17 +146,45 @@ let _logIntelCorrView = 'graph';
 let _logIntelSelectedNodeId = '';
 let _logIntelCorrRaw = null;
 let _logIntelGraphSimplified = false;
+let _logIntelLegendFilter = 'all';
+let _logIntelGraphSearch = '';
+let _logIntelHoverNodeId = '';
 let _logIntelWatch = false;
 let _logIntelLiveTimer = null;
 let _logIntelLiveSig = '';
 let _logIntelLayoutPositions = null;
-const _LI_LAYOUT_PREFIX = 'cimon-lintel-layout:';
+const _LI_LAYOUT_PREFIX = 'cimon-lintel-layout:v4:';
+
+function _liHashJitter(id, amp) {
+  let h = 0;
+  const s = String(id || '');
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return ((Math.abs(h) % 1000) / 1000 - 0.5) * amp;
+}
 
 function initLogIntelBindings() {
   const watch = document.getElementById('log-intel-watch');
   if (watch && !watch._liBound) {
     watch._liBound = true;
     watch.addEventListener('change', () => toggleLogIntelWatch());
+  }
+  const search = document.getElementById('log-intel-graph-search');
+  if (search && !search._liBound) {
+    search._liBound = true;
+    let searchTimer = null;
+    search.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        _logIntelGraphSearch = search.value || '';
+        _liApplyGraphFocus();
+      }, 220);
+    });
+    search.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      _logIntelGraphSearch = search.value || '';
+      _liJumpToGraphSearchMatch();
+    });
   }
 }
 
@@ -151,6 +253,9 @@ async function openLogIntelDetail(key) {
   _logIntelSelectedNodeId = '';
   _logIntelCorrView = 'graph';
   _logIntelGraphSimplified = false;
+  _logIntelLegendFilter = 'all';
+  _logIntelGraphSearch = '';
+  _logIntelHoverNodeId = '';
   const listPanel = document.getElementById('panel-log-intel-list');
   const detailPanel = document.getElementById('panel-log-intel-detail');
   if (listPanel) listPanel.hidden = true;
@@ -175,6 +280,9 @@ function closeLogIntelDetail() {
   _logIntelCorrData = null;
   _logIntelCorrRaw = null;
   _logIntelGraphSimplified = false;
+  _logIntelLegendFilter = 'all';
+  _logIntelGraphSearch = '';
+  _logIntelHoverNodeId = '';
   _logIntelWatch = false;
   _logIntelLiveSig = '';
   _liStopLiveRefresh();
@@ -224,10 +332,11 @@ function _liFocusGraphNode(id, opts) {
 function _liSelectGraphNode(nodeId, opts) {
   opts = opts || {};
   _logIntelSelectedNodeId = nodeId ? String(nodeId) : '';
-  _liApplyGraphSelection(_logIntelSelectedNodeId);
+  _liApplyGraphFocus();
   if (opts.flashCluster !== false) _liMarkSelectedCluster(_logIntelSelectedNodeId);
   const nodes = _liNodeMap(_logIntelCorrData || {});
   _liUpdateNodeInspector(nodes.get(_logIntelSelectedNodeId) || null);
+  if (_logIntelSelectedNodeId) _liFitGraphNeighborhood(_logIntelSelectedNodeId);
 }
 
 function _liMarkSelectedCluster(nodeId) {
@@ -248,12 +357,14 @@ function _liUpdateNodeInspector(node) {
   }
   const inDeg = Number(node.in_degree || 0);
   const outDeg = Number(node.out_degree || 0);
-  const short = String(node.label || node.id || '').replace(/\s+/g, ' ').trim();
+  const short = _liDisplayTemplate(String(node.label || node.id || ''));
   el.hidden = false;
   el.innerHTML = `
     <div class="lintel-inspector-main">
       <span class="lintel-inspector-role ${_liRoleClass(node.role)}">${esc(_liRoleLabel(node.role))}</span>
-      <span class="lintel-inspector-label" title="${esc(short)}">${esc(short)}</span>
+      ${node.level === 'error' ? `<span class="lintel-inspector-level lintel-inspector-error">${esc(_liT('dash.log_intel_legend_error', 'Error'))}</span>` : ''}
+      ${node.level === 'warn' ? `<span class="lintel-inspector-level lintel-inspector-warn">${esc(_liT('dash.log_intel_legend_warn', 'Warn'))}</span>` : ''}
+      <span class="lintel-inspector-label" title="${esc(String(node.label || node.id || ''))}">${esc(short)}</span>
     </div>
     <div class="lintel-inspector-stats">
       <span class="lintel-inspector-stat lintel-inspector-in" title="${esc(_liT('dash.log_intel_edge_in', 'Incoming'))}">↙ ${esc(String(inDeg))}</span>
@@ -262,19 +373,119 @@ function _liUpdateNodeInspector(node) {
     </div>`;
 }
 
-function _liApplyGraphSelection(nodeId) {
+function _liNodeBorderWidth(n, selected) {
+  if (selected) return 3;
+  return _liNodeIsLabeled(n) ? 2 : 1.5;
+}
+
+function _liEdgeKindForDisplay(e, focusId, linked, nodeById) {
+  const from = String(e.from);
+  const to = String(e.to);
+  if (focusId) {
+    if (from === focusId) return 'out';
+    if (to === focusId) return 'in';
+    return 'dim';
+  }
+  const mode = _logIntelLegendFilter;
+  if (mode === 'out') return 'out';
+  if (mode === 'in') return 'in';
+  if (mode && mode !== 'all') {
+    const fromN = nodeById.get(from);
+    const toN = nodeById.get(to);
+    const fromMatch = fromN && _liNodeMatchesLegend(fromN, mode);
+    const toMatch = toN && _liNodeMatchesLegend(toN, mode);
+    if (fromMatch && toMatch) return mode;
+    if (fromMatch) return 'out';
+    if (toMatch) return 'in';
+    return 'dim';
+  }
+  return 'neutral';
+}
+
+function _liApplyGraphFocus() {
   if (!_logIntelGraph || !_logIntelCorrData) return;
+  const focusId = _logIntelSelectedNodeId || _logIntelHoverNodeId || '';
+  const q = String(_logIntelGraphSearch || '').trim().toLowerCase();
+  const legendMode = _logIntelLegendFilter;
   const edges = Array.isArray(_logIntelCorrData.edges) ? _logIntelCorrData.edges : [];
-  const updates = edges.map((e, i) => {
-    let kind = 'neutral';
-    if (nodeId) {
-      if (String(e.from) === nodeId) kind = 'out';
-      else if (String(e.to) === nodeId) kind = 'in';
-      else kind = 'dim';
+  const nodes = Array.isArray(_logIntelCorrData.nodes) ? _logIntelCorrData.nodes : [];
+  const nodeById = _liNodeMap(_logIntelCorrData);
+  const linked = new Set();
+  if (focusId) linked.add(String(focusId));
+  const edgeUpdates = edges.map((e, i) => {
+    const from = String(e.from);
+    const to = String(e.to);
+    if (focusId) {
+      if (from === focusId) linked.add(to);
+      else if (to === focusId) linked.add(from);
     }
-    return { id: `e${i}`, color: _liEdgeColor(kind) };
+    const kind = _liEdgeKindForDisplay(e, focusId, linked, nodeById);
+    const w = Number(e.weight || 0);
+    return {
+      id: `e${i}`,
+      color: _liEdgeColor(kind),
+      width: kind === 'dim' ? 0.8 : Math.min(4, 0.8 + Math.log10(w + 1) * 1.2),
+    };
   });
-  try { _logIntelGraph.body.data.edges.update(updates); } catch { /* ignore */ }
+  const nodeUpdates = nodes.map((n) => {
+    const id = String(n.id);
+    let opacity = 1;
+    if (focusId) {
+      opacity = linked.has(id) ? 1 : 0.22;
+    } else if (q) {
+      const hay = String(n.label || n.id || '').toLowerCase();
+      opacity = hay.includes(q) ? 1 : 0.14;
+    } else if (legendMode && legendMode !== 'all') {
+      opacity = _liNodeMatchesLegend(n, legendMode) ? 1 : 0.2;
+    }
+    const expanded = focusId && id === focusId;
+    const forceBox = expanded || (legendMode && legendMode !== 'all' && _liNodeMatchesLegend(n, legendMode));
+    const styled = _liNodeStyle(n, { expanded: expanded || forceBox });
+    return {
+      ...styled,
+      opacity,
+      borderWidth: _liNodeBorderWidth(n, id === focusId),
+    };
+  });
+  try {
+    _logIntelGraph.body.data.edges.update(edgeUpdates);
+    _logIntelGraph.body.data.nodes.update(nodeUpdates);
+  } catch { /* ignore */ }
+}
+
+function _liFitGraphNeighborhood(nodeId) {
+  if (!_logIntelGraph || !nodeId) return;
+  const edges = Array.isArray(_logIntelCorrData?.edges) ? _logIntelCorrData.edges : [];
+  const related = new Set([String(nodeId)]);
+  edges.forEach((e) => {
+    const from = String(e.from);
+    const to = String(e.to);
+    if (from === nodeId) related.add(to);
+    if (to === nodeId) related.add(from);
+  });
+  try {
+    _logIntelGraph.fit({
+      nodes: [...related],
+      animation: { duration: 300, easingFunction: 'easeInOutQuad' },
+    });
+  } catch { /* ignore */ }
+}
+
+function _liJumpToGraphSearchMatch() {
+  const q = String(_logIntelGraphSearch || '').trim().toLowerCase();
+  if (!q || !_logIntelCorrData) return;
+  const match = (_logIntelCorrData.nodes || []).find((n) => (
+    String(n.label || n.id || '').toLowerCase().includes(q)
+  ));
+  if (!match) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.log_intel_graph_search_miss', 'No matching template on graph'), 'warn');
+    }
+    return;
+  }
+  if (_logIntelCorrView !== 'graph') setLogIntelCorrView('graph');
+  _liSelectGraphNode(String(match.id));
+  try { _logIntelGraph.selectNodes([match.id]); } catch { /* ignore */ }
 }
 
 async function loadLogIntelDetail(key, opts) {
@@ -320,9 +531,14 @@ async function loadLogIntelDetail(key, opts) {
   _logIntelWatch = !!data.watched;
   _liUpdateWatchUi(data);
 
-  _logIntelCorrRaw = _liMergeClustersIntoCorr(data.correlation || {}, data.clusters || []);
-  _logIntelGraphSimplified = false;
-  _logIntelCorrData = _logIntelCorrRaw;
+  _logIntelCorrRaw = data.correlation || { nodes: [], edges: [] };
+  _logIntelGraphSimplified = _liShouldAutoSimplify(_logIntelCorrRaw);
+  _logIntelLegendFilter = 'all';
+  _logIntelGraphSearch = '';
+  _logIntelHoverNodeId = '';
+  const searchEl = document.getElementById('log-intel-graph-search');
+  if (searchEl) searchEl.value = '';
+  _logIntelCorrData = _liPrepareGraphCorr(_logIntelCorrRaw, _logIntelGraphSimplified);
   const nodeMap = _liNodeMap(_logIntelCorrData);
 
   const clBox = document.getElementById('log-intel-clusters');
@@ -334,6 +550,7 @@ async function loadLogIntelDetail(key, opts) {
         const inDeg = nd ? Number(nd.in_degree || 0) : 0;
         const outDeg = nd ? Number(nd.out_degree || 0) : 0;
         const role = nd ? nd.role : 'normal';
+        const tplShown = _liDisplayTemplate(c.template || '');
         return `
         <div class="lintel-row" data-lintel-cluster-id="${esc(String(c.id || ''))}" title="${esc(c.template || '')}">
           <div class="lintel-row-top">
@@ -342,7 +559,7 @@ async function loadLogIntelDetail(key, opts) {
             <span class="mono lintel-row-count">×${esc(String(c.count))}</span>
             <span class="lintel-row-deg" title="${esc(_liT('dash.log_intel_node_links', 'Links'))}">↙${esc(String(inDeg))} ↗${esc(String(outDeg))}</span>
           </div>
-          <div class="lintel-tpl">${esc(c.template)}</div>
+          <div class="lintel-tpl">${esc(tplShown)}</div>
         </div>`;
       }).join('')
       : `<div class="muted lintel-list-empty">${esc(_liT('dash.log_intel_no_clusters', 'Not enough log data yet.'))}</div>`;
@@ -358,7 +575,9 @@ async function loadLogIntelDetail(key, opts) {
   renderLogIntelCorrList(_logIntelCorrData);
   renderLogIntelGraph(_logIntelCorrData);
   setLogIntelCorrView(_logIntelCorrView || 'graph');
+  _liUpdateGraphStats(_logIntelCorrData);
   _liUpdateSimplifyBtn();
+  _liUpdateLegendFilterUi();
   _liUpdateLiveStatus(data);
 
   const recent = document.getElementById('log-intel-recent');
@@ -502,7 +721,7 @@ async function toggleLogIntelWatch() {
 }
 
 function _liNodeLabel(n) {
-  const short = String(n.label || n.id || '').replace(/\s+/g, ' ').trim();
+  const short = _liDisplayTemplate(String(n.label || n.id || ''));
   return short.length > 56 ? `${short.slice(0, 54)}…` : short;
 }
 
@@ -514,26 +733,194 @@ function _liNodeMap(corr) {
   return map;
 }
 
-/** Ensure every cluster template appears on the graph, not only transition endpoints. */
-function _liMergeClustersIntoCorr(corr, clusters) {
+/** Keep only nodes that participate in at least one transition. */
+function _liLinkedOnlyCorr(corr) {
+  const nodes = Array.isArray(corr?.nodes) ? corr.nodes : [];
+  const edges = Array.isArray(corr?.edges) ? corr.edges : [];
+  if (!edges.length) return { nodes: [], edges: [] };
+  const linked = new Set();
+  edges.forEach((e) => {
+    linked.add(String(e.from));
+    linked.add(String(e.to));
+  });
+  return {
+    nodes: nodes.filter((n) => n && n.id && linked.has(String(n.id))),
+    edges,
+  };
+}
+
+function _liShouldAutoSimplify(corr) {
+  const nodes = Array.isArray(corr?.nodes) ? corr.nodes.length : 0;
+  const edges = Array.isArray(corr?.edges) ? corr.edges.length : 0;
+  return nodes > 8 || edges > 18;
+}
+
+function _liCapGraph(corr, maxNodes, maxEdges) {
   const nodes = Array.isArray(corr?.nodes) ? [...corr.nodes] : [];
   const edges = Array.isArray(corr?.edges) ? [...corr.edges] : [];
-  const byId = _liNodeMap({ nodes });
-  (clusters || []).forEach((c) => {
-    const id = String(c?.id || '');
-    if (!id || byId.has(id)) return;
-    const tpl = String(c.template || id);
-    byId.set(id, {
-      id,
-      label: tpl.length > 48 ? `${tpl.slice(0, 46)}…` : tpl,
-      count: Number(c.count || 0),
-      level: c.level || 'info',
-      role: 'normal',
-      in_degree: 0,
-      out_degree: 0,
-    });
+  if (nodes.length <= maxNodes && edges.length <= maxEdges) return { nodes, edges };
+  const ranked = [...nodes].sort((a, b) => {
+    const score = (n) => {
+      let s = Number(n.count || 0);
+      if (n.level === 'error') s += 10000;
+      if (n.level === 'warn') s += 5000;
+      if (n.role === 'root') s += 2000;
+      s += (Number(n.in_degree || 0) + Number(n.out_degree || 0)) * 100;
+      return s;
+    };
+    return score(b) - score(a);
   });
-  return { nodes: [...byId.values()], edges };
+  const keep = new Set(ranked.slice(0, maxNodes).map((n) => String(n.id)));
+  const keptEdges = edges
+    .filter((e) => keep.has(String(e.from)) && keep.has(String(e.to)))
+    .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))
+    .slice(0, maxEdges);
+  keptEdges.forEach((e) => {
+    keep.add(String(e.from));
+    keep.add(String(e.to));
+  });
+  return {
+    nodes: nodes.filter((n) => keep.has(String(n.id))),
+    edges: keptEdges,
+  };
+}
+
+function _liFilterCorrByLegend(corr, mode) {
+  if (!mode || mode === 'all') return corr;
+  const nodes = Array.isArray(corr?.nodes) ? corr.nodes : [];
+  const edges = Array.isArray(corr?.edges) ? corr.edges : [];
+
+  if (mode === 'out') {
+    const keep = new Set();
+    const keptEdges = edges.filter((e) => {
+      const fromN = nodes.find((n) => String(n.id) === String(e.from));
+      if (!fromN || Number(fromN.out_degree || 0) < 1) return false;
+      keep.add(String(e.from));
+      keep.add(String(e.to));
+      return true;
+    });
+    return {
+      nodes: nodes.filter((n) => keep.has(String(n.id))),
+      edges: keptEdges,
+    };
+  }
+  if (mode === 'in') {
+    const keep = new Set();
+    const keptEdges = edges.filter((e) => {
+      const toN = nodes.find((n) => String(n.id) === String(e.to));
+      if (!toN || Number(toN.in_degree || 0) < 1) return false;
+      keep.add(String(e.from));
+      keep.add(String(e.to));
+      return true;
+    });
+    return {
+      nodes: nodes.filter((n) => keep.has(String(n.id))),
+      edges: keptEdges,
+    };
+  }
+
+  const seed = new Set();
+  nodes.forEach((n) => {
+    if (_liNodeMatchesLegend(n, mode)) seed.add(String(n.id));
+  });
+  if (!seed.size) return { nodes: [], edges: [] };
+
+  const keep = new Set(seed);
+  edges.forEach((e) => {
+    const from = String(e.from);
+    const to = String(e.to);
+    if (seed.has(from) || seed.has(to)) {
+      keep.add(from);
+      keep.add(to);
+    }
+  });
+  return {
+    nodes: nodes.filter((n) => keep.has(String(n.id))),
+    edges: edges.filter((e) => keep.has(String(e.from)) && keep.has(String(e.to))),
+  };
+}
+
+function _liPrepareGraphCorr(corr, simplified) {
+  let data = _liFilterCorrByLegend(corr, _logIntelLegendFilter);
+  data = _liLinkedOnlyCorr(data);
+  if (simplified) data = _liSimplifyCorrelation(data);
+  else data = _liCapGraph(data, 28, 40);
+  return data;
+}
+
+function _liRefreshGraphView() {
+  if (!_logIntelCorrRaw) return;
+  _logIntelCorrData = _liPrepareGraphCorr(_logIntelCorrRaw, _logIntelGraphSimplified);
+  renderLogIntelCorrList(_logIntelCorrData);
+  renderLogIntelGraph(_logIntelCorrData);
+  _liUpdateGraphStats(_logIntelCorrData);
+  _liUpdateSimplifyBtn();
+  _liUpdateLegendFilterUi();
+}
+
+function _liUpdateGraphStats(corr) {
+  const el = document.getElementById('log-intel-graph-stats');
+  if (!el) return;
+  const n = Array.isArray(corr?.nodes) ? corr.nodes.length : 0;
+  const e = Array.isArray(corr?.edges) ? corr.edges.length : 0;
+  const rawN = Array.isArray(_logIntelCorrRaw?.nodes) ? _logIntelCorrRaw.nodes.length : n;
+  const rawE = Array.isArray(_logIntelCorrRaw?.edges) ? _logIntelCorrRaw.edges.length : e;
+  let text = _liT('dash.log_intel_graph_stats', '{nodes} nodes · {edges} links')
+    .replace('{nodes}', String(n))
+    .replace('{edges}', String(e));
+  if (rawN > n || rawE > e) {
+    text += ` ${_liT('dash.log_intel_graph_capped', '(of {rawN}/{rawE})')
+      .replace('{rawN}', String(rawN))
+      .replace('{rawE}', String(rawE))}`;
+  }
+  el.textContent = text;
+}
+
+function _liUpdateLegendFilterUi() {
+  document.querySelectorAll('[data-lintel-legend]').forEach((btn) => {
+    const mode = btn.getAttribute('data-lintel-legend');
+    btn.classList.toggle('active', mode === _logIntelLegendFilter);
+    btn.setAttribute('aria-pressed', mode === _logIntelLegendFilter ? 'true' : 'false');
+  });
+}
+
+function setLogIntelLegendFilter(mode) {
+  if (!_liLegendModes().includes(mode)) mode = 'all';
+  if (_logIntelLegendFilter === mode && mode !== 'all') {
+    mode = 'all';
+  } else if (_logIntelLegendFilter === mode) {
+    return;
+  }
+  _logIntelLegendFilter = mode;
+  _logIntelSelectedNodeId = '';
+  _logIntelHoverNodeId = '';
+  _liMarkSelectedCluster('');
+  _liUpdateNodeInspector(null);
+  _liRefreshGraphView();
+  setLogIntelCorrView('graph');
+}
+
+function setLogIntelGraphFilter(mode) {
+  setLogIntelLegendFilter(mode === 'error' || mode === 'warn' ? mode : 'all');
+}
+
+function _liSeedSpreadLayout(rawNodes) {
+  const n = rawNodes.length;
+  if (n < 2) return rawNodes;
+  const cols = Math.max(3, Math.ceil(Math.sqrt(n * 1.35)));
+  const rows = Math.ceil(n / cols);
+  const spacingX = Math.max(130, 115 + n * 1.8);
+  const spacingY = Math.max(95, 85 + n * 0.9);
+  return rawNodes.map((node, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const id = node.id || i;
+    return {
+      ...node,
+      x: (col - (cols - 1) / 2) * spacingX + _liHashJitter(id, 28),
+      y: (row - (rows - 1) / 2) * spacingY + _liHashJitter(`${id}:y`, 22),
+    };
+  });
 }
 
 /** Drop weak edges and low-signal nodes so the graph is easier to read. */
@@ -553,7 +940,7 @@ function _liSimplifyCorrelation(corr) {
     const fromN = nodeMap.get(String(e.from));
     const toN = nodeMap.get(String(e.to));
     return fromN?.level === 'error' || toN?.level === 'error' || fromN?.level === 'warn' || toN?.level === 'warn';
-  }).slice(0, 80);
+  }).slice(0, 28);
 
   const linked = new Set();
   keptEdges.forEach((e) => {
@@ -568,12 +955,13 @@ function _liSimplifyCorrelation(corr) {
     const count = Number(n.count || 0);
     const deg = Number(n.in_degree || 0) + Number(n.out_degree || 0);
     if (level === 'error' || level === 'warn') return true;
-    if (role === 'root' || role === 'hub') return true;
-    if (count >= 3 || deg >= 2) return true;
+    if (role === 'root') return true;
+    if (role === 'hub' && (level === 'error' || level === 'warn')) return true;
+    if (count >= 5 || deg >= 3) return true;
     return false;
   });
 
-  return { nodes: keptNodes.length ? keptNodes : nodes.slice(0, 48), edges: keptEdges.length ? keptEdges : edges.slice(0, 40) };
+  return { nodes: keptNodes.length ? keptNodes : nodes.slice(0, 18), edges: keptEdges.length ? keptEdges : edges.slice(0, 22) };
 }
 
 function _liUpdateSimplifyBtn() {
@@ -588,16 +976,12 @@ function _liUpdateSimplifyBtn() {
 function toggleSimplifyLogIntelGraph() {
   if (!_logIntelCorrRaw) return;
   _logIntelGraphSimplified = !_logIntelGraphSimplified;
-  _logIntelCorrData = _logIntelGraphSimplified
-    ? _liSimplifyCorrelation(_logIntelCorrRaw)
-    : _logIntelCorrRaw;
   _logIntelSelectedNodeId = '';
+  _logIntelHoverNodeId = '';
   _liMarkSelectedCluster('');
   _liUpdateNodeInspector(null);
-  renderLogIntelCorrList(_logIntelCorrData);
-  renderLogIntelGraph(_logIntelCorrData);
+  _liRefreshGraphView();
   setLogIntelCorrView('graph');
-  _liUpdateSimplifyBtn();
   if (typeof showToast === 'function') {
     const msg = _logIntelGraphSimplified
       ? _liT('dash.log_intel_simplify_done', 'Weak links and noisy events hidden')
@@ -657,15 +1041,37 @@ function setLogIntelCorrView(view) {
   if (graphWrap) graphWrap.hidden = view !== 'graph';
   if (view === 'graph' && _logIntelGraph) {
     try { _logIntelGraph.redraw(); } catch { /* ignore */ }
+    requestAnimationFrame(() => _liFitGraphComfortably(_logIntelGraph, false));
   }
 }
 
-function _liGraphOptions(useHierarchical) {
+function _liGraphOptions(usePhysics) {
+  const nodeCount = _logIntelCorrData?.nodes?.length || 0;
+  const edgeCount = _logIntelCorrData?.edges?.length || 0;
+  const spread = Math.max(nodeCount, Math.ceil(Math.sqrt(edgeCount)));
   const opts = {
-    physics: { enabled: false },
+    physics: usePhysics ? {
+      enabled: true,
+      stabilization: {
+        enabled: true,
+        iterations: Math.min(600, 120 + spread * 10),
+        updateInterval: 25,
+        fit: false,
+      },
+      barnesHut: {
+        gravitationalConstant: -22000 - spread * 120,
+        centralGravity: 0.03,
+        springLength: Math.max(240, 200 + spread * 10),
+        springConstant: 0.032,
+        damping: 0.22,
+        avoidOverlap: 1.45,
+      },
+      maxVelocity: 28,
+      minVelocity: 0.35,
+    } : { enabled: false },
     interaction: {
       hover: true,
-      tooltipDelay: 120,
+      tooltipDelay: 100,
       dragNodes: true,
       dragView: true,
       zoomView: false,
@@ -677,57 +1083,69 @@ function _liGraphOptions(useHierarchical) {
       navigationButtons: false,
     },
     edges: {
-      smooth: { enabled: true, type: 'cubicBezier', roundness: 0.2, forceDirection: false },
+      smooth: { enabled: false },
       color: _liEdgeColor('neutral'),
-      arrows: { to: { enabled: false } },
-      font: { color: '#cbd5e1', size: 10, strokeWidth: 0, align: 'horizontal' },
-      selectionWidth: 1,
+      arrows: { to: { enabled: true, scaleFactor: 0.35, type: 'arrow' } },
+      font: {
+        color: '#cbd5e1',
+        size: 9,
+        strokeWidth: 3,
+        strokeColor: '#0b1220',
+        align: 'middle',
+        background: 'rgba(11,18,32,.72)',
+      },
+      selectionWidth: 1.5,
     },
     nodes: {
       chosen: {
         node(values) {
-          values.borderWidth = 3;
+          values.borderWidth = 3.5;
+          values.shadow = true;
         },
       },
     },
+    layout: { hierarchical: { enabled: false }, improvedLayout: false },
     configure: { enabled: false },
   };
-  if (useHierarchical) {
-    opts.layout = {
-      improvedLayout: true,
-      hierarchical: {
-        enabled: true,
-        direction: 'UD',
-        sortMethod: 'directed',
-        levelSeparation: 150,
-        nodeSpacing: 140,
-        treeSpacing: 160,
-        blockShifting: true,
-        edgeMinimization: true,
-        shakeTowards: 'roots',
-      },
-    };
-  } else {
-    opts.layout = { hierarchical: { enabled: false }, improvedLayout: false };
-  }
   return opts;
+}
+
+function _liFitGraphComfortably(net, animate) {
+  if (!net) return;
+  try {
+    net.fit({
+      animation: animate ? { duration: 380, easingFunction: 'easeInOutQuad' } : false,
+    });
+  } catch { /* ignore */ }
+  try {
+    const scale = net.getScale();
+    if (scale > 1.05) {
+      net.moveTo({
+        scale: scale * 0.82,
+        animation: animate ? { duration: 260, easingFunction: 'easeInOutQuad' } : false,
+      });
+    }
+  } catch { /* ignore */ }
 }
 
 function _liFinalizeStaticGraph(net) {
   if (!net) return;
+  const el = document.getElementById('log-intel-graph');
   try {
-    net.setOptions({
-      layout: { hierarchical: { enabled: false }, improvedLayout: false },
-      physics: { enabled: false },
-    });
+    net.setOptions({ physics: { enabled: false } });
   } catch { /* ignore */ }
   const stored = _logIntelLayoutPositions || _liLoadLayoutFromStorage(_logIntelSelectedKey);
   if (stored) {
     _liApplyStoredLayout(net);
+    _liFitGraphComfortably(net, false);
   } else {
     _liFreezeAllNodePositions(net);
-    try { net.fit({ animation: false }); } catch { /* ignore */ }
+    _liFitGraphComfortably(net, true);
   }
+  if (el) {
+    requestAnimationFrame(() => el.classList.remove('lintel-graph-busy'));
+  }
+  _liApplyGraphFocus();
 }
 
 function _liBindGraphWheel(el, getNet) {
@@ -770,7 +1188,7 @@ function _liFreezeAllNodePositions(net) {
   } catch { /* ignore */ }
 }
 
-function _liBindGraphEvents(net) {
+function _liBindGraphEvents(net, usePhysics) {
   net.on('selectNode', (params) => {
     const id = params.nodes && params.nodes[0];
     if (!id) return;
@@ -781,8 +1199,19 @@ function _liBindGraphEvents(net) {
   });
   net.on('click', (params) => {
     if (params.nodes && params.nodes.length) return;
+    _logIntelHoverNodeId = '';
     _liSelectGraphNode('');
     try { net.unselectAll(); } catch { /* ignore */ }
+  });
+  net.on('hoverNode', (params) => {
+    if (_logIntelSelectedNodeId) return;
+    _logIntelHoverNodeId = params.node ? String(params.node) : '';
+    _liApplyGraphFocus();
+  });
+  net.on('blurNode', () => {
+    if (_logIntelSelectedNodeId) return;
+    _logIntelHoverNodeId = '';
+    _liApplyGraphFocus();
   });
   net.on('dragStart', (params) => {
     if (!params.nodes || !params.nodes.length) return;
@@ -810,8 +1239,13 @@ function _liBindGraphEvents(net) {
     finalized = true;
     _liFinalizeStaticGraph(net);
   };
-  net.once('afterDrawing', finalize);
-  setTimeout(finalize, 50);
+  if (usePhysics) {
+    net.on('stabilizationIterationsDone', finalize);
+    net.on('stabilized', finalize);
+    setTimeout(finalize, 8000);
+  } else {
+    finalize();
+  }
 }
 
 function renderLogIntelGraph(corr) {
@@ -821,17 +1255,26 @@ function renderLogIntelGraph(corr) {
     el.innerHTML = `<div class="muted" style="padding:1rem">${esc(_liT('dash.log_intel_graph_unavailable', 'Graph viewer failed to load (vis-network). Refresh the page.'))}</div>`;
     return;
   }
-  const nodes = (corr.nodes || []).map(_liNodeStyle);
-  const edges = (corr.edges || []).map((e, i) => ({
-    id: `e${i}`,
-    from: e.from,
-    to: e.to,
-    value: e.weight,
-    label: String(e.weight || ''),
-    width: Math.min(7, 1.2 + Math.log10((e.weight || 1) + 1) * 1.8),
-    title: e.title || `${e.weight || 0} transitions`,
-    color: _liEdgeColor('neutral'),
-  }));
+  const rawEdges = Array.isArray(corr.edges) ? corr.edges : [];
+  const rawNodes = Array.isArray(corr.nodes) ? corr.nodes : [];
+  const hasStoredLayout = !!(_logIntelLayoutPositions || _liLoadLayoutFromStorage(_logIntelSelectedKey));
+  const styled = rawNodes.map((n) => _liNodeStyle(n));
+  const nodes = hasStoredLayout ? styled : _liSeedSpreadLayout(styled);
+  const nodeById = _liNodeMap(corr);
+  const edges = rawEdges.map((e, i) => {
+    const w = Number(e.weight || 0);
+    const kind = _liEdgeKindForDisplay(e, '', new Set(), nodeById);
+    return {
+      id: `e${i}`,
+      from: e.from,
+      to: e.to,
+      value: w,
+      label: '',
+      width: Math.min(2.5, 0.5 + Math.log10(w + 1) * 0.75),
+      title: e.title || `${w} transitions`,
+      color: _liEdgeColor(kind),
+    };
+  });
   if (_logIntelGraph) {
     try {
       _logIntelLayoutPositions = _logIntelGraph.getPositions(_logIntelGraph.body.data.nodes.getIds());
@@ -842,28 +1285,39 @@ function renderLogIntelGraph(corr) {
   _logIntelSelectedNodeId = '';
   _liUpdateNodeInspector(null);
   if (!nodes.length) {
-    el.innerHTML = `<div class="muted lintel-graph-empty">${esc(_liT('dash.log_intel_no_graph', 'Correlation graph needs more events.'))}</div>`;
+    const msg = _logIntelLegendFilter !== 'all'
+      ? _liT('dash.log_intel_graph_filter_empty', 'No nodes match this filter')
+      : _liT('dash.log_intel_no_graph', 'Correlation graph needs more events.');
+    el.innerHTML = `<div class="muted lintel-graph-empty">${esc(msg)}</div>`;
     return;
   }
   el.innerHTML = '';
+  el.setAttribute('data-layout-msg', _liT('dash.log_intel_graph_layout', 'Arranging graph…'));
+  el.classList.add('lintel-graph-busy');
   _liBindGraphWheel(el, () => _logIntelGraph);
+  const usePhysics = !hasStoredLayout;
   const net = new vis.Network(
     el,
     { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) },
-    _liGraphOptions(true),
+    _liGraphOptions(usePhysics),
   );
-  _liBindGraphEvents(net);
+  _liBindGraphEvents(net, usePhysics);
   _logIntelGraph = net;
+  _liUpdateGraphStats(corr);
+  if (!usePhysics) _liApplyGraphFocus();
 }
 
 function fitLogIntelGraph() {
-  if (!_logIntelGraph) return;
-  try { _logIntelGraph.fit({ animation: false }); } catch { /* ignore */ }
+  _liFitGraphComfortably(_logIntelGraph, true);
 }
 
 function resetLogIntelGraphLayout() {
   if (!_logIntelCorrData) return;
   _logIntelSelectedNodeId = '';
+  _logIntelLayoutPositions = null;
+  if (_logIntelSelectedKey) {
+    try { localStorage.removeItem(_liLayoutStorageKey(_logIntelSelectedKey)); } catch { /* ignore */ }
+  }
   _liMarkSelectedCluster('');
   _liUpdateNodeInspector(null);
   renderLogIntelGraph(_logIntelCorrData);

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
@@ -29,7 +30,7 @@ async def ready() -> ReadyResponse:
     """Readiness probe: requires at least one snapshot present."""
     from web.core.snapshot_cache import load_snapshot
 
-    snap = load_snapshot()
+    snap = await asyncio.to_thread(load_snapshot)
     if snap:
         snap_age = (
             datetime.now(tz=timezone.utc)

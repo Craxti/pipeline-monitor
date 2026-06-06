@@ -6,6 +6,8 @@ import time
 from datetime import datetime, timezone
 from threading import Lock
 
+from web.services.collect_sync import parallel_util
+
 
 def collect_jenkins(
     *,
@@ -16,9 +18,13 @@ def collect_jenkins(
     progress,
     merge_build_records,
     maybe_save_partial,
+    touch_live_snapshot=None,
     push_collect_log,
     collect_slow,
     health: list,
+    health_lock: Lock | None = None,
+    stats_lock: Lock | None = None,
+    slow_lock: Lock | None = None,
     config_instance_label,
     logger,
     sqlite_available: bool,
@@ -31,11 +37,34 @@ def collect_jenkins(
     incremental_stats: dict | None = None,
     snap_lock: Lock | None = None,
 ) -> None:
-    """Collect Jenkins builds and (optionally) console/Allure tests."""
+    """Collect Jenkins builds and (optionally) console/Allure tests (parallel per instance)."""
     from clients.jenkins_client import JenkinsClient
     from web.services.collect_sync.exceptions import CollectCancelled
 
     state_lock = snap_lock
+
+    def _append_health(item: dict) -> None:
+        if health_lock is not None:
+            with health_lock:
+                health.append(item)
+        else:
+            health.append(item)
+
+    def _bump_stat(key: str, delta: int = 1) -> None:
+        if incremental_stats is None:
+            return
+        if stats_lock is not None:
+            with stats_lock:
+                incremental_stats[key] = int(incremental_stats.get(key, 0) or 0) + delta
+        else:
+            incremental_stats[key] = int(incremental_stats.get(key, 0) or 0) + delta
+
+    def _append_slow(item: dict) -> None:
+        if slow_lock is not None:
+            with slow_lock:
+                collect_slow.append(item)
+        else:
+            collect_slow.append(item)
 
     def _extend_tests(recs: list) -> None:
         if not recs:
@@ -53,10 +82,27 @@ def collect_jenkins(
         else:
             snapshot.collect_meta[key] = value
 
-    for inst in cfg.get("jenkins_instances", []):
+    def _append_synth_tests(builds, inst_key: str) -> None:
+        if not builds:
+            return
+        if state_lock:
+            with state_lock:
+                append_synth_tests_from_builds(
+                    snapshot=snapshot,
+                    builds=builds,
+                    inst_key=inst_key,
+                    TestRecord=TestRecord,
+                )
+        else:
+            append_synth_tests_from_builds(
+                snapshot=snapshot,
+                builds=builds,
+                inst_key=inst_key,
+                TestRecord=TestRecord,
+            )
+
+    def _collect_one_instance(inst: dict) -> None:
         check_cancelled()
-        if not inst.get("enabled", True):
-            continue
         label = inst.get("name", inst.get("url", "Jenkins"))
         inst_key = config_instance_label(inst, kind="jenkins")
         shared_discovered: list[str] = []
@@ -64,7 +110,6 @@ def collect_jenkins(
         n_allure_jobs_parsed = 0
         t0 = time.monotonic()
         last_status_by_job: dict[str, str] = {}
-        # Always discover all Jenkins jobs and builds (no configurable limits).
         show_all_jobs = True
         try:
             verify_ssl = bool(inst.get("verify_ssl", True))
@@ -180,12 +225,7 @@ def collect_jenkins(
                     except Exception:
                         pass
 
-                append_synth_tests_from_builds(
-                    snapshot=snapshot,
-                    builds=bulk_builds,
-                    inst_key=inst_key,
-                    TestRecord=TestRecord,
-                )
+                _append_synth_tests(bulk_builds, inst_key)
                 maybe_save_partial(snapshot, force=True)
             else:
                 progress(
@@ -198,10 +238,7 @@ def collect_jenkins(
                 if incremental_collect and sqlite_available and explicit_jobs:
                     for job_cfg in explicit_jobs:
                         check_cancelled()
-                        if incremental_stats is not None:
-                            incremental_stats["jenkins_checked"] = (
-                                int(incremental_stats.get("jenkins_checked", 0) or 0) + 1
-                            )
+                        _bump_stat("jenkins_checked")
                         job_name = (job_cfg.get("name") or "").strip()
                         if not job_name:
                             continue
@@ -218,10 +255,7 @@ def collect_jenkins(
                         except Exception:
                             lb_n = 0
                         if prev_bn > 0 and lb_n > 0 and lb_n <= prev_bn:
-                            if incremental_stats is not None:
-                                incremental_stats["jenkins_skipped"] = (
-                                    int(incremental_stats.get("jenkins_skipped", 0) or 0) + 1
-                                )
+                            _bump_stat("jenkins_skipped")
                             continue
                         critical = bool(job_cfg.get("critical", False))
                         recs = client.fetch_builds_for_job(
@@ -268,7 +302,7 @@ def collect_jenkins(
                             except Exception:
                                 pass
 
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "jenkins",
@@ -293,7 +327,7 @@ def collect_jenkins(
                 f"builds failed: {exc}",
                 "error",
             )
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "jenkins",
@@ -307,7 +341,6 @@ def collect_jenkins(
             check_cancelled()
             try:
                 from parsers.jenkins_allure_parser import JenkinsAllureParser
-                from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_allure = inst.get("jobs", []) or []
                 if show_all_jobs:
@@ -366,6 +399,11 @@ def collect_jenkins(
                         pass
                     _extend_tests(recs)
                     maybe_save_partial(snapshot)
+                    if touch_live_snapshot is not None:
+                        try:
+                            touch_live_snapshot()
+                        except Exception:
+                            pass
 
                 def _should_cancel() -> bool:
                     try:
@@ -374,13 +412,12 @@ def collect_jenkins(
                     except Exception:
                         return True
 
-                allure_max_builds = 0
                 allure_parser = JenkinsAllureParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
                     token=inst.get("token", ""),
                     jobs=jobs_for_allure,
-                    max_builds=allure_max_builds,
+                    max_builds=0,
                     workers=int(inst.get("allure_workers", 6) or 6),
                     verify_ssl=bool(inst.get("verify_ssl", True)),
                     progress_cb=lambda msg: progress(
@@ -391,7 +428,7 @@ def collect_jenkins(
                     retries=int(inst.get("allure_retries", 3) or 3),
                     backoff_seconds=float(inst.get("allure_backoff_seconds", 0.8) or 0.8),
                     records_cb=_append_tests_live_inst,
-                    timing_cb=lambda d: collect_slow.append(
+                    timing_cb=lambda d: _append_slow(
                         {
                             "ts": datetime.now(tz=timezone.utc).isoformat(),
                             "level": "info",
@@ -421,7 +458,6 @@ def collect_jenkins(
             check_cancelled()
             try:
                 from parsers.jenkins_console_parser import JenkinsConsoleParser
-                from web.services.collect_sync.exceptions import CollectCancelled
 
                 jobs_for_console = inst.get("jobs", []) or []
                 if show_all_jobs:
@@ -479,6 +515,11 @@ def collect_jenkins(
                         pass
                     _extend_tests(recs)
                     maybe_save_partial(snapshot)
+                    if touch_live_snapshot is not None:
+                        try:
+                            touch_live_snapshot()
+                        except Exception:
+                            pass
 
                 def _should_cancel() -> bool:
                     try:
@@ -503,7 +544,7 @@ def collect_jenkins(
                         f"Jenkins: {label}",
                         msg,
                     ),
-                    timing_cb=lambda d: collect_slow.append(
+                    timing_cb=lambda d: _append_slow(
                         {
                             "ts": datetime.now(tz=timezone.utc).isoformat(),
                             "level": "info",
@@ -545,3 +586,12 @@ def collect_jenkins(
             n_console_jobs_parsed,
             n_allure_jobs_parsed,
         )
+
+    instances = [i for i in (cfg.get("jenkins_instances") or []) if i.get("enabled", True)]
+    parallel_util.run_parallel_items(
+        instances,
+        _collect_one_instance,
+        parallel=parallel_util.parallel_instances_enabled(cfg),
+        max_workers=parallel_util.instance_worker_cap(cfg, len(instances)),
+        thread_prefix="jenkins-inst",
+    )

@@ -1,0 +1,47 @@
+/* CI/CD Monitor — canonical design tokens (single source of truth) */
+
+:root {
+  --ok: #10b981;
+  --fail: #f43f5e;
+  --warn: #f59e0b;
+  --info: #3b82f6;
+  --purple: #8b5cf6;
+  --accent: #60a5fa;
+
+  --st-success: var(--ok);
+  --st-failure: var(--fail);
+  --st-running: var(--info);
+  --st-unstable: var(--warn);
+  --st-unknown: #64748b;
+
+  --bg: #0a1120;
+  --surface: #111d2f;
+  --surface2: #162236;
+  --surface3: #1c2a42;
+  --sidebar-bg: #121826;
+  --text: #f1f5f9;
+  --muted: #8b9cb8;
+  --border: #243044;
+
+  --chart-teal: #2dd4bf;
+  --chart-fail: #fb7185;
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.35);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24), 0 4px 16px rgba(0, 0, 0, 0.18);
+  --shell-line: rgba(148, 163, 184, 0.1);
+}
+
+html.light {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --surface3: #e2e8f0;
+  --sidebar-bg: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #cbd5e1;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+}

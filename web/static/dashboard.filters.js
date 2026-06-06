@@ -12,20 +12,39 @@ const _FILTER_PARAMS = [
   { id:'f-tstatus',key:'tstatus' },
   { id:'f-tname',  key:'tname' },
   { id:'f-tsuite', key:'tsuite' },
+  { id:'f-tsource', key:'tsource' },
   { id:'f-fname',  key:'fname' },
   { id:'f-fsuite', key:'fsuite' },
+  { id:'f-fsource', key:'fsource' },
   { id:'f-svstatus', key:'svstatus' },
 ];
+
+/** Panel-scoped time-filter buttons — prevents cross-tab active-state bugs. */
+const _TIME_FILTER_SCOPES = {
+  builds: '#tab-panel-builds',
+  failures: '#panel-failures',
+  tests: '#panel-tests',
+  har: '#tab-panel-har',
+};
+
+function _clearTimeFilterBtns(scopeKey) {
+  const sel = _TIME_FILTER_SCOPES[scopeKey];
+  if (!sel) return;
+  document.querySelectorAll(`${sel} .time-filter-btn`).forEach((b) => b.classList.remove('active'));
+}
+
+function _activateTimeFilterBtn(btnId) {
+  document.getElementById(btnId)?.classList.add('active');
+}
 
 /** If the URL names any of these, treat it as a builds deep-link: do not fill other build dimensions from localStorage. */
 const _BUILD_DEEP_LINK_KEYS = ['source', 'instance', 'status', 'job'];
 
 function _applyBuildsHoursFromInt(h) {
-  document.querySelectorAll('.time-filter-btn').forEach((b) => b.classList.remove('active'));
+  _clearTimeFilterBtns('builds');
   if (h === 24 || h === 168) {
     _buildsHours = h;
-    const id = h === 24 ? 'tf-24h' : 'tf-7d';
-    document.getElementById(id)?.classList.add('active');
+    _activateTimeFilterBtn(h === 24 ? 'tf-24h' : 'tf-7d');
   } else {
     _buildsHours = 0;
   }
@@ -53,34 +72,29 @@ function updateFilterSummary() {
   const elb = document.getElementById('filter-active-builds');
   const elbTxt = document.getElementById('filter-active-builds-txt');
   if (elb) {
-    if (fb.length) {
-      elb.style.display = 'block';
-      if (elbTxt) elbTxt.textContent = `${t('dash.active_filters')}: ${fb.join(' · ')}`;
-    } else {
-      elb.style.display = 'none';
-      if (elbTxt) elbTxt.textContent = '';
-    }
+    elb.classList.toggle('is-visible', fb.length > 0);
+    if (elbTxt) elbTxt.textContent = fb.length ? `${t('dash.active_filters')}: ${fb.join(' · ')}` : '';
   }
   const ff = [];
+  const ffs = document.getElementById('f-fsource');
   const fn = document.getElementById('f-fname');
   const fsu = document.getElementById('f-fsuite');
+  if (ffs && ffs.value) ff.push(`${t('dash.th_source')}: ${ffs.value}`);
   if (fn && fn.value) ff.push(`${t('dash.th_test_name')}: ${fn.value}`);
   if (fsu && fsu.value) ff.push(`${t('dash.th_suite')}: ${fsu.value}`);
   if (_failuresDays > 0) ff.push(tf('dash.failures_last_days', { n: _failuresDays }));
   const elf = document.getElementById('filter-active-failures');
+  const elfTxt = document.getElementById('filter-active-failures-txt');
   if (elf) {
-    if (ff.length) {
-      elf.style.display = 'block';
-      elf.textContent = `${t('dash.active_filters')}: ${ff.join(' · ')}`;
-    } else {
-      elf.style.display = 'none';
-      elf.textContent = '';
-    }
+    elf.classList.toggle('is-visible', ff.length > 0);
+    if (elfTxt) elfTxt.textContent = ff.length ? `${t('dash.active_filters')}: ${ff.join(' · ')}` : '';
   }
   const ft = [];
+  const ftsrc = document.getElementById('f-tsource');
   const fts = document.getElementById('f-tstatus');
   const ftn = document.getElementById('f-tname');
   const ftsuite = document.getElementById('f-tsuite');
+  if (ftsrc && ftsrc.value) ft.push(`${t('dash.th_source')}: ${ftsrc.value}`);
   if (fts && fts.value) ft.push(`${t('dash.th_status')}: ${fts.value}`);
   if (ftn && ftn.value) ft.push(`${t('dash.filter_test_ph')}: ${ftn.value}`);
   if (ftsuite && ftsuite.value) ft.push(`${t('dash.th_suite')}: ${ftsuite.value}`);
@@ -90,13 +104,8 @@ function updateFilterSummary() {
   const elt = document.getElementById('filter-active-tests');
   const eltTxt = document.getElementById('filter-active-tests-txt');
   if (elt) {
-    if (ft.length) {
-      elt.style.display = 'block';
-      if (eltTxt) eltTxt.textContent = `${t('dash.active_filters')}: ${ft.join(' · ')}`;
-    } else {
-      elt.style.display = 'none';
-      if (eltTxt) eltTxt.textContent = '';
-    }
+    elt.classList.toggle('is-visible', ft.length > 0);
+    if (eltTxt) eltTxt.textContent = ft.length ? `${t('dash.active_filters')}: ${ft.join(' · ')}` : '';
   }
   const fsv = document.getElementById('f-svstatus');
   const svParts = [];
@@ -104,13 +113,8 @@ function updateFilterSummary() {
   const elsv = document.getElementById('filter-active-svcs');
   const elsvTxt = document.getElementById('filter-active-svcs-txt');
   if (elsv) {
-    if (svParts.length) {
-      elsv.style.display = 'block';
-      if (elsvTxt) elsvTxt.textContent = `${t('dash.active_filters')}: ${svParts.join(' · ')}`;
-    } else {
-      elsv.style.display = 'none';
-      if (elsvTxt) elsvTxt.textContent = '';
-    }
+    elsv.classList.toggle('is-visible', svParts.length > 0);
+    if (elsvTxt) elsvTxt.textContent = svParts.length ? `${t('dash.active_filters')}: ${svParts.join(' · ')}` : '';
   }
 }
 

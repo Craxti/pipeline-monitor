@@ -1,6 +1,27 @@
 // Collect auto-refresh during collect + tests-parse note: dashboard.collect-panel.js
 // Load after dashboard.services.js, before dashboard.status-map.js.
 
+let _lastPartialLiveCounts = null;
+let _partialLiveRefreshTimer = null;
+let _collectIncrementalRefresh = false;
+let _collectIncrementalBusy = false;
+let _lastIncrementalRunTs = 0;
+
+/** Debounce SSE partial updates; min gap between DOM refreshes. */
+const COLLECT_INCREMENTAL_DEBOUNCE_MS = 700;
+const COLLECT_INCREMENTAL_MIN_INTERVAL_MS = 1400;
+/** First page only during collect — avoids multi-page fetches that freeze the UI. */
+const COLLECT_INCREMENTAL_PER_PAGE = 48;
+
+function isCollectIncrementalRefresh() {
+  return !!_collectIncrementalRefresh;
+}
+
+function collectIncrementalPerPage(defaultPerPage) {
+  const d = Number(defaultPerPage) || 200;
+  return Math.min(COLLECT_INCREMENTAL_PER_PAGE, d);
+}
+
 function updateTestsParseNote(summaryObj) {
   const el = document.getElementById('tests-parse-note');
   if (!el) return;
@@ -28,19 +49,105 @@ function updateTestsParseNote(summaryObj) {
   el.textContent = parts.join(' · ');
 }
 
-function _autoRefreshVisiblePanelsDuringCollect(summaryObj) {
-  const c = summaryObj && summaryObj.collect;
-  if (!c || !c.is_collecting) return;
-  const now = Date.now();
-  if (now - _collectAutoRefreshTs < 5000) return; // 5s throttle
-  _collectAutoRefreshTs = now;
+function _partialCountsChanged(prev, next) {
+  if (!next || typeof next !== 'object') return false;
+  if (!prev) return true;
+  return (
+    Number(prev.tests || 0) !== Number(next.tests || 0)
+    || Number(prev.builds || 0) !== Number(next.builds || 0)
+    || Number(prev.services || 0) !== Number(next.services || 0)
+  );
+}
 
-  // Keep only the active tab live to avoid hammering the backend.
-  if (_dashTab === 'test-failures') {
-    resetFailures(true);
-  } else if (_dashTab === 'test-runs') {
-    resetTestsSoft(true);
-  } else if (_dashTab === 'services') {
-    resetServices(true);
+function _prepIncrementalPanel(state, fetchKey, bumpGen) {
+  try { abortFetchKey(fetchKey); } catch { /* ignore */ }
+  if (typeof bumpGen === 'function') bumpGen();
+  if (state) {
+    state.page = 1;
+    state.done = false;
+    state.loading = false;
   }
 }
+
+/** Soft reload of the visible tab while collect streams partial snapshot via SSE. */
+function refreshLivePanelsDuringCollect(payload) {
+  if (!_liveMode || typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return;
+  const counts = payload && payload.counts;
+  if (!_partialCountsChanged(_lastPartialLiveCounts, counts)) return;
+  _lastPartialLiveCounts = counts ? { ...counts } : null;
+
+  if (_partialLiveRefreshTimer) clearTimeout(_partialLiveRefreshTimer);
+  _partialLiveRefreshTimer = setTimeout(() => {
+    _partialLiveRefreshTimer = null;
+    _runCollectIncrementalRefresh();
+  }, COLLECT_INCREMENTAL_DEBOUNCE_MS);
+}
+
+/** Back-compat alias for SSE handler name. */
+function refreshLiveTestsPanelsDuringCollect(payload) {
+  return refreshLivePanelsDuringCollect(payload);
+}
+
+async function _runCollectIncrementalRefresh() {
+  if (!_liveMode || typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return;
+  if (_collectIncrementalBusy) return;
+  const now = Date.now();
+  if (now - _lastIncrementalRunTs < COLLECT_INCREMENTAL_MIN_INTERVAL_MS) {
+    const wait = COLLECT_INCREMENTAL_MIN_INTERVAL_MS - (now - _lastIncrementalRunTs);
+    if (_partialLiveRefreshTimer) clearTimeout(_partialLiveRefreshTimer);
+    _partialLiveRefreshTimer = setTimeout(() => {
+      _partialLiveRefreshTimer = null;
+      _runCollectIncrementalRefresh();
+    }, wait);
+    return;
+  }
+
+  _collectIncrementalBusy = true;
+  _collectIncrementalRefresh = true;
+  _lastIncrementalRunTs = Date.now();
+  try {
+    const tab = typeof _dashTab !== 'undefined' ? _dashTab : 'overview';
+    if (tab === 'builds') {
+      _prepIncrementalPanel(_state.builds, 'builds');
+      if (typeof loadBuilds === 'function') await loadBuilds();
+    } else if (tab === 'test-runs') {
+      _prepIncrementalPanel(_state.tests, 'tests', () => { _testsLoadGen++; });
+      if (typeof loadTests === 'function') await loadTests();
+    } else if (tab === 'test-failures') {
+      _prepIncrementalPanel(_state.failures, 'failures', () => { _failuresLoadGen++; });
+      if (typeof loadFailures === 'function') await loadFailures();
+    } else if (tab === 'services') {
+      _prepIncrementalPanel(_state.svcs, 'services');
+      if (typeof loadServices === 'function') await loadServices();
+    }
+    if (typeof loadSummary === 'function') {
+      await loadSummary();
+    }
+  } catch { /* ignore */ }
+  finally {
+    _collectIncrementalRefresh = false;
+    _collectIncrementalBusy = false;
+  }
+}
+
+function _resetPartialLiveRefreshState() {
+  _lastPartialLiveCounts = null;
+  _lastIncrementalRunTs = 0;
+  if (_partialLiveRefreshTimer) {
+    clearTimeout(_partialLiveRefreshTimer);
+    _partialLiveRefreshTimer = null;
+  }
+}
+
+/** Hook from loadSummary during collect — counts/top bar refresh (tables via SSE). */
+function _autoRefreshVisiblePanelsDuringCollect(summaryObj) {
+  if (!_liveMode || typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return;
+  try {
+    if (summaryObj && summaryObj.counts && typeof _applySummaryCountsLight === 'function') {
+      _applySummaryCountsLight(summaryObj.counts);
+    }
+  } catch { /* ignore */ }
+}
+
+window.isCollectIncrementalRefresh = isCollectIncrementalRefresh;
+window.collectIncrementalPerPage = collectIncrementalPerPage;

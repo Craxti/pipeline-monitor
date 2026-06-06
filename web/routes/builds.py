@@ -6,6 +6,8 @@ keep the app composition module thin.
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
@@ -54,7 +56,8 @@ async def api_instances_route():
     from web.services.build_filters import config_instance_label
     from web.services import instances_endpoints
 
-    return instances_endpoints.api_instances(
+    return await asyncio.to_thread(
+        instances_endpoints.api_instances,
         load_yaml_config=load_yaml_config,
         config_instance_label=config_instance_label,
     )
@@ -73,7 +76,8 @@ async def api_builds_history_route(
     from web.services import builds_history_endpoints
     from web.services import sqlite_imports as _db_opt
 
-    return builds_history_endpoints.api_builds_history(
+    return await asyncio.to_thread(
+        builds_history_endpoints.api_builds_history,
         sqlite_available=bool(_db_opt.SQLITE_AVAILABLE),
         db_query_builds_history=_db_opt.query_builds_history,
         page=page,

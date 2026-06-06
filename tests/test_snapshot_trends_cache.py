@@ -87,6 +87,166 @@ class TestSnapshotCache:
         out = asyncio.run(sc.load_snapshot_async())
         assert isinstance(out, CISnapshot)
 
+    def test_load_snapshot_fresh_cache_skips_db_probe(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        snap = CISnapshot(builds=[], tests=[], services=[])
+        set_latest_snapshot_json(snap.model_dump_json())
+        sc.invalidate_snapshot_cache()
+        sc.load_snapshot()
+
+        def _boom() -> int:
+            raise AssertionError("get_latest_snapshot_store_seq should not run on fresh cache hit")
+
+        monkeypatch.setattr("web.db.get_latest_snapshot_store_seq", _boom)
+        again = sc.load_snapshot()
+        assert isinstance(again, CISnapshot)
+
+    def test_load_snapshot_async_returns_cached_without_thread(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        set_latest_snapshot_json(CISnapshot().model_dump_json())
+        sc.invalidate_snapshot_cache()
+        sc.load_snapshot()
+
+        async def _boom(*_a, **_k):
+            raise AssertionError("asyncio.to_thread should not run when cache is fresh")
+
+        monkeypatch.setattr(asyncio, "to_thread", _boom)
+        out = asyncio.run(sc.load_snapshot_async())
+        assert isinstance(out, CISnapshot)
+
+    def test_load_snapshot_async_peeks_memory_during_collect_without_thread(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+        from models.models import TestRecord
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        set_latest_snapshot_json(CISnapshot().model_dump_json())
+        live = CISnapshot(tests=[TestRecord(source="x", test_name="t", status="failed")])
+        sc.set_collecting_accessor(lambda: True)
+        sc.prime_snapshot_cache(live, store_seq=None)
+        sc._snapshot_cache_expires_mono = 0.0
+
+        async def _boom(*_a, **_k):
+            raise AssertionError("asyncio.to_thread should not run during collect when memory cache exists")
+
+        monkeypatch.setattr(asyncio, "to_thread", _boom)
+        out = asyncio.run(sc.load_snapshot_async())
+        assert out is live
+
+
+class TestSnapshotPartialSave:
+    def test_save_snapshot_partial_memory_only_while_collecting(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+        from web.services import snapshot_store
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        base = CISnapshot(builds=[], tests=[], services=[])
+        set_latest_snapshot_json(base.model_dump_json())
+        sc.invalidate_snapshot_cache()
+        sc.load_snapshot()
+
+        db_writes = {"n": 0}
+        orig = set_latest_snapshot_json
+
+        def _track(body: str) -> int:
+            db_writes["n"] += 1
+            return orig(body)
+
+        monkeypatch.setattr("web.db.set_latest_snapshot_json", _track)
+        lock = __import__("threading").Lock()
+        snap = CISnapshot(builds=[], tests=[], services=[])
+
+        snapshot_store.save_snapshot_partial(
+            snap,
+            snapshot_write_lock=lock,
+            data_dir=tmp_path,
+            prime_snapshot_cache=sc.prime_snapshot_cache,
+            bump_revision=lambda: 0,
+            collect_state={"is_collecting": True},
+            load_snapshot=sc.load_snapshot,
+        )
+        assert db_writes["n"] == 0
+        assert sc.peek_snapshot_cache() is snap
+
+    def test_touch_collect_snapshot_live_primes_cache(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+        from web.services import snapshot_store
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        base = CISnapshot(builds=[], tests=[], services=[])
+        set_latest_snapshot_json(base.model_dump_json())
+        sc.invalidate_snapshot_cache()
+        sc.load_snapshot()
+
+        from models.models import TestRecord
+
+        broadcasts: list[dict] = []
+        monkeypatch.setattr(snapshot_store, "_sse_broadcast_collect_sync", broadcasts.append)
+        snapshot_store._COLLECT_SSE_TS_REF["ts"] = 0.0
+
+        snap = CISnapshot(
+            builds=[],
+            tests=[TestRecord(source="allure", test_name="t1", status="failed")],
+            services=[],
+        )
+        snapshot_store.touch_collect_snapshot_live(
+            snap,
+            prime_snapshot_cache=sc.prime_snapshot_cache,
+            collect_state={"is_collecting": True, "phase": "jenkins_allure"},
+        )
+        cached = sc.peek_snapshot_cache()
+        assert cached is not None
+        assert len(getattr(cached, "tests", None) or []) == 1
+        assert len(broadcasts) == 1
+        assert broadcasts[0]["type"] == "snapshot_partial"
+        assert broadcasts[0]["counts"]["tests"] == 1
+
 
 class TestTrends:
     def test_append_trends_replaces_today_bucket_and_caps_days(self, tmp_path: Path) -> None:

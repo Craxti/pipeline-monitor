@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import time
+from threading import Lock
 
+from web.services.collect_sync import parallel_util
 from web.services.collect_sync.exceptions import CollectCancelled
 
 
@@ -14,15 +16,22 @@ def collect_github_builds(
     progress,
     merge_build_records,
     health: list,
+    health_lock: Lock | None = None,
     config_instance_label,
     logger,
     check_cancelled,
 ) -> None:
-    """Collect workflow runs from configured GitHub instances."""
-    for inst in cfg.get("github_instances", []) or []:
+    """Collect workflow runs from configured GitHub instances (parallel per instance)."""
+
+    def _append_health(item: dict) -> None:
+        if health_lock is not None:
+            with health_lock:
+                health.append(item)
+        else:
+            health.append(item)
+
+    def _collect_one_instance(inst: dict) -> None:
         check_cancelled()
-        if not inst.get("enabled", True):
-            continue
         label = inst.get("name", inst.get("url", "GitHub"))
         gh_key = config_instance_label(inst, kind="github")
         t0 = time.monotonic()
@@ -72,7 +81,7 @@ def collect_github_builds(
                 if recs:
                     merge_build_records(recs)
 
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "github",
@@ -81,12 +90,17 @@ def collect_github_builds(
                     "latency_ms": int((time.monotonic() - t0) * 1000),
                 }
             )
-            logger.info("GitHub [%s] collection ok (latency_ms=%d)", label, int((time.monotonic() - t0) * 1000))
+            logger.info(
+                "GitHub [%s] collection ok (show_all=%s, latency_ms=%d)",
+                label,
+                bool(inst.get("show_all_repos", False)),
+                int((time.monotonic() - t0) * 1000),
+            )
         except CollectCancelled:
             raise
         except Exception as exc:
             logger.error("GitHub [%s] failed: %s", label, exc)
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "github",
@@ -95,3 +109,12 @@ def collect_github_builds(
                     "latency_ms": None,
                 }
             )
+
+    instances = [i for i in (cfg.get("github_instances") or []) if i.get("enabled", True)]
+    parallel_util.run_parallel_items(
+        instances,
+        _collect_one_instance,
+        parallel=parallel_util.parallel_instances_enabled(cfg),
+        max_workers=parallel_util.instance_worker_cap(cfg, len(instances)),
+        thread_prefix="github-inst",
+    )

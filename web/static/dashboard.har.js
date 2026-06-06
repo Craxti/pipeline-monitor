@@ -313,3 +313,5 @@ function setHarPreset(mode) {
 function toggleHarRawView() {
   openHarRawModal();
 }
+
+window.setHarPreset = setHarPreset;

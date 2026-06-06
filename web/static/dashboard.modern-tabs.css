@@ -265,6 +265,11 @@ tbody tr:hover td {
   font-size: 0.74rem;
 }
 
+#tab-panel-test-failures #panel-failures .tbl-wrap {
+  max-height: min(68vh, 780px);
+  overflow: auto;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    TAB 04 — Test runs
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -958,4 +963,50 @@ body.dash-app.ui-modern #tab-panel-log-intel .lintel-graph {
 /* Inline style overrides on panels */
 body.dash-app.ui-modern #tab-panel-builds #panel-favourites {
   margin-bottom: 1rem;
+}
+
+/* ── Unified filter bar (all data panels) ─────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+  width: 100%;
+}
+
+.filter-bar--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.filter-bar__controls.filters {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.filter-bar__summary.filter-active-line {
+  display: none;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.filter-bar__summary.filter-active-line.is-visible {
+  display: flex;
+}
+
+.filter-reset-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  margin-left: 0.35rem;
+}
+
+#global-search-wrap {
+  margin-right: 0.25rem;
+}
+
+/* Shared data table base */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
 }

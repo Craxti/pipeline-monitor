@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sqlite3
 import time
 from pathlib import Path
 from typing import Callable, Optional
@@ -17,18 +18,50 @@ logger = logging.getLogger(__name__)
 SNAPSHOT_JSON_LEGACY_PATH = Path("data") / "snapshot.json"
 
 _SNAPSHOT_CACHE_TTL_SEC = 2.0
+_COLLECT_CACHE_TTL_SEC = 60.0
 _snapshot_cache_snap: CISnapshot | None = None
 _snapshot_cache_rev: int = -1
 _snapshot_cache_store_seq: int | None = None
 _snapshot_cache_expires_mono: float = 0.0
 
 _revision_accessor: Optional[Callable[[], int]] = None
+_collecting_accessor: Optional[Callable[[], bool]] = None
 
 
 def set_snapshot_revision_accessor(fn: Callable[[], int]) -> None:
     """Call once from ``web.app`` after ``_data_revision`` is defined."""
     global _revision_accessor
     _revision_accessor = fn
+
+
+def set_collecting_accessor(fn: Callable[[], bool]) -> None:
+    """Call once from ``web.core.runtime`` — longer cache TTL while collect runs."""
+    global _collecting_accessor
+    _collecting_accessor = fn
+
+
+def _cache_ttl_sec() -> float:
+    fn = _collecting_accessor
+    if fn is not None:
+        try:
+            if fn():
+                return _COLLECT_CACHE_TTL_SEC
+        except Exception:
+            pass
+    return _SNAPSHOT_CACHE_TTL_SEC
+
+
+def _cached_if_fresh() -> CISnapshot | None:
+    """Return in-memory snapshot when TTL + revision still valid (no SQLite)."""
+    mon = time.monotonic()
+    rev = _current_revision()
+    if (
+        _snapshot_cache_snap is not None
+        and _snapshot_cache_rev == rev
+        and mon < _snapshot_cache_expires_mono
+    ):
+        return _snapshot_cache_snap
+    return None
 
 
 def _current_revision() -> int:
@@ -41,6 +74,14 @@ def _current_revision() -> int:
         return 0
 
 
+def _stale_snapshot_cache(reason: str) -> CISnapshot | None:
+    """Return last good in-memory snapshot when SQLite is temporarily busy."""
+    if _snapshot_cache_snap is not None:
+        logger.warning("Serving stale snapshot cache (%s)", reason)
+        return _snapshot_cache_snap
+    return None
+
+
 def invalidate_snapshot_cache() -> None:
     """Clear in-memory snapshot cache."""
     global _snapshot_cache_snap, _snapshot_cache_rev
@@ -51,14 +92,20 @@ def invalidate_snapshot_cache() -> None:
     _snapshot_cache_expires_mono = 0.0
 
 
+def peek_snapshot_cache() -> CISnapshot | None:
+    """Return the in-memory cached snapshot without hitting SQLite (may be slightly stale)."""
+    return _snapshot_cache_snap
+
+
 def prime_snapshot_cache(snapshot: CISnapshot, store_seq: int | None = None) -> None:
     """Seed cache with a known snapshot + DB ``store_seq`` (from ``set_latest_snapshot_json``)."""
     global _snapshot_cache_snap, _snapshot_cache_rev
     global _snapshot_cache_store_seq, _snapshot_cache_expires_mono
     _snapshot_cache_snap = snapshot
     _snapshot_cache_rev = _current_revision()
-    _snapshot_cache_store_seq = store_seq
-    _snapshot_cache_expires_mono = time.monotonic() + _SNAPSHOT_CACHE_TTL_SEC
+    if store_seq is not None:
+        _snapshot_cache_store_seq = store_seq
+    _snapshot_cache_expires_mono = time.monotonic() + _cache_ttl_sec()
 
 
 def load_snapshot() -> CISnapshot | None:
@@ -77,10 +124,21 @@ def load_snapshot() -> CISnapshot | None:
         invalidate_snapshot_cache()
         return None
 
+    cached = _cached_if_fresh()
+    if cached is not None:
+        return cached
+
     mon = time.monotonic()
     rev = _current_revision()
     try:
         seq_probe = get_latest_snapshot_store_seq()
+    except sqlite3.OperationalError as exc:
+        stale = _stale_snapshot_cache(str(exc))
+        if stale is not None:
+            return stale
+        logger.error("Failed to load snapshot: %s", exc)
+        invalidate_snapshot_cache()
+        return None
     except Exception as exc:
         logger.error("Failed to load snapshot: %s", exc)
         invalidate_snapshot_cache()
@@ -96,6 +154,13 @@ def load_snapshot() -> CISnapshot | None:
 
     try:
         raw, seq = get_latest_snapshot_raw()
+    except sqlite3.OperationalError as exc:
+        stale = _stale_snapshot_cache(str(exc))
+        if stale is not None:
+            return stale
+        logger.error("Failed to load snapshot: %s", exc)
+        invalidate_snapshot_cache()
+        return None
     except Exception as exc:
         logger.error("Failed to load snapshot: %s", exc)
         invalidate_snapshot_cache()
@@ -116,5 +181,17 @@ def load_snapshot() -> CISnapshot | None:
 
 
 async def load_snapshot_async() -> CISnapshot | None:
-    """Threaded wrapper around `load_snapshot`."""
+    """Return cached snapshot on the event loop; fall back to threaded SQLite read."""
+    cached = _cached_if_fresh()
+    if cached is not None:
+        return cached
+    fn = _collecting_accessor
+    if fn is not None:
+        try:
+            if fn():
+                peeked = peek_snapshot_cache()
+                if peeked is not None:
+                    return peeked
+        except Exception:
+            pass
     return await asyncio.to_thread(load_snapshot)

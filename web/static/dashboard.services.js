@@ -18,23 +18,15 @@ function resetServices(soft=false, force=false) {
 }
 function clearSvcFilters() {
   document.getElementById('f-svstatus').value = '';
-  _svcProblemsOnly = false;
-  const cb = document.getElementById('sv-problems-only');
-  if (cb) cb.checked = false;
-  try { localStorage.setItem('cimon-svc-problems', '0'); } catch {}
+  try { localStorage.removeItem('cimon-svc-problems'); } catch {}
   try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
   resetServices();
 }
 
-function toggleSvcProblemsOnly(on) {
-  _svcProblemsOnly = !!on;
-  try { localStorage.setItem('cimon-svc-problems', _svcProblemsOnly ? '1' : '0'); } catch {}
-  if (_svcProblemsOnly) {
-    document.getElementById('f-svstatus').value = 'problems';
-  } else if (document.getElementById('f-svstatus').value === 'problems') {
-    document.getElementById('f-svstatus').value = '';
-  }
-  _syncURLAndFilterSummary();
+function setSvcStatusFilter(value) {
+  const sel = document.getElementById('f-svstatus');
+  if (sel) sel.value = value || '';
+  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
   resetServices();
 }
 
@@ -73,11 +65,17 @@ function _fmtAgo(d) {
 async function loadServices() {
   const s = _state.svcs;
   if (s.loading || s.done) return;
+  const tbody = document.getElementById('tbody-svcs');
+  if (guardPanelLoadDuringCollect('svcs', tbody, s)) return;
   s.loading = true;
   try {
     const rawStatus = document.getElementById('f-svstatus')?.value || '';
-    const status = _svcProblemsOnly ? 'problems' : rawStatus;
-    const url = apiUrl(`api/services?page=${s.page}&per_page=${s.per_page}&status=${encodeURIComponent(status)}`);
+    const status = rawStatus;
+    const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
+    const perPage = incr && typeof collectIncrementalPerPage === 'function'
+      ? collectIncrementalPerPage(s.per_page)
+      : s.per_page;
+    const url = apiUrl(`api/services?page=${s.page}&per_page=${perPage}&status=${encodeURIComponent(status)}`);
 
     const res = await fetchKeyed('services', url).catch(()=>null);
 
@@ -100,7 +98,7 @@ async function loadServices() {
 
     const rows = data.items;
     if (s.page === 1 && !rows.length) {
-      if (keepTableOnTransientEmpty(tbody, rows, s)) return;
+      if (keepTableOnTransientEmpty(tbody, rows, s, 'svcs')) return;
       tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
       s.done = true; updateFilterSummary(); return;
     }
@@ -175,9 +173,9 @@ async function loadServices() {
 
     _applyGlobalSearch();
     updateFilterSummary();
+    if (incr) { s.done = true; return; }
     if (!data.has_more) { s.done = true; return; }
     s.page++;
-    // No paging limit in UI: fetch all service pages.
     window.requestAnimationFrame(() => { loadServices(); });
   } finally {
     s.loading = false;

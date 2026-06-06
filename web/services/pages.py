@@ -50,12 +50,11 @@ async def index_page(
     *,
     templates,
     load_snapshot_async: Callable[[], Awaitable[Any]],
-    load_yaml_config: Callable[[], dict],
+    cfg: dict,
     ui_language: str,
 ):
     """Render the main dashboard page."""
     snap = await load_snapshot_async()
-    _ = load_yaml_config()  # kept for behavior parity (side-effects / validation)
     ctx: dict = {
         "snap": snap,
         "ui_language": ui_language,

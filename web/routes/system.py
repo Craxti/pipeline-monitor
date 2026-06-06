@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
@@ -13,4 +15,4 @@ router = APIRouter(tags=["system"])
 @router.get("/api/system/metrics", response_class=JSONResponse)
 async def api_system_metrics_route():
     """Return host runtime metrics for dashboard System tab."""
-    return system_endpoints.system_metrics_payload()
+    return await asyncio.to_thread(system_endpoints.system_metrics_payload)

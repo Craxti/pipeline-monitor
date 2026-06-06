@@ -220,7 +220,7 @@ function _chartColors() {
   const light = document.documentElement.classList.contains('light');
   return {
     grid: light ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.07)',
-    text: light ? '#64748b' : '#94a3b8',
+    text: _cssVar('--muted') || (light ? '#64748b' : '#94a3b8'),
   };
 }
 
@@ -253,11 +253,14 @@ const _trendDataLabelsPlugin = {
       if (!meta || meta.hidden) return;
       const isLine = dataset.type === 'line';
       const isFailBar = dataset._labelRole === 'failed';
+      const isValueBar = dataset._labelRole === 'value';
       meta.data.forEach((el, idx) => {
         const val = dataset.data[idx];
         if (val == null || val === 0) return;
-        if (!isLine && !isFailBar) return;
-        const txt = typeof val === 'number' ? String(Math.round(val)) : String(val);
+        if (!isLine && !isFailBar && !isValueBar) return;
+        const txt = typeof val === 'number'
+          ? (Number.isInteger(val) ? String(val) : val.toFixed(1))
+          : String(val);
         ctx.save();
         if (isLine) {
           ctx.fillStyle = '#f8fafc';
@@ -281,6 +284,62 @@ const _trendDataLabelsPlugin = {
 function _destroyCharts() {
   _trendsCharts.forEach(c => c && c.destroy());
   _trendsCharts = [];
+}
+
+function _trendsCollectGraceActive() {
+  try {
+    if (typeof _collectGraceActive === 'function') return _collectGraceActive();
+  } catch { /* ignore */ }
+  return typeof _dashIsCollecting !== 'undefined' && !!_dashIsCollecting;
+}
+
+function shouldSkipTrendsReloadDuringCollect() {
+  try {
+    if (!_trendsCollectGraceActive()) return false;
+    if (typeof _dashTab !== 'undefined' && _dashTab !== 'trends') return false;
+    return Array.isArray(_trendsRawCache) && _trendsRawCache.length > 0;
+  } catch { return false; }
+}
+
+function _setTrendsLoading(on) {
+  const wrap = document.getElementById('wrap-trends');
+  const banner = document.getElementById('trends-loading');
+  const panel = document.getElementById('tab-panel-trends');
+  if (banner) {
+    banner.hidden = !on;
+    banner.classList.toggle('is-visible', !!on);
+    if (on && typeof t === 'function') {
+      const txt = document.getElementById('trends-loading-txt');
+      if (txt) txt.textContent = t('dash.trends_loading');
+    }
+  }
+  if (wrap) wrap.classList.toggle('trends-loading', !!on);
+  if (panel) panel.classList.toggle('trends-panel-busy', !!on);
+}
+
+function _showTrendsEmptyState(msg) {
+  _destroyCharts();
+  const text = msg || (typeof t === 'function' ? t('dash.trends_empty') : 'No trend data');
+  document.querySelectorAll('#panel-trends .chart-card').forEach((card) => {
+    let ph = card.querySelector('.trends-empty-placeholder');
+    const canvas = card.querySelector('canvas');
+    if (!ph) {
+      ph = document.createElement('div');
+      ph.className = 'trends-empty-placeholder';
+      if (canvas && canvas.parentNode) canvas.parentNode.insertBefore(ph, canvas.nextSibling);
+      else card.appendChild(ph);
+    }
+    ph.textContent = text;
+    ph.hidden = false;
+    if (canvas) canvas.hidden = true;
+  });
+}
+
+function _hideTrendsEmptyPlaceholders() {
+  document.querySelectorAll('#panel-trends .trends-empty-placeholder').forEach((el) => {
+    el.hidden = true;
+  });
+  document.querySelectorAll('#panel-trends canvas').forEach((c) => { c.hidden = false; });
 }
 
 function _mkLine(id, labels, datasets, opts) {
@@ -464,6 +523,123 @@ function _mkBarV(id, labels, datasets, opts) {
       scales: {
         x: { stacked, ticks: { color: text, font: { size: 10 } }, grid: g },
         y: yBar,
+      },
+    },
+  });
+}
+
+/** Custom trend chart — same combo bar+line look as default Builds/Tests cards. */
+function _mkCustomTrendChart(id, labels, seriesList, opts) {
+  opts = opts || {};
+  const { grid, text } = _chartColors();
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx || !seriesList.length) return null;
+  const kind = opts.kind === 'bar' ? 'bar' : 'line';
+  const stacked = !!opts.stacked;
+  const showGrid = opts.showGrid !== false;
+  const g = showGrid ? { color: grid, drawBorder: false, borderDash: [4, 4] } : { display: false };
+  const yPrec = opts.yPrecision;
+  const yTick = { color: text, font: { size: 10 } };
+  if (yPrec != null) {
+    yTick.precision = yPrec;
+    yTick.callback = (v) => (typeof v === 'number' ? v.toFixed(yPrec) : v);
+  } else {
+    yTick.precision = 0;
+  }
+  const yScale = {
+    stacked: kind === 'bar' && stacked,
+    beginAtZero: true,
+    ticks: yTick,
+    grid: g,
+  };
+  if (opts.yMax != null && typeof opts.yMax === 'number' && !Number.isNaN(opts.yMax) && opts.yMax > 0) {
+    yScale.max = opts.yMax;
+  }
+
+  const n = seriesList.length;
+  const barPct = n <= 1 ? 0.55 : (stacked ? 0.72 : 0.42);
+  const datasets = [];
+
+  seriesList.forEach((s, i) => {
+    const col = s.color;
+    if (kind === 'line') {
+      datasets.push({
+        type: 'bar',
+        label: s.label,
+        data: s.data,
+        backgroundColor: col,
+        borderRadius: 4,
+        borderSkipped: false,
+        barPercentage: barPct,
+        categoryPercentage: 0.72,
+        maxBarThickness: n <= 1 ? 42 : 30,
+        order: 10 + i,
+        _hideDataLabels: true,
+      });
+      const ptR = s.pointRadius != null ? s.pointRadius : 5;
+      datasets.push({
+        type: 'line',
+        label: s.label,
+        data: s.data,
+        borderColor: col,
+        backgroundColor: 'transparent',
+        pointRadius: ptR,
+        pointHoverRadius: ptR > 0 ? ptR + 1 : 0,
+        pointBackgroundColor: col,
+        pointBorderColor: '#fff',
+        pointBorderWidth: ptR > 0 ? 2 : 0,
+        borderWidth: 2,
+        tension: s.tension != null ? s.tension : 0.1,
+        fill: false,
+        order: 1 + i,
+      });
+    } else {
+      datasets.push({
+        type: 'bar',
+        label: s.label,
+        data: s.data,
+        backgroundColor: col,
+        borderRadius: 4,
+        borderSkipped: false,
+        barPercentage: barPct,
+        categoryPercentage: 0.72,
+        maxBarThickness: stacked ? 48 : (n <= 1 ? 42 : 30),
+        order: i,
+        _labelRole: 'value',
+        _labelColor: col,
+      });
+    }
+  });
+
+  return new Chart(ctx, {
+    type: 'bar',
+    plugins: [_trendDataLabelsPlugin],
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          align: 'center',
+          labels: {
+            color: text,
+            boxWidth: 12,
+            font: { size: 11 },
+            filter: (item, chartData) => {
+              if (kind === 'line') return chartData.datasets[item.datasetIndex].type !== 'line';
+              return true;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          stacked: kind === 'bar' && stacked,
+          ticks: { color: text, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          grid: { display: false },
+        },
+        y: yScale,
       },
     },
   });
@@ -663,14 +839,27 @@ function tcAddSeriesRow() {
   const pick = prevRow && prevRow.querySelector('.tc-metric')?.value ? prevRow.querySelector('.tc-metric').value : (first && first.value ? first.value : TREND_METRICS[0]);
   const colSel = prevRow && prevRow.querySelector('.tc-color');
   const colPick = colSel ? colSel.value : '';
-  row.innerHTML = `<select class="tc-metric" onchange="tcRowSyncMetric(this.closest('.tc-series-row'))">${tcMetricOptionsHtml(pick)}</select>
-    <input type="text" class="tc-job-input" list="tc-job-datalist" style="display:none;flex:1;min-width:min(100%,200px)" maxlength="200" data-i18n-placeholder="dash.trend_job_ph" placeholder="" />
-    <input type="text" class="tc-svc-input" list="tc-svc-datalist" style="display:none;flex:1;min-width:min(100%,200px)" maxlength="200" data-i18n-placeholder="dash.trend_svc_ph" placeholder="" />
-    <input type="text" class="tc-label" data-i18n-placeholder="dash.trend_custom_legend_ph" placeholder="" />
-    <select class="tc-color" title="">${tcColorOptionsHtml(colPick)}</select>
-    <button type="button" class="btn btn-ghost" style="font-size:.75rem;padding:.2rem .45rem" onclick="tcRemoveSeriesRow(this)" data-i18n="dash.trend_custom_remove_row">×</button>`;
+  const idx = wrap.querySelectorAll('.tc-series-row').length + 1;
+  row.innerHTML = `<div class="tc-series-row-top">
+    <span class="tc-series-badge">${idx}</span>
+    <button type="button" class="tc-series-remove" onclick="tcRemoveSeriesRow(this)" data-i18n-title="dash.trend_custom_remove_row" title="">&#10005;</button>
+  </div>
+  <div class="tc-series-grid">
+    <div class="tc-series-field tc-series-field--metric">
+      <select class="tc-metric f-select tc-input" onchange="tcRowSyncMetric(this.closest('.tc-series-row'))">${tcMetricOptionsHtml(pick)}</select>
+    </div>
+    <input type="text" class="tc-job-input tc-input f-input" list="tc-job-datalist" style="display:none" maxlength="200" data-i18n-placeholder="dash.trend_job_ph" placeholder="" />
+    <input type="text" class="tc-svc-input tc-input f-input" list="tc-svc-datalist" style="display:none" maxlength="200" data-i18n-placeholder="dash.trend_svc_ph" placeholder="" />
+    <div class="tc-series-field">
+      <input type="text" class="tc-label tc-input f-input" data-i18n-placeholder="dash.trend_custom_legend_ph" placeholder="" />
+    </div>
+    <div class="tc-series-field tc-series-field--color">
+      <select class="tc-color f-select tc-input">${tcColorOptionsHtml(colPick)}</select>
+    </div>
+  </div>`;
   wrap.appendChild(row);
   tcRowSyncMetric(row);
+  tcRenumberSeriesRows();
   applyUITexts();
 }
 
@@ -691,6 +880,16 @@ function tcRemoveSeriesRow(btn) {
   const wrap = document.getElementById('tc-series-rows');
   if (!wrap || wrap.querySelectorAll('.tc-series-row').length < 2) return;
   btn.closest('.tc-series-row')?.remove();
+  tcRenumberSeriesRows();
+}
+
+function tcRenumberSeriesRows() {
+  const wrap = document.getElementById('tc-series-rows');
+  if (!wrap) return;
+  wrap.querySelectorAll('.tc-series-row').forEach((row, i) => {
+    const badge = row.querySelector('.tc-series-badge');
+    if (badge) badge.textContent = String(i + 1);
+  });
 }
 
 function tcEnsureSeriesRows() {
@@ -704,8 +903,28 @@ function tcSyncTrendModalKindUI() {
   const k = document.getElementById('tc-kind')?.value;
   const lo = document.getElementById('tc-line-opts');
   const bo = document.getElementById('tc-bar-opts');
-  if (lo) lo.style.display = k === 'line' ? '' : 'none';
-  if (bo) bo.style.display = k === 'bar' ? '' : 'none';
+  const isLine = k !== 'bar';
+  if (lo) lo.hidden = !isLine;
+  if (bo) bo.hidden = isLine;
+  document.querySelectorAll('#tc-kind-seg .tc-seg-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-tc-kind') === (isLine ? 'line' : 'bar'));
+  });
+}
+
+function tcSetChartKind(kind) {
+  const sel = document.getElementById('tc-kind');
+  const val = kind === 'bar' ? 'bar' : 'line';
+  if (sel) sel.value = val;
+  tcSyncTrendModalKindUI();
+}
+
+function tcSetBarMode(mode) {
+  const val = mode === 'stacked' ? 'stacked' : 'grouped';
+  const inp = document.querySelector(`input[name="tc-bar-mode"][value="${val}"]`);
+  if (inp) inp.checked = true;
+  document.querySelectorAll('#tc-bar-mode-seg .tc-seg-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-tc-bar') === val);
+  });
 }
 
 let _trendsModalPrevFocus = null;
@@ -751,14 +970,12 @@ function closeTrendsChartModal() {
 function resetTrendsConstructorForm() {
   const ti = document.getElementById('tc-title');
   if (ti) ti.value = '';
-  const k = document.getElementById('tc-kind');
-  if (k) k.value = 'line';
+  tcSetChartKind('line');
   const lf = document.getElementById('tc-line-fill');
   if (lf) lf.checked = true;
   const lp = document.getElementById('tc-line-points');
   if (lp) lp.value = 'none';
-  const br = document.querySelector('input[name="tc-bar-mode"][value="grouped"]');
-  if (br) br.checked = true;
+  tcSetBarMode('grouped');
   const cs = document.getElementById('tc-chart-smooth');
   if (cs) cs.value = 'none';
   const ym = document.getElementById('tc-y-max');
@@ -767,6 +984,8 @@ function resetTrendsConstructorForm() {
   if (hg) hg.checked = false;
   const lt = document.getElementById('tc-line-tension');
   if (lt) lt.value = '0.3';
+  const adv = document.getElementById('tc-chart-adv');
+  if (adv && typeof adv.open !== 'undefined') adv.open = false;
   const wrap = document.getElementById('tc-series-rows');
   if (wrap) {
     wrap.innerHTML = '';
@@ -870,8 +1089,8 @@ function renderCustomTrendChartCards() {
       const sid = String(cfg.id);
       const stitle = esc(cfg.title);
       return `<div class="chart-card chart-card-custom" id="chart-card-custom-${sid}">
-      <button type="button" class="chart-zoom-btn" onclick="toggleChartFullscreen('chart-card-custom-${sid}',-1)" data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
-      <button type="button" class="chart-del-btn" onclick="removeCustomTrendChart('${sid}')" data-i18n-title="dash.trend_custom_remove_chart" title="">&#10005;</button>
+      <button type="button" class="chart-zoom-btn" data-dash-action="toggleChartFullscreen" data-dash-args='["chart-card-custom-${sid}",-1]' data-i18n-title="dash.zoom_chart" title="">&#x2922;</button>
+      <button type="button" class="chart-del-btn" data-dash-action="removeCustomTrendChart" data-dash-args='["${sid}"]' data-i18n-title="dash.trend_custom_remove_chart" title="">&#10005;</button>
       <h3>${stitle}</h3>
       <canvas id="chart-custom-${sid}"></canvas>
     </div>`;
@@ -881,22 +1100,24 @@ function renderCustomTrendChartCards() {
 }
 
 function buildCustomTrendCharts(data, labels) {
-  const palette = ['--info', '--st-failure', '--st-success', '--warn', '--purple'];
+  const paletteCss = ['--chart-teal', '--st-failure', '--st-success', '--warn', '--purple'];
+  const paletteFallback = [_trendTealColor(), '#f87171', '#4ade80', '#fbbf24', '#a78bfa'];
   const out = [];
   loadCustomTrendsConfig().forEach((cfg) => {
     const cid = 'chart-custom-' + cfg.id;
     const anyPct = cfg.series.some((s) => _trendMetricIsPct(s.metric));
     const yPrecision = anyPct ? 1 : 0;
-    const lineFill = cfg.lineFill !== false;
     const linePts = _trendLinePointRadius(cfg.linePoints || 'none');
     const lt = parseFloat(cfg.lineTension, 10);
-    const tension = cfg.kind === 'line' && !Number.isNaN(lt) && lt >= 0 && lt <= 1 ? lt : 0.3;
+    const tension = cfg.kind === 'line' && !Number.isNaN(lt) && lt >= 0 && lt <= 1 ? lt : 0.1;
     const sm = cfg.chartSmooth || 'none';
     const hideGrid = !!cfg.hideGrid;
     const yMax = cfg.yMax;
-    const datasets = cfg.series.map((s, i) => {
-      const pi = typeof s.colorIdx === 'number' && s.colorIdx >= 0 && s.colorIdx <= 4 ? s.colorIdx : (i % palette.length);
-      const col = _cssVar(palette[pi]);
+    const pointRadius = linePts.r > 0 ? linePts.r : 5;
+    const seriesList = cfg.series.map((s, i) => {
+      const pi = typeof s.colorIdx === 'number' && s.colorIdx >= 0 && s.colorIdx <= 4 ? s.colorIdx : (i % paletteCss.length);
+      let col = _cssVar(paletteCss[pi]);
+      if (!col || col === '#94a3b8') col = paletteFallback[pi];
       let defLabel = t('dash.metric_' + s.metric);
       if (TREND_METRICS_JOB.includes(s.metric) && s.jobName) defLabel = `${defLabel}: ${s.jobName}`;
       if (s.metric === 'service_down' && s.serviceName) defLabel = `${defLabel}: ${s.serviceName}`;
@@ -904,28 +1125,15 @@ function buildCustomTrendCharts(data, labels) {
       let vals = data.map((d) => _trendSeriesVal(d, s));
       if (sm === 'ma3') vals = _movingAvg(vals, 3);
       else if (sm === 'ma7') vals = _movingAvg(vals, 7);
-      const base = {
-        label,
-        data: vals,
-        borderColor: col,
-        backgroundColor: cfg.kind === 'bar' ? _hexToRgba(col, 0.55) : _hexToRgba(col, 0.12),
-        tension: cfg.kind === 'line' ? tension : 0,
-        fill: cfg.kind === 'line' && lineFill,
-      };
-      if (cfg.kind === 'bar') base.borderWidth = 1;
-      if (cfg.kind === 'line') {
-        base.pointRadius = linePts.r;
-        base.pointHoverRadius = linePts.h;
-      }
-      return base;
+      return { label, data: vals, color: col, tension, pointRadius };
     });
-    const chartOpts = { yPrecision, showGrid: !hideGrid, yMax };
-    let ch;
-    if (cfg.kind === 'bar') {
-      ch = _mkBarV(cid, labels, datasets, { stacked: !!cfg.barStacked, yPrecision, showGrid: !hideGrid, yMax });
-    } else {
-      ch = _mkLine(cid, labels, datasets, chartOpts);
-    }
+    const ch = _mkCustomTrendChart(cid, labels, seriesList, {
+      kind: cfg.kind,
+      stacked: !!cfg.barStacked,
+      yPrecision,
+      showGrid: !hideGrid,
+      yMax,
+    });
     if (ch) out.push(ch);
     const node = document.getElementById(cid);
     if (node) {
@@ -1136,8 +1344,30 @@ window.applyTrendsDateRange = applyTrendsDateRange;
 window.clearTrendsDateRange = clearTrendsDateRange;
 window.resetTrendsFilters = resetTrendsFilters;
 window.toggleTrendsAdvancedFilters = toggleTrendsAdvancedFilters;
+window.openTrendsChartModal = openTrendsChartModal;
+window.closeTrendsChartModal = closeTrendsChartModal;
+window.addCustomTrendChart = addCustomTrendChart;
+window.tcAddSeriesRow = tcAddSeriesRow;
+window.tcRemoveSeriesRow = tcRemoveSeriesRow;
+window.tcRowSyncMetric = tcRowSyncMetric;
+window.tcSyncTrendModalKindUI = tcSyncTrendModalKindUI;
+window.tcSetChartKind = tcSetChartKind;
+window.tcSetBarMode = tcSetBarMode;
+window.removeCustomTrendChart = removeCustomTrendChart;
+window.toggleChartFullscreen = toggleChartFullscreen;
+window.setTrendsSize = setTrendsSize;
+window.loadTrends = loadTrends;
+
+function initTrendsChartModalBindings() {
+  if (window._trendsChartModalInited) return;
+  window._trendsChartModalInited = true;
+  tcEnsureSeriesRows();
+  tcSyncTrendModalKindUI();
+}
 
 function initTrendsFiltersFromStorage() {
+  if (window._trendsFiltersInited) return;
+  window._trendsFiltersInited = true;
   const st = _scopeStore();
   if (st && typeof st.load === 'function') st.load();
   const ad = _filtersAdapter();
@@ -1190,22 +1420,18 @@ function initTrendsFiltersFromStorage() {
       if (ena) _syncTrendsScopeToGlobalIfEnabled();
     }, { passive: true });
   }
+  initTrendsChartModalBindings();
 }
 
 function renderTrendsChartsFromData(data) {
-  _destroyCharts();
   renderCustomTrendChartCards();
   if (!data.length) {
-    document.querySelectorAll('#panel-trends canvas').forEach((c) => {
-      const ctx = c.getContext('2d');
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      ctx.font = '13px system-ui';
-      ctx.fillText(t('dash.trends_empty'), c.width / 2, 80);
-    });
+    if (_trendsCharts.length) return;
+    _showTrendsEmptyState();
     return;
   }
+  _hideTrendsEmptyPlaceholders();
+  _destroyCharts();
   const labels = data.map((d) => _formatTrendDateLabel(d.date));
   const sm = _trendsSmooth;
   const sl = (arr) => _smoothSeries(arr, sm);
@@ -1340,6 +1566,11 @@ async function loadTrends(days, btn) {
     localStorage.setItem('cimon-trends-period', String(days));
   }
 
+  if (shouldSkipTrendsReloadDuringCollect()) return;
+
+  const prevCache = Array.isArray(_trendsRawCache) && _trendsRawCache.length ? _trendsRawCache : null;
+  _setTrendsLoading(true);
+
   const errEl = document.getElementById('trends-error');
   let data;
   try {
@@ -1347,7 +1578,7 @@ async function loadTrends(days, btn) {
     const res = await fetchKeyed('trends', apiUrl(`api/trends?days=${nd}`)).catch(() => null);
     if (res === FETCH_ABORTED) return;
     if (!res || !res.ok) {
-      if (errEl) {
+      if (errEl && !prevCache) {
         errEl.style.display = 'flex';
         errEl.innerHTML = `<span>${esc(t('trends_err'))} (HTTP ${res ? res.status : '—'})</span><button type="button" class="btn btn-ghost" onclick="loadTrends(${_trendsViewDays},null)">${t('common.retry')}</button>`;
       }
@@ -1355,13 +1586,19 @@ async function loadTrends(days, btn) {
     }
     data = await res.json();
   } catch (e) {
-    if (errEl) {
+    if (errEl && !prevCache) {
       errEl.style.display = 'flex';
       errEl.innerHTML = `<span>${esc(t('trends_err'))}</span><button type="button" class="btn btn-ghost" onclick="loadTrends(${_trendsViewDays},null)">${t('common.retry')}</button>`;
     }
     return;
+  } finally {
+    _setTrendsLoading(false);
   }
-  _trendsRawCache = Array.isArray(data) ? data : [];
+
+  const next = Array.isArray(data) ? data : [];
+  if (!next.length && prevCache && _trendsCollectGraceActive()) return;
+
+  _trendsRawCache = next;
   if (errEl) {
     errEl.style.display = 'none';
     errEl.innerHTML = '';
@@ -1369,4 +1606,6 @@ async function loadTrends(days, btn) {
   renderTrendsChartsFromData(getTrendsViewData());
   loadTrendsHistorySummary(_trendsApiDaysFetch());
 }
+
+window.shouldSkipTrendsReloadDuringCollect = shouldSkipTrendsReloadDuringCollect;
 

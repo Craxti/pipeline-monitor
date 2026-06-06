@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import time
+from threading import Lock
+
+from web.services.collect_sync import parallel_util
+from web.services.collect_sync.exceptions import CollectCancelled
 
 
 def collect_docker_services(
@@ -11,18 +15,26 @@ def collect_docker_services(
     snapshot,
     progress,
     health: list,
+    health_lock: Lock | None = None,
     logger,
     check_cancelled,
     snap_lock=None,
     maybe_save_partial=None,
 ) -> None:
-    """Collect container/service status via Docker monitor."""
+    """Collect container/service status via Docker monitor (parallel per host)."""
     from docker_monitor.monitor import DockerMonitor
-    from web.services.collect_sync.exceptions import CollectCancelled
 
     dm_cfg = cfg.get("docker_monitor", {})
     if not dm_cfg.get("enabled"):
         return
+
+    def _append_health(item: dict) -> None:
+        if health_lock is not None:
+            with health_lock:
+                health.append(item)
+        else:
+            health.append(item)
+
     t0 = time.monotonic()
     try:
         progress("docker", "Docker / HTTP", "Running checks…")
@@ -34,8 +46,10 @@ def collect_docker_services(
             if isinstance(h, dict) and h.get("enabled", True):
                 hosts.append(h)
 
-        all_services = []
-        for h in hosts:
+        all_services: list = []
+        services_lock = Lock()
+
+        def _check_host(h: dict) -> None:
             check_cancelled()
             logger.info("Docker monitor host check started: %s", h.get("name") or h.get("host") or "unknown")
             monitor = DockerMonitor(
@@ -45,10 +59,20 @@ def collect_docker_services(
                 show_all=dm_cfg.get("show_all_containers", False),
                 docker_host=h,
             )
-            all_services.extend(monitor.check_all())
+            chunk = monitor.check_all()
             check_cancelled()
+            if chunk:
+                with services_lock:
+                    all_services.extend(chunk)
 
-        # HTTP checks are collected once (not tied to Docker daemon hosts).
+        parallel_util.run_parallel_items(
+            hosts,
+            _check_host,
+            parallel=parallel_util.parallel_instances_enabled(cfg),
+            max_workers=parallel_util.instance_worker_cap(cfg, len(hosts)),
+            thread_prefix="docker-host",
+        )
+
         http_monitor = DockerMonitor(
             containers=[],
             http_checks=dm_cfg.get("http_checks", []),
@@ -74,7 +98,7 @@ def collect_docker_services(
             len(dm_cfg.get("http_checks", []) or []),
             len(all_services),
         )
-        health.append(
+        _append_health(
             {
                 "name": "Docker monitor",
                 "kind": "docker",
@@ -87,7 +111,7 @@ def collect_docker_services(
         raise
     except Exception as exc:
         logger.error("Docker monitor failed: %s", exc)
-        health.append(
+        _append_health(
             {
                 "name": "Docker monitor",
                 "kind": "docker",

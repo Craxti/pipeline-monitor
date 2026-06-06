@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timezone
 from collections.abc import Awaitable, Callable
 
+from web.services.collect_executor import get_collect_executor
 from web.services.collect_sync.exceptions import CollectCancelled
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ async def do_collect(
         push_collect_log("starting", "Starting collect…", None, "info")
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
-            None,
+            get_collect_executor(),
             lambda: run_collect_sync(cfg, force_full=force_full),
         )
         collect_state["last_collected_at"] = datetime.now(tz=timezone.utc).isoformat()

@@ -48,12 +48,13 @@ async def dashboard(request: Request):
     """Render main dashboard page."""
     from web.services import ui_lang
 
+    cfg = await asyncio.to_thread(load_yaml_config)
     return await pages.index_page(
         request,
         templates=_templates,
         load_snapshot_async=rt.load_snapshot_async,
-        load_yaml_config=load_yaml_config,
-        ui_language=ui_lang.ui_lang_from_config(load_yaml_config),
+        cfg=cfg,
+        ui_language=ui_lang.ui_lang_from_config_dict(cfg),
     )
 
 
@@ -76,7 +77,8 @@ async def api_status():
 async def api_dashboard_summary():
     """Return dashboard summary payload."""
     snap = await rt.load_snapshot_async()
-    return dashboard_summary.dashboard_summary_payload(
+    return await asyncio.to_thread(
+        dashboard_summary.dashboard_summary_payload,
         load_yaml_config=load_yaml_config,
         snap=snap,
         collect_state=rt.collect_state,
@@ -148,7 +150,8 @@ async def api_trends(days: int = 14):
     def _trends_compute(d: int):
         return trends_uptime.trends_compute(d, history_path=None)
 
-    return trends_uptime_endpoints.api_trends(
+    return await asyncio.to_thread(
+        trends_uptime_endpoints.api_trends,
         days=days,
         data_revision=rt.revision_rt.revision,
         mem_cache_get=_mem_get,
@@ -186,11 +189,15 @@ async def api_trends_history_summary(days: int = 30, source: str = "", instance:
     # Route-level service boundary for KPI logic.
     from web.services.trends_kpi_service import TrendsKPIService
 
-    payload = TrendsKPIService(
-        trends_compute=lambda d: trends_uptime.trends_compute(d, history_path=None),
-        event_feed_load=lambda lim: event_feed_api.load(limit=lim),
-    ).history_summary(days=days, source_filter=source, instance_filter=instance)
-    _mem_set(cache_key, payload)
+    def _build_payload():
+        payload = TrendsKPIService(
+            trends_compute=lambda d: trends_uptime.trends_compute(d, history_path=None),
+            event_feed_load=lambda lim: event_feed_api.load(limit=lim),
+        ).history_summary(days=days, source_filter=source, instance_filter=instance)
+        _mem_set(cache_key, payload)
+        return payload
+
+    payload = await asyncio.to_thread(_build_payload)
     return JSONResponse(content=payload)
 
 
@@ -221,7 +228,8 @@ async def api_uptime(days: int = 30):
             db_svc_uptime=_db_svc_uptime if _SQLITE_AVAILABLE else None,
         )
 
-    return trends_uptime_endpoints.api_uptime(
+    return await asyncio.to_thread(
+        trends_uptime_endpoints.api_uptime,
         days=days,
         data_revision=rt.revision_rt.revision,
         mem_cache_get=_mem_get,
@@ -233,13 +241,18 @@ async def api_uptime(days: int = 30):
 @router.get("/api/db/stats", response_class=JSONResponse)
 async def api_db_stats():
     """Return SQLite diagnostics (if available)."""
-    return db_endpoints.api_db_stats(sqlite_available=_SQLITE_AVAILABLE, db_stats=db_stats)
+    return await asyncio.to_thread(
+        db_endpoints.api_db_stats,
+        sqlite_available=_SQLITE_AVAILABLE,
+        db_stats=db_stats,
+    )
 
 
 @router.get("/api/sources", response_class=JSONResponse)
 async def api_sources():
     """Return configured sources list."""
-    return sources_endpoints.api_sources(
+    return await asyncio.to_thread(
+        sources_endpoints.api_sources,
         load_snapshot=rt.load_snapshot,
         load_yaml_config=load_yaml_config,
         is_snapshot_build_enabled=is_snapshot_build_enabled,
@@ -265,7 +278,8 @@ async def api_events_persisted(limit: int = 250):
 
         return event_feed_api.load(limit=lim)
 
-    return events_endpoints.api_events_persisted(
+    return await asyncio.to_thread(
+        events_endpoints.api_events_persisted,
         event_feed_load=_event_feed_load,
         limit=limit,
     )
@@ -274,7 +288,8 @@ async def api_events_persisted(limit: int = 250):
 @router.get("/api/analytics/sparklines", response_class=JSONResponse)
 async def api_analytics_sparklines(jobs: str = "", limit_per_job: int = 12):
     """Return per-job build duration sparklines."""
-    return analytics_endpoints.api_analytics_sparklines(
+    return await asyncio.to_thread(
+        analytics_endpoints.api_analytics_sparklines,
         sqlite_available=_SQLITE_AVAILABLE,
         db_build_duration=_db_build_duration,
         jobs=jobs,
@@ -285,7 +300,8 @@ async def api_analytics_sparklines(jobs: str = "", limit_per_job: int = 12):
 @router.get("/api/analytics/flaky", response_class=JSONResponse)
 async def api_analytics_flaky(threshold: float = 0.4, min_runs: int = 4, days: int = 30):
     """Return flaky analysis based on history."""
-    return analytics_endpoints.api_analytics_flaky(
+    return await asyncio.to_thread(
+        analytics_endpoints.api_analytics_flaky,
         sqlite_available=_SQLITE_AVAILABLE,
         db_flaky_analysis=_db_flaky_analysis,
         threshold=threshold,

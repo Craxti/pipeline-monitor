@@ -3,59 +3,22 @@
    Loads after dashboard.css. Same class names & layout; new palette + polish.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Design tokens (override dashboard :root / html.light) ─────────────── */
+/* ── Design tokens (shell-specific; palette in tokens.css) ─────────────── */
 :root {
-  --ok: #2dd4bf;
-  --fail: #fb7185;
-  --warn: #fbbf24;
-  --info: #38bdf8;
-  --purple: #a78bfa;
-
-  --bg: #05080f;
-  --surface: #0c111c;
-  --surface2: #131b2a;
-  --surface3: #1a2438;
-  --text: #eef2f8;
-  --muted: #8b97a8;
-  --border: #273549;
-
-  --radius: 0.875rem;
-  --accent: #7dd3fc;
-
-  --shell-line: rgba(125, 211, 252, 0.08);
   --shell-glow: 0 0 40px -12px rgba(56, 189, 248, 0.15);
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.35);
   --shadow-float: 0 12px 40px -8px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --focus-ring: 0 0 0 3px rgba(56, 189, 248, 0.35);
-
   --shell-radius: 1.125rem;
   --shell-radius-sm: 0.6875rem;
-  /* Sticky offset under one-line header (approx. height + top bar) */
   --header-sticky-offset: 52px;
 }
 
 html.light {
-  --ok: #0d9488;
-  --fail: #e11d48;
-  --warn: #d97706;
-  --info: #0284c7;
-  --purple: #7c3aed;
-
-  --bg: #eef2f6;
-  --surface: #ffffff;
-  --surface2: #f4f7fb;
-  --surface3: #e2e8f0;
-  --text: #0f172a;
-  --muted: #5c6b7e;
-  --border: #c9d4e3;
-
+  --shell-glow: 0 0 32px -10px rgba(2, 132, 199, 0.12);
   --shell-line: rgba(15, 23, 42, 0.08);
-  --shell-glow: 0 8px 32px -8px rgba(2, 132, 199, 0.12);
   --shadow-soft: 0 2px 12px rgba(15, 23, 42, 0.06);
   --shadow-float: 0 16px 48px -12px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --focus-ring: 0 0 0 3px rgba(2, 132, 199, 0.22);
 }
 
 html {

@@ -4,8 +4,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // FAILURES (top-N aggregated)
 // ─────────────────────────────────────────────────────────────────────────────
+const TOP_FAILURES_AGG_LIMIT = 10000;
+
 let _failSort = { key: 'count', dir: 'desc' };
 let _failSortInit = false;
+let _failuresLoadGen = 0;
+let _lastFailuresPageSig = '';
 
 function _failSortVal(row, key) {
   if (key === 'test') return String(row.test_name || '').toLowerCase();
@@ -64,75 +68,10 @@ function _initFailureSort() {
   _updateFailureSortHdr();
 }
 
-function resetFailures(soft=false) {
-  // If a previous page load is in-flight, cancel it so new filters apply immediately.
-  abortFetchKey('failures');
-  const s = _state.failures; s.page=1; s.done=false; s.loading = false;
-  const tb = document.getElementById('tbody-failures');
-  if (!soft) tb.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_loading'))}</td></tr>`;
-  loadFailures();
-}
-function clearFailureFilters() {
-  const fs = document.getElementById('f-fsource');
-  if (fs) fs.value = 'real';
-  document.getElementById('f-fname').value  = '';
-  document.getElementById('f-fsuite').value = '';
-  _failuresDays = 0;
-  ['tf-f-1d','tf-f-3d','tf-f-7d','tf-f-30d'].forEach((id) => document.getElementById(id)?.classList.remove('active'));
-  try { localStorage.setItem('cimon-failures-days', '0'); } catch { /* ignore */ }
-  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
-  updateFailuresExportLinks();
-  resetFailures();
-}
-// Called from stat cards
-function filterTests(status) {
-  document.getElementById('f-tstatus').value = status;
-  try { _persistFiltersFromForm(); } catch { /* ignore */ }
-  resetTests();
-  goToInTab('test-runs', 'panel-tests');
-}
-
-async function loadFailures() {
-  _initFailureSort();
-  const s = _state.failures;
-  if (s.loading || s.done) return;
-  s.loading = true;
-  try {
-    const name  = document.getElementById('f-fname').value;
-    const suite = document.getElementById('f-fsuite').value;
-    const source = document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '';
-    const dayQ = _failuresDays > 0 ? `&days=${_failuresDays}` : '';
-    const url = apiUrl(`api/tests/top-failures?page=${s.page}&per_page=${s.per_page}&n=500&source=${encodeURIComponent(source)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}${dayQ}`);
-
-    const res = await fetchKeyed('failures', url).catch(()=>null);
-
-    const tbody = document.getElementById('tbody-failures');
-    if (res === FETCH_ABORTED) return;
-    if (!res || !res.ok) {
-      if (keepTableOnTransientApiError(tbody, res, s)) return;
-      if (res && res.status === 404) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`; }
-      else {
-        const detail = await fetchApiErrorDetail(res);
-        srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
-        const extra = detail ? ` — ${esc(detail)}` : '';
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
-      }
-      s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
-    }
-    const data = await res.json();
-    s.total = data.total;
-    document.getElementById('failures-count').textContent = data.total;
-
-    const rows = _sortFailureRows(data.items || []);
-    if (s.page === 1 && !rows.length) {
-      if (keepTableOnTransientEmpty(tbody, rows, s)) return;
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="5"><div>${esc(t('dash.table_no_failures'))}</div><div class="empty-hint">${t('dash.empty_failures_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
-      s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
-    }
-
-    const offset = (s.page - 1) * s.per_page;
-    const frag = document.createDocumentFragment();
-    rows.forEach((f, i) => {
+function _appendFailureRows(tbody, rows, page, replace) {
+  const offset = (page - 1) * _state.failures.per_page;
+  const frag = document.createDocumentFragment();
+  rows.forEach((f, i) => {
     const tr = document.createElement('tr');
 
     const td0 = document.createElement('td');
@@ -196,17 +135,141 @@ async function loadFailures() {
 
     tr.append(td0, td1, td2, td3, td4);
     frag.appendChild(tr);
-    });
-    if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.replaceChildren(frag); });
-    else tbody.appendChild(frag);
+  });
+  if (replace) swapTableContentSmooth(tbody, () => { tbody.replaceChildren(frag); });
+  else tbody.appendChild(frag);
+}
 
+function resetFailures(soft=false) {
+  // Cancel any in-flight multi-page load before restarting.
+  _failuresLoadGen++;
+  abortFetchKey('failures');
+  const s = _state.failures; s.page=1; s.done=false; s.loading = false;
+  const tb = document.getElementById('tbody-failures');
+  // During collect, keep visible rows unless the user explicitly forced a hard reset.
+  if (!soft && typeof _collectGraceActive === 'function' && _collectGraceActive() && tbodyHasDataRows(tb)) {
+    soft = true;
+  }
+  if (!soft && tb) tb.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_loading'))}</td></tr>`;
+  loadFailures();
+}
+function clearFailureFilters() {
+  const fs = document.getElementById('f-fsource');
+  if (fs) fs.value = 'real';
+  document.getElementById('f-fname').value  = '';
+  document.getElementById('f-fsuite').value = '';
+  _failuresDays = 0;
+  ['tf-f-1d','tf-f-3d','tf-f-7d','tf-f-30d'].forEach((id) => document.getElementById(id)?.classList.remove('active'));
+  try { localStorage.setItem('cimon-failures-days', '0'); } catch { /* ignore */ }
+  try { _persistFiltersFromForm(); } catch { _syncURLAndFilterSummary(); }
+  updateFailuresExportLinks();
+  resetFailures();
+}
+// Called from stat cards
+function filterTests(status) {
+  document.getElementById('f-tstatus').value = status;
+  try { _persistFiltersFromForm(); } catch { /* ignore */ }
+  resetTests();
+  goToInTab('test-runs', 'panel-tests');
+}
+
+async function loadFailures() {
+  _initFailureSort();
+  const s = _state.failures;
+  if (s.loading || s.done) return;
+
+  const tbody = document.getElementById('tbody-failures');
+  if (guardPanelLoadDuringCollect('failures', tbody, s)) return;
+  const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
+  if (!incr && s.page === 1 && typeof shouldSkipTableReloadDuringCollect === 'function' && shouldSkipTableReloadDuringCollect('failures', tbody)) {
+    s.done = true;
+    s.loading = false;
+    return;
+  }
+
+  const myGen = ++_failuresLoadGen;
+  s.loading = true;
+  const name  = document.getElementById('f-fname').value;
+  const suite = document.getElementById('f-fsuite').value;
+  const source = document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '';
+  const dayQ = _failuresDays > 0 ? `&days=${_failuresDays}` : '';
+  const perPage = incr && typeof collectIncrementalPerPage === 'function'
+    ? collectIncrementalPerPage(s.per_page)
+    : s.per_page;
+  const aggLimit = incr ? 800 : TOP_FAILURES_AGG_LIMIT;
+
+  try {
+    while (myGen === _failuresLoadGen && !s.done) {
+      const url = apiUrl(
+        `api/tests/top-failures?page=${s.page}&per_page=${perPage}&n=${aggLimit}`
+        + `&source=${encodeURIComponent(source)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}${dayQ}`
+      );
+
+      const res = await fetchKeyed('failures', url).catch(() => null);
+      if (myGen !== _failuresLoadGen) return;
+      if (res === FETCH_ABORTED) return;
+      if (!res || !res.ok) {
+        if (keepTableOnTransientApiError(tbody, res, s, 'failures')) return;
+        if (res && res.status === 404) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
+        } else {
+          const detail = await fetchApiErrorDetail(res);
+          srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+          const extra = detail ? ` — ${esc(detail)}` : '';
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+        }
+        s.done = true;
+        updateFilterSummary();
+        _applyGlobalSearch();
+        return;
+      }
+
+      const data = await res.json();
+      if (myGen !== _failuresLoadGen) return;
+      s.total = data.total;
+      document.getElementById('failures-count').textContent = data.total;
+
+      const rows = _sortFailureRows(data.items || []);
+      if (s.page === 1 && !rows.length) {
+        if (keepTableOnTransientEmpty(tbody, rows, s, 'failures')) return;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5"><div>${esc(t('dash.table_no_failures'))}</div><div class="empty-hint">${t('dash.empty_failures_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
+        s.done = true;
+        updateFilterSummary();
+        _applyGlobalSearch();
+        return;
+      }
+
+      if (s.page === 1 && !data.has_more) {
+        const pageSig = rows.map((f) => [
+          String(f.test_name || ''),
+          String(f.suite || ''),
+          String(f.count ?? ''),
+          String(f.message || '').slice(0, 120),
+        ].join('\x1f')).join('\x1e');
+        if (_liveMode && pageSig && pageSig === _lastFailuresPageSig) {
+          s.done = true;
+          updateFilterSummary();
+          _applyGlobalSearch();
+          return;
+        }
+        _lastFailuresPageSig = pageSig;
+      }
+
+      _appendFailureRows(tbody, rows, s.page, s.page === 1);
+
+      if (incr || !data.has_more) {
+        s.done = true;
+        break;
+      }
+      s.page++;
+    }
+
+    if (s.done && tbodyHasDataRows(tbody)) {
+      try { cacheStaleTableHtml('failures', tbody); } catch { /* ignore */ }
+    }
     _applyGlobalSearch();
     updateFilterSummary();
-    if (!data.has_more) { s.done = true; return; }
-    s.page++;
-    // No paging limit in UI: fetch all pages.
-    window.requestAnimationFrame(() => { loadFailures(); });
   } finally {
-    s.loading = false;
+    if (myGen === _failuresLoadGen) s.loading = false;
   }
 }

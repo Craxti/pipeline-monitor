@@ -43,9 +43,6 @@ PAIRS: list[tuple[str, str]] = [
         ' data-dash-action="runbookFocusTestFailures"',
     ),
     (
-        " onclick=\"goToInTab('services','panel-svcs');"
-        "document.getElementById('sv-problems-only').checked=true;"
-        'toggleSvcProblemsOnly(true);"',
         ' data-dash-action="runbookFocusServicesProblems"',
     ),
 ]

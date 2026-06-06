@@ -2,8 +2,110 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Any, Callable
+
+_COLLECT_SSE_TS_REF: dict[str, float] = {"ts": 0.0}
+_COLLECT_SSE_MIN_INTERVAL_S = 3.0
+
+
+def _patch_snapshot_for_collect_publish(snapshot: Any, collect_state: dict) -> Any:
+    """Merge empty in-progress sections with the last cached snapshot (avoid blank tables)."""
+    if not collect_state.get("is_collecting"):
+        return snapshot
+    try:
+        from web.core.snapshot_cache import peek_snapshot_cache
+
+        prev = peek_snapshot_cache()
+    except Exception:
+        prev = None
+    if prev is None:
+        return snapshot
+    cur_builds = list(getattr(snapshot, "builds", None) or [])
+    cur_tests = list(getattr(snapshot, "tests", None) or [])
+    cur_services = list(getattr(snapshot, "services", None) or [])
+    prev_builds = list(getattr(prev, "builds", None) or [])
+    prev_tests = list(getattr(prev, "tests", None) or [])
+    prev_services = list(getattr(prev, "services", None) or [])
+
+    patch_builds = len(cur_builds) == 0 and len(prev_builds) > 0
+    patch_tests = len(cur_tests) == 0 and len(prev_tests) > 0
+    patch_services = len(cur_services) == 0 and len(prev_services) > 0
+    if not (patch_builds or patch_tests or patch_services):
+        return snapshot
+    snapshot_to_save = snapshot.model_copy(deep=True)
+    if patch_builds:
+        snapshot_to_save.builds = prev_builds
+    if patch_tests:
+        snapshot_to_save.tests = prev_tests
+    if patch_services:
+        snapshot_to_save.services = prev_services
+    return snapshot_to_save
+
+
+def _sse_broadcast_collect_sync(payload: dict) -> None:
+    """Best-effort SSE push from the sync collect thread."""
+    try:
+        import asyncio
+
+        from web.core import runtime as rt
+        from web.services import sse_hub
+
+        loop = rt.main_loop
+        if loop is None or not loop.is_running():
+            return
+        asyncio.run_coroutine_threadsafe(
+            sse_hub.broadcast_async(rt.sse_rt.queues, payload),
+            loop,
+        )
+    except Exception:
+        pass
+
+
+def _maybe_broadcast_collect_snapshot_sse(snapshot: Any, collect_state: dict) -> None:
+    if not collect_state.get("is_collecting"):
+        return
+    now = time.monotonic()
+    last = float(_COLLECT_SSE_TS_REF.get("ts", 0.0) or 0.0)
+    if now - last < _COLLECT_SSE_MIN_INTERVAL_S:
+        return
+    _COLLECT_SSE_TS_REF["ts"] = now
+    try:
+        from web.core import runtime as rt
+
+        counts = {
+            "builds": len(getattr(snapshot, "builds", None) or []),
+            "tests": len(getattr(snapshot, "tests", None) or []),
+            "services": len(getattr(snapshot, "services", None) or []),
+        }
+        _sse_broadcast_collect_sync(
+            {
+                "type": "snapshot_partial",
+                "revision": rt.revision_rt.revision,
+                "counts": counts,
+                "phase": collect_state.get("phase"),
+            }
+        )
+    except Exception:
+        pass
+
+
+def touch_collect_snapshot_live(
+    snapshot: Any,
+    *,
+    prime_snapshot_cache: Callable[[Any, int | None], None],
+    collect_state: dict,
+) -> None:
+    """Refresh in-memory snapshot during collect and notify SSE clients (throttled)."""
+    if not collect_state.get("is_collecting"):
+        return
+    snapshot_to_publish = _patch_snapshot_for_collect_publish(snapshot, collect_state)
+    try:
+        prime_snapshot_cache(snapshot_to_publish, store_seq=None)
+    except Exception:
+        pass
+    _maybe_broadcast_collect_snapshot_sse(snapshot_to_publish, collect_state)
 
 
 def save_snapshot(
@@ -60,35 +162,16 @@ def save_snapshot_partial(
     Persist an in-progress snapshot for live dashboard updates during Collect.
     Intentionally skips trends/notifications/DB history append to keep it cheap.
     """
-    snapshot_to_save = snapshot
-    try:
-        # During collect, never publish a partial snapshot that would blank an entire table
-        # after page refresh. If current section is empty but previous snapshot had data,
-        # keep previous section in the partial view (without mutating live collect object).
-        if collect_state.get("is_collecting"):
-            prev = load_snapshot()
-            if prev is not None:
-                cur_builds = list(getattr(snapshot, "builds", None) or [])
-                cur_tests = list(getattr(snapshot, "tests", None) or [])
-                cur_services = list(getattr(snapshot, "services", None) or [])
-                prev_builds = list(getattr(prev, "builds", None) or [])
-                prev_tests = list(getattr(prev, "tests", None) or [])
-                prev_services = list(getattr(prev, "services", None) or [])
+    snapshot_to_save = _patch_snapshot_for_collect_publish(snapshot, collect_state)
 
-                patch_builds = len(cur_builds) == 0 and len(prev_builds) > 0
-                patch_tests = len(cur_tests) == 0 and len(prev_tests) > 0
-                patch_services = len(cur_services) == 0 and len(prev_services) > 0
-
-                if patch_builds or patch_tests or patch_services:
-                    snapshot_to_save = snapshot.model_copy(deep=True)
-                    if patch_builds:
-                        snapshot_to_save.builds = prev_builds
-                    if patch_tests:
-                        snapshot_to_save.tests = prev_tests
-                    if patch_services:
-                        snapshot_to_save.services = prev_services
-    except Exception:
-        snapshot_to_save = snapshot
+    if collect_state.get("is_collecting"):
+        # Memory-only while collect runs — SQLite writes here block readers and freeze the UI.
+        try:
+            prime_snapshot_cache(snapshot_to_save, store_seq=None)
+        except Exception:
+            pass
+        _maybe_broadcast_collect_snapshot_sse(snapshot_to_save, collect_state)
+        return
 
     try:
         body = snapshot_to_save.model_dump_json()
@@ -101,5 +184,4 @@ def save_snapshot_partial(
         if not ensure_database_initialized(data_dir=data_dir):
             return
         seq = set_latest_snapshot_json(body)
-        bump_revision()
         prime_snapshot_cache(snapshot_to_save, seq)

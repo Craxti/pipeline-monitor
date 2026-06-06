@@ -6,33 +6,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --surface2: #151c28;
-  --surface3: #243044;
-  --sidebar-bg: #121826;
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  --border: rgba(148, 163, 184, 0.12);
-  --ok: #4ade80;
-  --fail: #f87171;
-  --warn: #fbbf24;
-  --info: #3b82f6;
-  --accent: #60a5fa;
+  --dash-sidebar-w: 15.5rem;
   --radius: 12px;
-  --radius-sm: 8px;
-  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.18);
-  --shadow-card: 0 0 0 1px rgba(148, 163, 184, 0.08), 0 4px 20px rgba(0, 0, 0, 0.22);
-}
-
-html.light {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --surface2: #f8fafc;
-  --surface3: #e2e8f0;
-  --sidebar-bg: #ffffff;
-  --border: rgba(15, 23, 42, 0.1);
-  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 body.dash-app {
@@ -42,9 +17,6 @@ body.dash-app {
 }
 
 /* ── Sidebar — reference: wide, clean, blue active pill ─────────────────── */
-:root {
-  --dash-sidebar-w: 15.5rem;
-}
 
 aside.dash-sidebar,
 aside.dash-sidebar#dash-page-tabs {

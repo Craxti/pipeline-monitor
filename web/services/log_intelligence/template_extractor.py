@@ -13,6 +13,9 @@ _HEX_RE = re.compile(r"\b0x[0-9a-f]+\b", re.I)
 _IP_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 _NUM_RE = re.compile(r"\b\d+\b")
 _TS_PREFIX_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\dZ+\-: ]*\s*")
+_BRACKET_TS_RE = re.compile(r"^\[\d{4}[-/]\d{1,2}[-/]\d{1,2}[^\]]*\]\s*")
+_BRACKET_ANY_TS_RE = re.compile(r"^\[[^\]]*(?:\d{4}|\d{2}:\d{2}:\d{2})[^\]]*\]\s*")
+_BRACKET_N_TS_RE = re.compile(r"^\[[\s<N>:,.\-+/]+\]\s*")
 _LEVEL_RE = re.compile(r"\b(ERROR|WARN|WARNING|INFO|DEBUG|TRACE|FATAL|CRITICAL)\b", re.I)
 
 
@@ -22,10 +25,13 @@ def extract_template(line: str) -> str:
     if not s:
         return ""
     s = _TS_PREFIX_RE.sub("", s)
+    s = _BRACKET_TS_RE.sub("", s)
+    s = _BRACKET_ANY_TS_RE.sub("", s)
     s = _UUID_RE.sub("<UUID>", s)
     s = _HEX_RE.sub("<HEX>", s)
     s = _IP_RE.sub("<IP>", s)
     s = _NUM_RE.sub("<N>", s)
+    s = _BRACKET_N_TS_RE.sub("", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s[:280]
 

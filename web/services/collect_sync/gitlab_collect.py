@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import time
+from threading import Lock
 
 from urllib.parse import quote_plus
+
+from web.services.collect_sync import parallel_util
 
 
 def _snapshot_has_gitlab_for_instance(snapshot, inst_label: str) -> bool:
@@ -28,6 +31,8 @@ def collect_gitlab_builds(
     progress,
     merge_build_records,
     health: list,
+    health_lock: Lock | None = None,
+    stats_lock: Lock | None = None,
     config_instance_label,
     logger,
     incremental_collect: bool,
@@ -37,13 +42,27 @@ def collect_gitlab_builds(
     check_cancelled,
     incremental_stats: dict | None = None,
 ) -> None:
-    """Collect build records from configured GitLab instances."""
+    """Collect build records from configured GitLab instances (parallel per instance)."""
     from web.services.collect_sync.exceptions import CollectCancelled
 
-    for inst in cfg.get("gitlab_instances", []):
+    def _append_health(item: dict) -> None:
+        if health_lock is not None:
+            with health_lock:
+                health.append(item)
+        else:
+            health.append(item)
+
+    def _bump_stat(key: str, delta: int = 1) -> None:
+        if incremental_stats is None:
+            return
+        if stats_lock is not None:
+            with stats_lock:
+                incremental_stats[key] = int(incremental_stats.get(key, 0) or 0) + delta
+        else:
+            incremental_stats[key] = int(incremental_stats.get(key, 0) or 0) + delta
+
+    def _collect_one_instance(inst: dict) -> None:
         check_cancelled()
-        if not inst.get("enabled", True):
-            continue
         label = inst.get("name", inst.get("url", "GitLab"))
         gl_key = config_instance_label(inst, kind="gitlab")
         t0 = time.monotonic()
@@ -78,8 +97,6 @@ def collect_gitlab_builds(
             incremental = bool(
                 incremental_collect and sqlite_available and get_collector_state_int and set_collector_state_int
             )
-            # Watermarks can outlive a snapshot that lost GitLab rows (e.g. after force_full).
-            # Refetch pipelines for instances with no GitLab builds in the current snapshot.
             if incremental and not _snapshot_has_gitlab_for_instance(snapshot, gl_key):
                 incremental = False
                 logger.info(
@@ -89,8 +106,8 @@ def collect_gitlab_builds(
 
             for proj_cfg in project_list:
                 check_cancelled()
-                if incremental_stats is not None and incremental:
-                    incremental_stats["gitlab_checked"] = int(incremental_stats.get("gitlab_checked", 0) or 0) + 1
+                if incremental:
+                    _bump_stat("gitlab_checked")
                 proj_id = str(proj_cfg.get("id", ""))
                 critical = bool(proj_cfg.get("critical", False))
                 resolved_id = client._resolve_project(proj_id)
@@ -110,10 +127,7 @@ def collect_gitlab_builds(
                             except (TypeError, ValueError):
                                 top_id = 0
                             if top_id and top_id <= prev:
-                                if incremental_stats is not None:
-                                    incremental_stats["gitlab_skipped"] = (
-                                        int(incremental_stats.get("gitlab_skipped", 0) or 0) + 1
-                                    )
+                                _bump_stat("gitlab_skipped")
                                 continue
 
                 recs = client.fetch_pipelines_for_project(
@@ -143,7 +157,7 @@ def collect_gitlab_builds(
                             except Exception:
                                 pass
 
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "gitlab",
@@ -163,7 +177,7 @@ def collect_gitlab_builds(
             raise
         except Exception as exc:
             logger.error("GitLab [%s] failed: %s", label, exc)
-            health.append(
+            _append_health(
                 {
                     "name": label,
                     "kind": "gitlab",
@@ -172,3 +186,12 @@ def collect_gitlab_builds(
                     "latency_ms": None,
                 }
             )
+
+    instances = [i for i in (cfg.get("gitlab_instances") or []) if i.get("enabled", True)]
+    parallel_util.run_parallel_items(
+        instances,
+        _collect_one_instance,
+        parallel=parallel_util.parallel_instances_enabled(cfg),
+        max_workers=parallel_util.instance_worker_cap(cfg, len(instances)),
+        thread_prefix="gitlab-inst",
+    )

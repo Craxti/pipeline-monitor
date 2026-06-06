@@ -69,7 +69,7 @@ class LogIntelLoop:
         while not self._stop.is_set():
             interval = _DEFAULT_INTERVAL
             try:
-                cfg = load_cfg()
+                cfg = await asyncio.to_thread(load_cfg)
                 web_cfg = cfg.get("web", {}) if isinstance(cfg.get("web"), dict) else {}
                 enabled = bool(web_cfg.get("log_intel_enabled", True))
                 interval = int(web_cfg.get("log_intel_interval_seconds", _DEFAULT_INTERVAL) or _DEFAULT_INTERVAL)

@@ -34,7 +34,11 @@ function openActionConfirm(opts) {
     sub.textContent = opts.subtitle || '';
     tLabel.textContent = opts.targetLabel || t('dash.modal_target');
     tText.textContent = opts.targetText || '';
-    wrap.style.display = opts.targetText ? 'block' : 'none';
+    if (wrap) {
+      const showTarget = !!opts.targetText;
+      wrap.hidden = !showTarget;
+      wrap.style.display = showTarget ? 'block' : 'none';
+    }
     meta.innerHTML = opts.metaHtml || '';
 
     okBtn.textContent = opts.okText || t('dash.action_confirm');
@@ -46,11 +50,13 @@ function openActionConfirm(opts) {
     // Branch input (for GitLab pipeline)
     const branchWrap  = document.getElementById('modal-branch-wrap');
     const branchInput = document.getElementById('modal-branch-input');
-    if (opts.branchValue !== undefined) {
-      branchWrap.style.display = '';
-      branchInput.value = opts.branchValue || 'main';
-    } else {
-      branchWrap.style.display = 'none';
+    if (branchWrap) {
+      const showBranch = opts.branchValue !== undefined;
+      branchWrap.hidden = !showBranch;
+      branchWrap.style.display = showBranch ? '' : 'none';
+    }
+    if (branchInput) {
+      if (opts.branchValue !== undefined) branchInput.value = opts.branchValue || 'main';
     }
 
     const cleanup = () => {
@@ -357,11 +363,43 @@ function globalSearch(q) {
       if (tr.classList.contains('empty-row') || tr.classList.contains('load-more-row')) return;
       // Build group headers: match is decided after data rows (headers rarely contain job names).
       if (id === 'tbody-builds' && tr.classList.contains('src-group-row') && _gsQuery) return;
+      if (id === 'tbody-tests' && tr.classList.contains('test-run-child') && _gsQuery) return;
       const hay = _globalSearchRowHaystack(tr);
       const matches = !_gsQuery || hay.includes(_gsQuery);
       tr.classList.toggle('row-hidden-search', !matches);
     });
   });
+
+  const tbodyTests = document.getElementById('tbody-tests');
+  if (tbodyTests) {
+    tbodyTests.querySelectorAll('tr.gs-reveal-match').forEach((tr) => tr.classList.remove('gs-reveal-match'));
+    if (_gsQuery) {
+      tbodyTests.querySelectorAll('tr.test-run-child').forEach((tr) => {
+        if (tr.classList.contains('empty-row') || tr.classList.contains('load-more-row')) return;
+        if (!tr.classList.contains('row-hidden-search')) tr.classList.add('gs-reveal-match');
+      });
+      const groupHasVisible = {};
+      tbodyTests.querySelectorAll('tr.test-run-child').forEach((tr) => {
+        if (tr.classList.contains('empty-row') || tr.classList.contains('load-more-row')) return;
+        const g = tr.getAttribute('data-tgroup');
+        if (!g) return;
+        if (!tr.classList.contains('row-hidden-search')) groupHasVisible[g] = true;
+      });
+      tbodyTests.querySelectorAll('tr.test-group-row').forEach((tr) => {
+        const g = tr.getAttribute('data-tgroup');
+        const dn = (tr.getAttribute('data-test-name') || '').toLowerCase();
+        const ds = (tr.getAttribute('data-test-suite') || '').toLowerCase();
+        const parentMatch = !_gsQuery || dn.includes(_gsQuery) || ds.includes(_gsQuery) || !tr.classList.contains('row-hidden-search');
+        const childMatch = g && groupHasVisible[g];
+        tr.classList.toggle('row-hidden-search', !(parentMatch || childMatch));
+        if (childMatch && g) {
+          try { applyTestGroupVisibility(g); } catch { /* ignore */ }
+        }
+      });
+    } else {
+      tbodyTests.querySelectorAll('tr.test-group-row, tr.test-run-child').forEach((tr) => tr.classList.remove('row-hidden-search'));
+    }
+  }
 
   const tbodyBuilds = document.getElementById('tbody-builds');
   if (tbodyBuilds) {
@@ -628,7 +666,6 @@ let _buildsHours = 0;
 let _testsHours = 0;
 /** Top failures panel: 0 = whole snapshot, else last N days by test timestamp */
 let _failuresDays = 0;
-let _svcProblemsOnly = false;
 let _persistedEvents = [];
 let _lastSnap = null;
 let _topAgeBaseSec = null;
@@ -654,7 +691,6 @@ function toggleTestsTimeFilter(hours) {
   }
   try { localStorage.setItem('cimon-tests-hours', String(_testsHours)); } catch {}
   updateFilterSummary();
-  resetFailures();
   resetTests();
 }
 
@@ -691,11 +727,9 @@ function toggleTimeFilter(hours) {
   const wasActive = _buildsHours === hours;
   _buildsHours = wasActive ? 0 : hours;
 
-  document.querySelectorAll('.time-filter-btn').forEach(b => b.classList.remove('active'));
+  _clearTimeFilterBtns('builds');
   if (!wasActive) {
-    const id = hours === 24 ? 'tf-24h' : 'tf-7d';
-    const el = document.getElementById(id);
-    if (el) el.classList.add('active');
+    _activateTimeFilterBtn(hours === 24 ? 'tf-24h' : 'tf-7d');
   }
   try {
     localStorage.setItem('cimon-builds-hours', String(_buildsHours));
@@ -708,8 +742,8 @@ function applyBuildPreset(preset) {
   if (preset === 'failed24') {
     document.getElementById('f-bstatus').value = 'failure';
     _buildsHours = 24;
-    document.querySelectorAll('.time-filter-btn').forEach((b) => b.classList.remove('active'));
-    document.getElementById('tf-24h')?.classList.add('active');
+    _clearTimeFilterBtns('builds');
+    _activateTimeFilterBtn('tf-24h');
     try { localStorage.setItem('cimon-builds-hours', '24'); } catch { /* ignore */ }
     resetBuilds();
     updateFilterSummary();
@@ -719,7 +753,7 @@ function applyBuildPreset(preset) {
     document.getElementById('f-bstatus').value = '';
     document.getElementById('f-job').value = '';
     _buildsHours = 0;
-    document.querySelectorAll('.time-filter-btn').forEach((b) => b.classList.remove('active'));
+    _clearTimeFilterBtns('builds');
     try { localStorage.setItem('cimon-builds-hours', '0'); } catch { /* ignore */ }
     resetBuilds();
     updateFilterSummary();

@@ -51,5 +51,8 @@ def make_lifespan(
                 await shutdown_self_update()
             await shutdown_proxy()
             await stop_collect_task(collect_task)
+            from web.services.collect_executor import shutdown_collect_executor
+
+            await asyncio.to_thread(shutdown_collect_executor)
 
     return _lifespan

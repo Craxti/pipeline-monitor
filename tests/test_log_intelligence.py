@@ -15,6 +15,24 @@ def test_extract_template_normalizes_numbers():
     assert "10.0.0.1" not in tpl
 
 
+def test_extract_template_strips_bracket_timestamp():
+    line = (
+        "[2024-01-15 10:00:00,123] INFO Reading configuration from: "
+        "/etc/kafka/zookeeper.properties (org.apache.zookeeper.server.quorum.QuorumPeerConfig)"
+    )
+    tpl = extract_template(line)
+    assert not tpl.startswith("[")
+    assert "<N>-<N>-<N>" not in tpl
+    assert "Reading configuration from:" in tpl
+    assert "QuorumPeerConfig" in tpl
+
+
+def test_extract_template_strips_bracket_timestamp_after_normalization():
+    tpl = extract_template("[2024-01-15 10:00:00,123] WARN slow query took 42 ms")
+    assert tpl.startswith("WARN") or tpl.startswith("slow")
+    assert "[<N>" not in tpl
+
+
 def test_container_model_clustering_and_correlation():
     m = ContainerLogModel(container="app", docker_host="")
     text = "\n".join(

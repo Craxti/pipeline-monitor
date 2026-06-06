@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Awaitable, Callable
 
 from web.services import collect_interval_policy as _cip
@@ -19,7 +20,7 @@ async def meta_payload(
     data_revision: int,
 ) -> dict[str, Any]:
     """Build a meta payload used by the frontend for quick polling."""
-    cfg = load_yaml_config()
+    cfg = await asyncio.to_thread(load_yaml_config)
     w_cfg = cfg.get("web", {})
     interval = int(w_cfg.get("collect_interval_seconds", 300))
     stale_threshold = interval * 2
@@ -35,6 +36,12 @@ async def meta_payload(
     if snap:
         job_analytics = job_build_analytics(snap)
 
+    correlation = await asyncio.to_thread(
+        _correlation.correlation_last_hour,
+        snap=snap,
+        load_events=load_events,
+    )
+
     return {
         "data_revision": data_revision,
         "snapshot": _freshness.snapshot_freshness(snap=snap, stale_threshold_seconds=stale_threshold),
@@ -44,7 +51,7 @@ async def meta_payload(
             "last_error": collect_state["last_error"],
             "interval_seconds": interval,
         },
-        "correlation": _correlation.correlation_last_hour(snap=snap, load_events=load_events),
+        "correlation": correlation,
         "job_analytics": job_analytics,
         "parse_coverage": (getattr(snap, "collect_meta", None) if snap else None) or {},
         "web_ui": {

@@ -6,6 +6,11 @@ let _refreshAllPending = false;
 
 /** Full dashboard reload. Single-flight: overlapping calls (SSE collect_done + pollCollect, rapid R key) coalesce. */
 async function refreshAll() {
+  // While collect runs, only refresh the collect bar — table/API reloads freeze the UI.
+  if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) {
+    pollCollect();
+    return;
+  }
   if (_refreshAllRunning) {
     _refreshAllPending = true;
     return;
@@ -22,22 +27,45 @@ async function refreshAll() {
         s.done = false;
         s.loading = false;
       });
+      const skipBuilds = typeof shouldSkipTableReloadDuringCollect === 'function'
+        && shouldSkipTableReloadDuringCollect('builds', document.getElementById('tbody-builds'));
+      const skipTests = typeof shouldSkipTableReloadDuringCollect === 'function'
+        && shouldSkipTableReloadDuringCollect('tests', document.getElementById('tbody-tests'));
+      const skipFailures = typeof shouldSkipTableReloadDuringCollect === 'function'
+        && shouldSkipTableReloadDuringCollect('failures', document.getElementById('tbody-failures'));
+      const skipSvcs = typeof shouldSkipTableReloadDuringCollect === 'function'
+        && shouldSkipTableReloadDuringCollect('svcs', document.getElementById('tbody-svcs'));
       ['builds', 'failures', 'tests', 'services'].forEach((k) => {
+        if (k === 'builds' && skipBuilds) return;
+        if (k === 'tests' && skipTests) return;
+        if (k === 'failures' && skipFailures) return;
+        if (k === 'services' && skipSvcs) return;
         try { abortFetchKey(k); } catch { /* ignore */ }
       });
       // Do not blank tables on refresh; keep current rows until new data arrives.
+      if (skipBuilds) { _state.builds.done = true; _state.builds.loading = false; }
+      if (skipTests) { _state.tests.done = true; _state.tests.loading = false; }
+      if (skipFailures) { _state.failures.done = true; _state.failures.loading = false; }
+      if (skipSvcs) { _state.svcs.done = true; _state.svcs.loading = false; }
 
       // Update dropdowns (can change after Collect / settings updates).
       await populateSourcesAndInstances();
-      await Promise.all([
+      const reloads = [
         loadSummary(),
-        loadBuilds(),
-        loadFailures(),
-        loadTests(),
-        loadUptimeData().then(() => loadServices()),
         loadSystemStats(),
-      ]);
+      ];
+      if (!skipBuilds) reloads.push(loadBuilds());
+      if (!skipFailures) reloads.push(loadFailures());
+      if (!skipTests) reloads.push(loadTests());
+      if (!skipSvcs) reloads.push(loadUptimeData().then(() => loadServices()));
+      else reloads.push(loadUptimeData());
+      await Promise.all(reloads);
       if (!_refreshAllPending) break;
+    }
+    if (_dashTab === 'trends' && typeof loadTrends === 'function') {
+      if (!(typeof shouldSkipTrendsReloadDuringCollect === 'function' && shouldSkipTrendsReloadDuringCollect())) {
+        loadTrends(typeof _trendsViewDays === 'number' ? _trendsViewDays : 14, null);
+      }
     }
   } finally {
     _refreshAllRunning = false;
@@ -79,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Read filters from URL
   _readURLFilters();
+  try { _migrateLegacyTestSourceSelect(); } catch { /* ignore */ }
   _hookFilterURLSync();
 
   // Restore tests time filter + quick source buttons
@@ -102,14 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
   updateFailuresExportLinks();
   _syncTestSourceQuickButtons();
 
-  // Restore services "problems only" toggle
+  // Migrate legacy services "problems only" checkbox → status select
   try {
-    _svcProblemsOnly = (localStorage.getItem('cimon-svc-problems') || '') === '1';
-    const cb = document.getElementById('sv-problems-only');
-    if (cb) cb.checked = _svcProblemsOnly;
-    if (_svcProblemsOnly) {
+    if (localStorage.getItem('cimon-svc-problems') === '1') {
       const sel = document.getElementById('f-svstatus');
-      if (sel) sel.value = 'problems';
+      if (sel && !sel.value) sel.value = 'problems';
+      localStorage.removeItem('cimon-svc-problems');
     }
   } catch { /* ignore */ }
 
@@ -141,6 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (e.key !== 'Escape') return;
+    const tcModal = document.getElementById('trends-chart-modal');
+    if (tcModal && tcModal.classList.contains('open')) {
+      if (typeof closeTrendsChartModal === 'function') closeTrendsChartModal();
+      return;
+    }
     const rb = document.getElementById('runbook-modal');
     if (rb && rb.classList.contains('open')) closeRunbook();
   });
@@ -170,6 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!DASH_TABS.includes(initTab)) initTab = 'overview';
   setDashboardTab(initTab, { skipUrl: true });
   if (initTab === 'log-intel' && typeof loadLogIntelList === 'function') loadLogIntelList();
+  if (initTab === 'trends') {
+    try {
+      if (typeof initTrendsFiltersFromStorage === 'function') initTrendsFiltersFromStorage();
+    } catch { /* ignore */ }
+    if (typeof loadTrends === 'function') {
+      loadTrends(typeof _trendsViewDays === 'number' ? _trendsViewDays : 14, null);
+    }
+  }
 
   // Render starred builds panel
   _renderFavPanel();
