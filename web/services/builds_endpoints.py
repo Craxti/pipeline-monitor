@@ -9,6 +9,104 @@ from typing import Any, Awaitable, Callable
 from fastapi import HTTPException
 
 
+def _history_sqlite_available() -> bool:
+    try:
+        from web.services import sqlite_imports as sq
+
+        return bool(sq.SQLITE_AVAILABLE)
+    except Exception:
+        return False
+
+
+def _history_builds_days(hours: int) -> int:
+    if hours and int(hours) > 0:
+        return max(1, int((int(hours) + 23) / 24))
+    try:
+        from web.db import _get_history_retention_days
+
+        retention = int(_get_history_retention_days() or 0)
+        return retention if retention > 0 else 90
+    except Exception:
+        return 90
+
+
+def _api_builds_from_history(
+    snap: Any,
+    cfg: dict,
+    *,
+    inst_label_for_build_with_cfg: Callable[[Any, dict], str],
+    normalize_build_status: Callable[[str], str],
+    job_build_analytics: Callable[[Any], dict[str, dict]],
+    page: int,
+    per_page: int,
+    source: str,
+    status: str,
+    job: str,
+    hours: int,
+) -> dict | None:
+    if not _history_sqlite_available():
+        return None
+    try:
+        from web.db import ensure_database_initialized, query_builds_history
+        from models.models import BuildRecord, normalize_build_status as norm_build_st
+    except ImportError:
+        return None
+    if not ensure_database_initialized():
+        return None
+
+    days = _history_builds_days(hours)
+    data = query_builds_history(
+        job=job,
+        source=source,
+        status=status,
+        page=page,
+        per_page=per_page,
+        days=days,
+    )
+    if int(data.get("total") or 0) <= 0 and not data.get("items"):
+        return None
+
+    job_ctx = job_build_analytics(snap)
+    out_items: list[dict] = []
+    for row in data.get("items") or []:
+        try:
+            st_raw = norm_build_st(row.get("status") or "unknown")
+            started = row.get("started_at")
+            if isinstance(started, str) and started:
+                try:
+                    started = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                except Exception:
+                    started = None
+            b = BuildRecord(
+                source=row.get("source") or "unknown",
+                job_name=row.get("job_name") or "",
+                build_number=row.get("build_number"),
+                status=st_raw,
+                started_at=started,
+                duration_seconds=row.get("duration_seconds"),
+                branch=row.get("branch"),
+                commit_sha=row.get("commit_sha"),
+                url=row.get("url"),
+                critical=bool(row.get("critical")),
+            )
+        except Exception:
+            continue
+        inst = inst_label_for_build_with_cfg(b, cfg) or ""
+        payload = json.loads(b.model_dump_json())
+        payload["analytics"] = job_ctx.get(b.job_name, {})
+        payload["instance"] = inst
+        out_items.append(payload)
+
+    return {
+        "items": out_items,
+        "page": page,
+        "per_page": per_page,
+        "total": int(data.get("total") or 0),
+        "has_more": bool(data.get("has_more")),
+        "group_counts": {},
+    }
+
+
 def _api_builds_sync(
     snap: Any,
     cfg: dict,
@@ -25,6 +123,23 @@ def _api_builds_sync(
     job: str,
     hours: int,
 ) -> dict:
+    if not (instance or "").strip():
+        hist = _api_builds_from_history(
+            snap,
+            cfg,
+            inst_label_for_build_with_cfg=inst_label_for_build_with_cfg,
+            normalize_build_status=normalize_build_status,
+            job_build_analytics=job_build_analytics,
+            page=page,
+            per_page=per_page,
+            source=source,
+            status=status,
+            job=job,
+            hours=hours,
+        )
+        if hist is not None:
+            return hist
+
     items = [b for b in (snap.builds or []) if is_snapshot_build_enabled(b, cfg)]
     if source:
         items = [b for b in items if (b.source or "").lower() == source.lower()]

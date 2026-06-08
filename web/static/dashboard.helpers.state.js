@@ -8,6 +8,7 @@ let _lastIcReasonFacts = null;
 let _lastIncidentSeverity = 'ok';
 let _collectAutoRefreshTs = 0;
 let _logIntelSelectedKey = '';
+let _logIntelSelectedModelId = 0;
 let _logIntelPollTs = 0;
 let _logIntelGraph = null;
 let _logIntelCorrData = null;
@@ -50,7 +51,7 @@ const DASH_TAB_META = {
   system: { titleKey: 'tabNav.system', subKey: 'tabNav.system_sub' },
   trends: { titleKey: 'tabNav.trends', subKey: 'tabNav.trends_sub' },
   incidents: { titleKey: 'tabNav.incidents', subKey: 'tabNav.incidents_sub' },
-  'log-intel': { titleKey: 'tabNav.log_intel', subKey: 'tabNav.log_intel_sub' },
+  'log-intel': { titleKey: 'tabNav.service_intel', subKey: 'tabNav.service_intel_sub' },
   har: { titleKey: 'tabNav.har', subKey: 'tabNav.har_sub' },
 };
 
@@ -108,6 +109,17 @@ function setDashboardTab(name, opts) {
   if (name !== 'test-runs') abortFetchKey('tests');
   if (name !== 'test-failures') abortFetchKey('failures');
   if (name !== 'services') abortFetchKey('services');
+
+  if (name === 'builds' && typeof loadBuilds === 'function') {
+    const s = _state.builds;
+    const tb = document.getElementById('tbody-builds');
+    if (needsFullTableLoad(s, tb)) scheduleTablePageChain(s, loadBuilds, tb);
+  }
+  if (name === 'test-runs' && typeof loadTests === 'function') {
+    const s = _state.tests;
+    const tb = document.getElementById('tbody-tests');
+    if (needsFullTableLoad(s, tb)) scheduleTablePageChain(s, loadTests, tb);
+  }
 }
 
 function goToInTab(tab, elId) {

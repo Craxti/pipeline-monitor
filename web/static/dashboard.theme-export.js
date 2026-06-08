@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 function _applyTheme(theme) {
   document.documentElement.classList.toggle('light', theme === 'light');
-  const btn = document.getElementById('btn-theme');
+  const btn = document.getElementById('btn-theme-settings') || document.getElementById('btn-theme');
   if (btn) btn.setAttribute('title', theme === 'light' ? t('dash.theme_light_hint') : t('dash.theme_dark_hint'));
   if (btn) {
     btn.textContent = '';

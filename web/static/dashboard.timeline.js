@@ -84,7 +84,6 @@ function renderTimeline(builds, services, persistedList) {
     if (seen.has(k)) continue;
     seen.add(k);
     deduped.push(ev);
-    if (deduped.length >= 220) break;
   }
 
   if (!deduped.length) {
@@ -93,7 +92,7 @@ function renderTimeline(builds, services, persistedList) {
     return;
   }
 
-  list.innerHTML = deduped.slice(0, 200).map(ev => `
+  list.innerHTML = deduped.map(ev => `
     <div class="tl-item">
       <div class="tl-icon ${_escHtml(ev.cls)}">${_escHtml(ev.icon)}</div>
       <div class="tl-body">

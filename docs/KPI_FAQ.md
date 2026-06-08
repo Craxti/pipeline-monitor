@@ -15,11 +15,17 @@ Possible reasons:
 ## Which filters affect KPI cards?
 
 For Trends KPI cards:
+
 - `source`
 - `instance`
 - selected period (`days`)
 
-Filters like `tstatus` and `svstatus` belong to other tabs and do not alter KPI computations.
+Filters like `tstatus`, `svstatus`, and Incidents tab state do not alter KPI computations.
+
+## Service incidents vs CI incident bundle
+
+- **Service incidents** (`/api/service-incidents`) come from log intelligence anomalies on Docker/external services.
+- **CI incident bundle** (`/api/incident*`) aggregates current snapshot build/test failures for export — separate from service incidents.
 
 ## How to verify KPI data path quickly?
 

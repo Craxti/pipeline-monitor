@@ -16,6 +16,7 @@ def collect_status_payload(
     collect_state: dict,
     auto_collect_enabled: bool,
     auto_collect_enabled_at_iso: str | None,
+    data_revision: int | None = None,
 ) -> dict:
     """Build collection status response for the UI."""
     next_in = None
@@ -47,8 +48,11 @@ def collect_status_payload(
                     next_in = None
     except Exception:
         next_in = None
-    return {
+    out = {
         **collect_state,
         "auto_collect_enabled": bool(auto_collect_enabled),
         "next_collect_in_seconds": next_in,
     }
+    if data_revision is not None:
+        out["data_revision"] = int(data_revision)
+    return out

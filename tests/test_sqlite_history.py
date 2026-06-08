@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from models.models import BuildRecord, BuildStatus, CISnapshot, ServiceStatus
+from models.models import BuildRecord, BuildStatus, CISnapshot, ServiceStatus, TestRecord
 from web import db as dbmod
 
 
@@ -91,6 +91,43 @@ class TestFlakyAnalysis:
 
         flaky = dbmod.flaky_analysis(threshold=0.4, min_runs=4, days=30)
         assert any(x["job"] == "job-flaky" for x in flaky)
+
+
+class TestTestsHistoryAllureMeta:
+    def test_persists_and_reads_allure_fields(self, isolated_db, monkeypatch) -> None:
+        # load_yaml_config() re-opens the production DB during retention cleanup — keep isolated path.
+        monkeypatch.setattr(dbmod, "_run_retention_cleanup_if_due", lambda: None)
+        now = datetime.now(tz=timezone.utc)
+        snap = CISnapshot(
+            collected_at=now,
+            tests=[
+                TestRecord(
+                    source="jenkins_unified",
+                    source_instance="Jenkins ARTIMATE",
+                    suite="job/ui-tests",
+                    test_name="test_login",
+                    status="failed",
+                    failure_message="assert 1 == 2",
+                    timestamp=now,
+                    build_number=99,
+                    allure_uid="uid-abc",
+                    allure_description="Steps to reproduce",
+                    allure_attachments=[
+                        {"name": "shot.png", "type": "image/png", "source": "attachments/shot.png"},
+                    ],
+                ),
+            ],
+        )
+        dbmod.append_snapshot(snap)
+
+        data = dbmod.query_tests_history(name="test_login", page=1, per_page=10)
+        assert data["total"] == 1
+        item = data["items"][0]
+        assert item["source_instance"] == "Jenkins ARTIMATE"
+        assert item["build_number"] == 99
+        assert item["allure_uid"] == "uid-abc"
+        assert item["allure_description"] == "Steps to reproduce"
+        assert item["allure_attachments"] and item["allure_attachments"][0]["source"] == "attachments/shot.png"
 
 
 class TestServiceUptime:

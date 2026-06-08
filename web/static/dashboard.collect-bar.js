@@ -30,6 +30,16 @@ function updateCollectBar(state) {
   _dashIsCollecting = !!(state && state.is_collecting);
   if (_dashIsCollecting && !wasCollecting) {
     try { pauseTableLoadsForCollect(); } catch { /* ignore */ }
+    try {
+      if (typeof notifyCollectCountsChanged === 'function' && state && state.progress_counts) {
+        notifyCollectCountsChanged(
+          state.progress_counts,
+          state.phase || null,
+          state.data_revision != null ? Number(state.data_revision) : null,
+          state.active_phases
+        );
+      }
+    } catch { /* ignore */ }
   }
 
   const hasErr = state.last_error != null && String(state.last_error).trim() !== '';
@@ -65,9 +75,13 @@ function updateCollectBar(state) {
       const cnt = (typeof counts.builds === 'number' || typeof counts.tests === 'number' || typeof counts.services === 'number')
         ? ` · builds=${counts.builds ?? 0} tests=${counts.tests ?? 0} svcs=${counts.services ?? 0}`
         : '';
-      const sub = state.progress_sub
+      let sub = state.progress_sub
         ? `${state.progress_sub} · ${t('dash.collect_elapsed')}: ${fmtSec(sec)}${cnt}`
         : `${t('dash.collect_elapsed')}: ${fmtSec(sec)}${cnt}`;
+      const ap = Array.isArray(state.active_phases) ? state.active_phases.filter(Boolean) : [];
+      if (ap.length > 1) {
+        sub = `${ap.length} sources in parallel · ${sub}`;
+      }
       _setCollectLines(main, sub);
     };
     tickEl();
@@ -137,6 +151,10 @@ function updateCollectBar(state) {
 }
 
 let _prevCollecting = false;
+let _lastPollProgressCounts = null;
+let _lastPollPhase = null;
+let _lastPollRevision = null;
+let _lastCollectLivePollTs = 0;
 
 async function pollCollect() {
   const res = await fetch(apiUrl('api/collect/status')).catch(()=>null);
@@ -144,12 +162,35 @@ async function pollCollect() {
   const state = await res.json();
   updateCollectBar(state);
   if (state.is_collecting) {
+    const pc = state.progress_counts;
+    const phase = state.phase || null;
+    const revision = state.data_revision != null ? Number(state.data_revision) : null;
+    if (pc && typeof notifyCollectCountsChanged === 'function') {
+      const countsChanged = !_lastPollProgressCounts
+        || Number(_lastPollProgressCounts.builds || 0) !== Number(pc.builds || 0)
+        || Number(_lastPollProgressCounts.tests || 0) !== Number(pc.tests || 0)
+        || Number(_lastPollProgressCounts.services || 0) !== Number(pc.services || 0);
+      const phaseChanged = phase != null && String(phase) !== String(_lastPollPhase || '');
+      const revisionChanged = revision != null && revision !== _lastPollRevision;
+      const heartbeat = (Date.now() - (_lastCollectLivePollTs || 0)) >= 4500;
+      if (countsChanged || phaseChanged || revisionChanged || heartbeat) {
+        _lastPollProgressCounts = { builds: pc.builds, tests: pc.tests, services: pc.services };
+        _lastPollPhase = phase;
+        if (revision != null) _lastPollRevision = revision;
+        _lastCollectLivePollTs = Date.now();
+        notifyCollectCountsChanged(pc, phase, revision, state.active_phases);
+      }
+    }
     if (!_ivCollectFastPoll) {
-      _ivCollectFastPoll = setInterval(() => { pollCollect(); }, 2500);
+      _ivCollectFastPoll = setInterval(() => { pollCollect(); }, 1500);
     }
   } else if (_ivCollectFastPoll) {
     clearInterval(_ivCollectFastPoll);
     _ivCollectFastPoll = null;
+    _lastPollProgressCounts = null;
+    _lastPollPhase = null;
+    _lastPollRevision = null;
+    _lastCollectLivePollTs = 0;
   }
   if (_prevCollecting && !state.is_collecting) {
     try {

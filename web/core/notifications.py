@@ -148,40 +148,7 @@ def detect_state_changes(
                 _append_or_group_event(ev=ev, notifications=notifications, append_event=append_event)
         prev_svc_statuses[name] = curr
 
-    # Incident (aggregate) notification: emit once when an incident first appears.
-    try:
-        failed_builds = sum(1 for b in snapshot.builds if getattr(b, "status_normalized", None) in fail_st)
-        failed_tests = sum(1 for t in snapshot.tests if getattr(t, "status_normalized", None) in ("failed", "error"))
-        down_svcs = sum(1 for s in snapshot.services if getattr(s, "status_normalized", None) == "down")
-        has_critical = any(
-            bool(getattr(b, "critical", False)) and getattr(b, "status_normalized", None) in fail_st
-            for b in snapshot.builds
-        )
-        active = (failed_builds > 0) or (failed_tests > 0) or (down_svcs > 0)
-        sig = (failed_builds, failed_tests, down_svcs, bool(has_critical))
-        if active and not prev_incident_active:
-            notify_id_seq += 1
-            lvl = "error" if (down_svcs > 0 or has_critical) else "warn"
-            ev = {
-                "id": notify_id_seq,
-                "ts": now_iso,
-                "kind": "incident",
-                "level": lvl,
-                "title": "Incident detected",
-                "detail": (
-                    f"Failed builds: {failed_builds}, " f"failed tests: {failed_tests}, " f"services down: {down_svcs}"
-                ),
-                "url": "/?tab=incidents",
-                "critical": bool(has_critical) or (down_svcs > 0),
-            }
-            _append_or_group_event(ev=ev, notifications=notifications, append_event=append_event)
-        prev_incident_active = active
-        prev_incident_sig = sig
-    except Exception:
-        # Never block build/service notifications on incident aggregation.
-        pass
-
-    # Trim ring-buffer
+    # Incidents are created only via service analysis (anomaly → service_incidents).
     if notify_max > 0 and len(notifications) > notify_max:
         del notifications[: len(notifications) - notify_max]
 

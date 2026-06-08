@@ -73,6 +73,8 @@ function openActionConfirm(opts) {
     const onKey = (e) => { if (e.key === 'Escape') finish(null); };
 
     document.getElementById('modal-cancel').onclick = () => finish(null);
+    const closeX = document.getElementById('modal-close-x');
+    if (closeX) closeX.onclick = () => finish(null);
     okBtn.onclick = () => finish(true);
     ov.onclick = (e) => { if (e.target === ov) finish(null); };
 
@@ -448,6 +450,49 @@ let _notifMaxId = 0;
 let _notifSeen = 0;
 let _notifClientExtraUnread = 0;
 let _staleDataNotifEpisodeShown = false;
+let _notifItems = [];
+
+const _NOTIF_GROUP_ORDER = ['error', 'warn', 'ok'];
+const _NOTIF_GROUP_LABEL = {
+  error: 'dash.notif_group_critical',
+  warn: 'dash.notif_group_warnings',
+  ok: 'dash.notif_group_info',
+};
+
+function _notifGroupKey(n) {
+  if (n.level === 'error') return 'error';
+  if (n.level === 'warn') return 'warn';
+  return 'ok';
+}
+
+function _notifEmptyHtml() {
+  return `<div class="notif-empty-state">
+    <div class="notif-empty-ico" aria-hidden="true"></div>
+    <div class="notif-empty-title">${esc(t('dash.notif_empty'))}</div>
+    <div class="notif-empty-hint">${esc(t('dash.notif_empty_hint'))}</div>
+  </div>`;
+}
+
+function _renderNotifPanel() {
+  const list = document.getElementById('notif-list');
+  if (!list) return;
+  if (!_notifItems.length) {
+    list.innerHTML = _notifEmptyHtml();
+    return;
+  }
+  const groups = { error: [], warn: [], ok: [] };
+  _notifItems.forEach((n) => {
+    groups[_notifGroupKey(n)].push(n);
+  });
+  let html = '';
+  _NOTIF_GROUP_ORDER.forEach((k) => {
+    if (!groups[k].length) return;
+    html += `<div class="notif-group"><div class="notif-group-title">${esc(t(_NOTIF_GROUP_LABEL[k]))}</div>`;
+    groups[k].forEach((n) => { html += _renderNotifItem(n); });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
 
 function _notifCombinedUnread() {
   return Math.max(0, _notifMaxId - _notifSeen) + _notifClientExtraUnread;
@@ -470,11 +515,7 @@ function _maybeNotifySnapshotStale(effectivelyStale) {
   if (_staleDataNotifEpisodeShown) return;
   _staleDataNotifEpisodeShown = true;
 
-  const list = document.getElementById('notif-list');
-  if (!list) return;
-
-  list.querySelectorAll('.notif-item[data-client-kind="stale-data"]').forEach((el) => el.remove());
-
+  _notifItems = _notifItems.filter((n) => n.clientKind !== 'stale-data');
   const item = {
     level: 'warn',
     title: t('dash.stale_data_notif_title'),
@@ -482,9 +523,8 @@ function _maybeNotifySnapshotStale(effectivelyStale) {
     ts: Date.now(),
     clientKind: 'stale-data',
   };
-  const wasEmpty = list.querySelector('.notif-empty');
-  if (wasEmpty) list.innerHTML = '';
-  list.insertAdjacentHTML('afterbegin', _renderNotifItem(item));
+  _notifItems.unshift(item);
+  _renderNotifPanel();
 
   const panel = document.getElementById('notif-panel');
   if (panel && !panel.classList.contains('open')) {
@@ -530,8 +570,8 @@ function _updateNotifBadge(count) {
 }
 
 function clearNotifications() {
-  const list = document.getElementById('notif-list');
-  if (list) list.innerHTML = '<div class="notif-empty">No state-change events yet</div>';
+  _notifItems = [];
+  _renderNotifPanel();
   _notifMaxId = 0; _notifSeen = 0;
   _notifClientExtraUnread = 0;
   _staleDataNotifEpisodeShown = false;
@@ -559,23 +599,25 @@ async function pollNotifications() {
   const data = await res.json();
   if (!data.items || !data.items.length) return;
 
-  const list = document.getElementById('notif-list');
   const panel = document.getElementById('notif-panel');
-  const wasEmpty = list.querySelector('.notif-empty');
-
-  if (wasEmpty) list.innerHTML = '';
-
-  data.items.forEach(n => {
-    list.insertAdjacentHTML('afterbegin', _renderNotifItem(n));
+  data.items.forEach((n) => {
+    _notifItems.unshift(n);
     if (n.id > _notifMaxId) _notifMaxId = n.id;
   });
+  _renderNotifPanel();
 
   const newCount = _notifCombinedUnread();
   if (newCount > 0 && !panel.classList.contains('open')) {
     _updateNotifBadge(newCount);
-    // Show a toast for each new critical notification
-    data.items.filter(n => n.level === 'error').forEach(n => {
-      showToast(n.title, 'err');
+    data.items.forEach((n) => {
+      const kind = String(n.kind || '');
+      if (kind === 'service_incident') {
+        showToast(n.title, n.level === 'error' ? 'err' : 'warn');
+      } else if (kind === 'service_incident_resolved') {
+        showToast(n.title, 'ok');
+      } else if (n.level === 'error') {
+        showToast(n.title, 'err');
+      }
     });
   }
 }
@@ -694,35 +736,6 @@ function toggleTestsTimeFilter(hours) {
   resetTests();
 }
 
-function setTestSourceQuick(v) {
-  const sel = document.getElementById('f-tsource');
-  if (!sel) return;
-  sel.value = v;
-  const fs = document.getElementById('f-fsource');
-  if (fs) {
-    for (let i = 0; i < fs.options.length; i++) {
-      if (fs.options[i].value === v) {
-        fs.value = v;
-        break;
-      }
-    }
-  }
-  updateTestsExportLinks();
-  _syncTestSourceQuickButtons();
-  resetFailures();
-  resetTests();
-}
-
-function _syncTestSourceQuickButtons() {
-  const v = document.getElementById('f-tsource')?.value || '';
-  const b1 = document.getElementById('tsrc-real');
-  const b2 = document.getElementById('tsrc-jenkins');
-  const b3 = document.getElementById('tsrc-synth');
-  if (b1) b1.classList.toggle('lv-active', v === 'real');
-  if (b2) b2.classList.toggle('lv-active', v === 'jenkins' || v === 'jenkins_unified' || v === 'jenkins_merged');
-  if (b3) b3.classList.toggle('lv-active', v === 'synthetic');
-}
-
 function toggleTimeFilter(hours) {
   const wasActive = _buildsHours === hours;
   _buildsHours = wasActive ? 0 : hours;
@@ -735,7 +748,7 @@ function toggleTimeFilter(hours) {
     localStorage.setItem('cimon-builds-hours', String(_buildsHours));
   } catch { /* ignore */ }
   updateFilterSummary();
-  resetBuilds();
+  resetBuilds(false, true);
 }
 
 function applyBuildPreset(preset) {
@@ -745,7 +758,7 @@ function applyBuildPreset(preset) {
     _clearTimeFilterBtns('builds');
     _activateTimeFilterBtn('tf-24h');
     try { localStorage.setItem('cimon-builds-hours', '24'); } catch { /* ignore */ }
-    resetBuilds();
+    resetBuilds(false, true);
     updateFilterSummary();
     goToInTab('builds', 'panel-builds');
   } else if (preset === 'starred') {
@@ -755,7 +768,7 @@ function applyBuildPreset(preset) {
     _buildsHours = 0;
     _clearTimeFilterBtns('builds');
     try { localStorage.setItem('cimon-builds-hours', '0'); } catch { /* ignore */ }
-    resetBuilds();
+    resetBuilds(false, true);
     updateFilterSummary();
     goToInTab('builds', 'panel-favourites');
   }

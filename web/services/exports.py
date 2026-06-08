@@ -134,6 +134,7 @@ async def export_tests(
     name: str = "",
     hours: int = 0,
     source: str = "",
+    instance: str = "",
 ) -> Response:
     """Export tests as CSV/XLSX."""
     snap = _must_snapshot(load_snapshot)
@@ -156,6 +157,8 @@ async def export_tests(
         ]
     if source:
         items = tests_analytics.filter_tests_by_source(items, source)
+    if instance:
+        items = tests_analytics.filter_tests_by_instance(items, instance)
 
     headers = [
         "source",
@@ -193,6 +196,7 @@ async def export_failures(
     suite: str = "",
     name: str = "",
     source: str = "",
+    instance: str = "",
     hours: int = 0,
     days: int = 0,
 ) -> Response:
@@ -204,6 +208,7 @@ async def export_failures(
         hours=int(hours or 0),
         days=int(days or 0),
     )
+    tests_win = tests_analytics.filter_tests_by_instance(tests_win, instance)
     agg = tests_analytics.aggregate_top_failing_tests(
         tests_analytics.filter_tests_by_source(tests_win, source),
         top_n=n,

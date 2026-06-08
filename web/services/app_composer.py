@@ -33,6 +33,7 @@ from web.routes.collect import router as _collect_router
 from web.routes.dashboard import router as _dashboard_router
 from web.routes.incident import router as _incident_router
 from web.routes.log_intel import router as _log_intel_router
+from web.routes.service_incidents import router as _service_incidents_router
 from web.routes.logs import router as _logs_router
 from web.routes.ops import router as _ops_router
 from web.routes.services import router as _services_router
@@ -119,6 +120,7 @@ for __r in (
     _dashboard_router,
     _actions_router,
     _log_intel_router,
+    _service_incidents_router,
     _logs_router,
     _webhooks_router,
 ):

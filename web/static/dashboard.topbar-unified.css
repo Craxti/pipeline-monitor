@@ -1,0 +1,138 @@
+/* Topbar — simplified actions + SVG icons */
+
+.topbar-ico {
+  display: inline-block;
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.topbar-ico--search {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3-3'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3-3'/%3E%3C/svg%3E");
+}
+
+.topbar-ico--refresh {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M21 12a9 9 0 1 1-2.64-6.36'/%3E%3Cpath d='M21 3v6h-6'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath d='M21 12a9 9 0 1 1-2.64-6.36'/%3E%3Cpath d='M21 3v6h-6'/%3E%3C/svg%3E");
+}
+
+.topbar-ico--close-sm {
+  width: 0.75rem;
+  height: 0.75rem;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5'%3E%3Cpath d='M18 6L6 18M6 6l12 12'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5'%3E%3Cpath d='M18 6L6 18M6 6l12 12'/%3E%3C/svg%3E");
+}
+
+.header-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: min(100%, 11rem);
+  max-width: min(16rem, 28vw);
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--control-radius, 0.625rem);
+  border: 1px solid var(--control-border, rgba(148, 163, 184, 0.14));
+  background: var(--surface3);
+}
+
+.header-search #global-search {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  outline: none;
+  padding: 0.15rem 0;
+}
+
+.header-search .global-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 0.35rem;
+}
+
+.header-search .global-search-clear:hover {
+  color: var(--text);
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.topbar-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dash-topbar-actions {
+  gap: 0.4rem;
+}
+
+.dash-topbar-actions .collect-actions-stack {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .topbar-action-btn span:not(.topbar-ico) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .topbar-action-btn {
+    padding: 0.45rem;
+    min-width: 2.125rem;
+    justify-content: center;
+  }
+}
+
+/* Panel toolbar (Tests / Failures / Services) */
+
+.panel-subhint--below-head {
+  margin: 0;
+  padding: 0.35rem 1.15rem 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.panel-toolbar.filter-bar,
+.panel-toolbar.filter-bar.filter-bar--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 18;
+  background: linear-gradient(180deg, var(--surface) 0%, rgba(17, 29, 47, 0.98) 100%);
+  border-bottom: 1px solid var(--shell-line);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+html.light .panel-toolbar.filter-bar {
+  background: linear-gradient(180deg, #fff 0%, rgba(248, 250, 252, 0.98) 100%);
+}
+
+.panel-toolbar .filter-bar__controls.filters {
+  padding: 0.75rem 1.15rem;
+}
+
+.panel-toolbar .filter-bar__summary {
+  padding: 0 1.15rem 0.65rem;
+}
+
+.panel-head-minimal + .panel-toolbar.filter-bar {
+  margin-top: 0;
+}

@@ -23,25 +23,25 @@ def dashboard_summary_payload(
     stale_threshold = interval * 2
     counts: dict[str, int] = {
         "builds": 0,
+        "successful_builds": 0,
         "failed_builds": 0,
         "failed_tests": 0,
         "tests_total": 0,
+        "services_total": 0,
         "services_down": 0,
     }
     if snap:
-        counts["builds"] = len(getattr(snap, "builds", []) or [])
-        counts["failed_builds"] = sum(
-            1
-            for b in (getattr(snap, "builds", []) or [])
-            if _sp.is_build_problem(getattr(b, "status_normalized", None))
-        )
+        builds = getattr(snap, "builds", []) or []
+        services = getattr(snap, "services", []) or []
+        counts["builds"] = len(builds)
+        counts["successful_builds"] = sum(1 for b in builds if getattr(b, "status_normalized", None) == "success")
+        counts["failed_builds"] = sum(1 for b in builds if _sp.is_build_problem(getattr(b, "status_normalized", None)))
         counts["failed_tests"] = sum(
             1 for t in (getattr(snap, "tests", []) or []) if _sp.is_test_problem(getattr(t, "status_normalized", None))
         )
         counts["tests_total"] = len(getattr(snap, "tests", []) or [])
-        counts["services_down"] = sum(
-            1 for s in (getattr(snap, "services", []) or []) if getattr(s, "status_normalized", None) == "down"
-        )
+        counts["services_total"] = len(services)
+        counts["services_down"] = sum(1 for s in services if getattr(s, "status_normalized", None) == "down")
 
     partial_errors: list[dict[str, Any]] = []
     if collect_state.get("last_error"):

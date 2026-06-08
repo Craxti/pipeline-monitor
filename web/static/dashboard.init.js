@@ -92,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initDashDelegatedActions();
   initDashFormControlBindings();
   applyUITexts();
+  if (typeof initModernSelects === 'function') initModernSelects();
+  if (typeof initExportModern === 'function') initExportModern();
   _loadCollapsedBuildGroups();
   initDashboardTabs();
   initDashSidebarNav();
@@ -100,29 +102,18 @@ document.addEventListener('DOMContentLoaded', () => {
   [
     ['btn-collect', 'dash.collect'],
     ['btn-collect-full', 'dash.collect_full'],
-    ['btn-collect-full', 'dash.collect_full'],
-    ['btn-theme', 'dash.theme'],
-    ['btn-compact', 'dash.compact'],
     ['notif-btn', 'dash.notif_btn'],
   ].forEach(([id, k]) => {
     const el = document.getElementById(id);
     if (el) el.setAttribute('aria-label', t(k));
   });
 
-  // Restore theme & compact from localStorage
+  // Restore theme from localStorage (toggle lives in Settings → General)
   _applyTheme(localStorage.getItem('cimon-theme') || 'dark');
-  if (localStorage.getItem('cimon-compact')) {
-    toggleCompact();
-  } else {
-    const bc = document.getElementById('btn-compact');
-    if (bc) {
-      bc.setAttribute('title', t('dash.compact_off'));
-      bc.setAttribute('aria-label', t('dash.compact_off'));
-    }
-  }
 
   // Read filters from URL
   _readURLFilters();
+  if (typeof refreshAllModernSelects === 'function') refreshAllModernSelects();
   try { _migrateLegacyTestSourceSelect(); } catch { /* ignore */ }
   _hookFilterURLSync();
 
@@ -145,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_failuresDays === 30) document.getElementById('tf-f-30d')?.classList.add('active');
   } catch { /* ignore */ }
   updateFailuresExportLinks();
-  _syncTestSourceQuickButtons();
 
   // Migrate legacy services "problems only" checkbox → status select
   try {
@@ -184,6 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     if (e.key !== 'Escape') return;
+    const liCreate = document.getElementById('log-intel-create-modal');
+    if (liCreate && liCreate.classList.contains('open')) {
+      if (typeof closeLogIntelCreateModal === 'function') closeLogIntelCreateModal();
+      return;
+    }
     const tcModal = document.getElementById('trends-chart-modal');
     if (tcModal && tcModal.classList.contains('open')) {
       if (typeof closeTrendsChartModal === 'function') closeTrendsChartModal();
@@ -230,14 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render starred builds panel
   _renderFavPanel();
 
-  // Initial data load: all CI tables in background unless collect is already running.
+  // Initial data load — always populate from DB/cache, even if collect is already running.
   pollCollect().finally(() => {
-    if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) return;
     loadUptimeData().then(() => loadServices());
     loadSummary();
     loadSystemStats();
     populateSourcesAndInstances().then(() => {
-      if (typeof _dashIsCollecting !== 'undefined' && _dashIsCollecting) return;
+      if (typeof refreshAllModernSelects === 'function') refreshAllModernSelects();
       if (typeof _initAllTableObservers === 'function') _initAllTableObservers();
       loadBuilds();
       loadFailures();

@@ -40,10 +40,13 @@ def start_collect_loop_task(
     collect_loop: Callable[[dict], "asyncio.Future[None]"],
     create_task: Callable[["asyncio.Future[None]"], asyncio.Task],
     logger,
+    task_ref: dict | None = None,
 ) -> asyncio.Task | None:
     """Start background collect loop task if enabled in config."""
     if not w_cfg.get("auto_collect", True):
         logger.info("Auto-collect disabled in config (web.auto_collect=false).")
+        if task_ref is not None:
+            task_ref["task"] = None
         return None
     collect_state["dashboard_live_fast_collect"] = True
     collect_state["interval_seconds"] = _cip.effective_collect_interval_seconds(
@@ -53,7 +56,10 @@ def start_collect_loop_task(
     interval = int(collect_state["interval_seconds"] or 300)
     prime_auto_collect_for_web_config(w_cfg, logger=logger)
     logger.info("Collect loop task started (interval=%ds).", interval)
-    return create_task(collect_loop(cfg))
+    task = create_task(collect_loop(cfg))
+    if task_ref is not None:
+        task_ref["task"] = task
+    return task
 
 
 async def cancel_task(task: asyncio.Task | None) -> None:

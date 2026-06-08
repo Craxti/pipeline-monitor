@@ -110,7 +110,16 @@ def filter_tests_by_source(items: list[Any], source: str) -> list[Any]:
             and (t.source or "").strip().lower() not in _REAL_HIDDEN_JENKINS_SOURCES
         ]
     if s in ("jenkins", "jenkins_merged", "jenkins_unified"):
-        return [t for t in items if (t.source or "").strip().lower() == "jenkins_unified"]
+        unified = [t for t in items if (t.source or "").strip().lower() == "jenkins_unified"]
+        if unified:
+            return unified
+        # During an in-progress collect, unified merge runs at end of cycle — show raw Jenkins rows live.
+        return [
+            t
+            for t in items
+            if (t.source or "").strip().lower().startswith("jenkins_")
+            and (t.source or "").strip().lower() != "jenkins_build"
+        ]
     if s == "jenkins_allure":
         # Raw ``jenkins_allure`` rows are merged away at collect time; keep filter useful on unified rows.
         out: list[Any] = []
@@ -140,7 +149,17 @@ def filter_tests_by_source(items: list[Any], source: str) -> list[Any]:
         return out_c
     if s == "gitlab":
         return [t for t in items if (t.source or "").strip().lower() == "gitlab"]
+    if s == "github":
+        return [t for t in items if (t.source or "").strip().lower() == "github"]
     return [t for t in items if (t.source or "").strip().lower() == s]
+
+
+def filter_tests_by_instance(items: list[Any], instance: str) -> list[Any]:
+    """Filter tests by configured CI instance label (``source_instance``)."""
+    inst = (instance or "").strip()
+    if not inst:
+        return items
+    return [t for t in items if (getattr(t, "source_instance", None) or "").strip() == inst]
 
 
 def filter_tests_by_lookback_hours(

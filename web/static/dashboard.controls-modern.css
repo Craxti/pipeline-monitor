@@ -1,0 +1,703 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   CI/CD Monitor — modern controls (filters, buttons, segmented toggles)
+   Final polish layer — loads after dashboard.pages-unified.css
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --control-bg: rgba(148, 163, 184, 0.06);
+  --control-bg-hover: rgba(59, 130, 246, 0.1);
+  --control-border: rgba(148, 163, 184, 0.14);
+  --control-border-active: rgba(96, 165, 250, 0.45);
+  --control-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --control-radius: 0.625rem;
+  --seg-radius: 999px;
+}
+
+html.light {
+  --control-bg: rgba(15, 23, 42, 0.04);
+  --control-bg-hover: rgba(59, 130, 246, 0.08);
+  --control-border: rgba(15, 23, 42, 0.1);
+}
+
+/* ── Filter bar shell ─────────────────────────────────────────────────────── */
+.builds-toolbar.filter-bar,
+.filter-bar.filter-bar--inline,
+.filter-bar.filter-bar--stacked {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.05) 0%, rgba(148, 163, 184, 0.02) 100%);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.builds-toolbar.filter-bar {
+  padding: 0;
+}
+
+.filter-bar__controls.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.55rem;
+  padding: 0.8rem 1.15rem;
+}
+
+.filter-bar--inline .filter-bar__controls.filters {
+  padding: 0;
+}
+
+/* ── Inputs & selects ─────────────────────────────────────────────────────── */
+.f-select,
+.f-input,
+.filter-bar select,
+.filter-bar input[type="text"],
+.filter-bar input[type="search"] {
+  min-height: 2.125rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
+  background: var(--surface3);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.f-input-search,
+.f-input--job {
+  min-width: min(100%, 11rem);
+}
+
+.f-select {
+  padding-right: 1.85rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b9cb8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  appearance: none;
+}
+
+.f-select:hover,
+.f-input:hover {
+  border-color: var(--control-border-active);
+  background-color: rgba(59, 130, 246, 0.06);
+}
+
+.f-select:focus,
+.f-input:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: var(--focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── Segmented control (time filters, presets group) ────────────────────────── */
+.time-filter-group,
+.filter-presets,
+.panel-count--plain.seg-control,
+.panel-count--plain:has(.log-lvl-btn) {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  padding: 0.2rem;
+  gap: 0.15rem;
+  border-radius: var(--seg-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  box-shadow: var(--control-shadow);
+}
+
+.time-filter-group .time-filter-btn,
+.filter-presets .preset-btn,
+.panel-count--plain .log-lvl-btn {
+  border: none !important;
+  border-radius: var(--seg-radius) !important;
+  background: transparent !important;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.38rem 0.72rem;
+  min-height: 1.85rem;
+  line-height: 1.2;
+  box-shadow: none;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.time-filter-group .time-filter-btn:hover,
+.filter-presets .preset-btn:hover,
+.panel-count--plain .log-lvl-btn:hover {
+  color: var(--text);
+  background: rgba(148, 163, 184, 0.1) !important;
+}
+
+.time-filter-group .time-filter-btn.active,
+.filter-presets .preset-btn.active,
+.filter-presets .preset-btn.preset-starred.active,
+.panel-count--plain .log-lvl-btn.active {
+  background: rgba(59, 130, 246, 0.22) !important;
+  color: #dbeafe !important;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.25);
+}
+
+html.light .time-filter-group .time-filter-btn.active,
+html.light .panel-count--plain .log-lvl-btn.active {
+  color: #1d4ed8 !important;
+  background: rgba(59, 130, 246, 0.14) !important;
+}
+
+.filter-presets .preset-btn.preset-starred.active {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fcd34d !important;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+}
+
+/* Standalone time/preset buttons outside a group */
+.filters > .time-filter-btn:not(.time-filter-group .time-filter-btn),
+.filters > .preset-btn:not(.filter-presets .preset-btn) {
+  border-radius: var(--seg-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  padding: 0.38rem 0.72rem;
+  min-height: 2.125rem;
+  font-weight: 600;
+}
+
+.filters > .time-filter-btn.active:not(.time-filter-group .time-filter-btn) {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: var(--control-border-active);
+  color: var(--accent);
+}
+
+/* ── Clear / reset ────────────────────────────────────────────────────────── */
+.f-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.125rem;
+  padding: 0.38rem 0.72rem;
+  border-radius: var(--seg-radius);
+  border: 1px dashed rgba(148, 163, 184, 0.28);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.f-clear:hover {
+  color: var(--fail);
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.06);
+}
+
+.filter-reset-btn {
+  border-radius: var(--seg-radius) !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 0.28rem 0.65rem !important;
+  border: 1px solid var(--control-border) !important;
+  background: var(--surface3) !important;
+}
+
+.filter-reset-btn:hover {
+  border-color: var(--control-border-active) !important;
+  background: var(--control-bg-hover) !important;
+}
+
+/* Active filters summary chip row */
+.filter-bar__summary.filter-active-line.is-visible {
+  margin: 0 1.15rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--control-radius);
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.04));
+  font-size: 0.78rem;
+  color: var(--text);
+}
+
+.builds-toolbar .filter-bar__summary.filter-active-line.is-visible {
+  margin: 0 1.15rem 0.85rem;
+}
+
+/* ── Panel chrome buttons ─────────────────────────────────────────────────── */
+.panel-refresh-btn,
+.expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
+}
+
+.panel-refresh-btn:hover,
+.expand-btn:hover {
+  color: var(--accent);
+  border-color: var(--control-border-active);
+  background: var(--control-bg-hover);
+  transform: translateY(-1px);
+}
+
+.panel-refresh-btn:active,
+.expand-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Global buttons (toolbar + panels) ────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.125rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: var(--control-shadow);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--control-border-active);
+  background: var(--control-bg-hover);
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary,
+#btn-collect {
+  border: none;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary:hover:not(:disabled),
+#btn-collect:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4f8ff7 0%, #2563eb 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--control-bg-hover);
+  box-shadow: none;
+}
+
+.btn-export-sm {
+  border-radius: var(--control-radius);
+  font-weight: 600;
+}
+
+/* ── Table row actions ────────────────────────────────────────────────────── */
+.act-btn {
+  border-radius: var(--seg-radius);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.28rem 0.62rem;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+
+.act-btn:hover {
+  transform: translateY(-1px);
+}
+
+.act-group {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.svc-docker-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0.28rem;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: none;
+}
+
+.svc-docker-actions .act-btn {
+  min-width: 1.85rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.svc-docker-actions .act-btn.docker-start:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--ok);
+}
+
+.svc-docker-actions .act-btn.docker-stop:hover {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.45);
+  color: var(--fail);
+}
+
+.svc-docker-actions .act-btn.docker-restart:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--warn);
+}
+
+/* ── Export dropdown ──────────────────────────────────────────────────────── */
+.export-wrap .btn {
+  border-radius: var(--control-radius);
+}
+
+.export-menu {
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
+  background: var(--surface2);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  padding: 0.25rem;
+}
+
+.export-menu a {
+  display: block;
+  padding: 0.45rem 0.75rem;
+  border-radius: calc(var(--control-radius) - 2px);
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: background 0.12s;
+}
+
+.export-menu a:hover {
+  background: var(--control-bg-hover);
+}
+
+/* ── Topbar extras ────────────────────────────────────────────────────────── */
+#global-search-wrap {
+  border-radius: var(--seg-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+#global-search-wrap:focus-within {
+  border-color: var(--control-border-active);
+  box-shadow: var(--focus-ring);
+}
+
+.lang-toggle {
+  display: inline-flex;
+  padding: 0.18rem;
+  border-radius: var(--seg-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  overflow: hidden;
+}
+
+.lang-toggle button {
+  border: none;
+  border-radius: var(--seg-radius);
+  padding: 0.32rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lang-toggle button.active,
+.lang-toggle button[data-lang]:hover {
+  background: rgba(59, 130, 246, 0.18);
+  color: var(--accent);
+}
+
+/* ── Panel count badge ────────────────────────────────────────────────────── */
+.panel-count:not(.panel-count--plain):not(.panel-count--meta) {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--seg-radius);
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+  color: var(--muted);
+}
+
+.panel-head h2 {
+  letter-spacing: -0.015em;
+}
+
+/* ── Trends filter bar ────────────────────────────────────────────────────── */
+.trends-filters-bar {
+  padding: 0.85rem 1.15rem;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.05) 0%, rgba(148, 163, 184, 0.02) 100%);
+  border-bottom: 1px solid var(--shell-line);
+}
+
+.trends-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.55rem;
+}
+
+.trend-period-btn,
+.trends-filters-bar .btn,
+.trends-filters-bar .f-select,
+.trends-filters-bar .f-input {
+  border-radius: var(--control-radius);
+}
+
+.trend-period-btn {
+  border-radius: var(--seg-radius);
+  font-weight: 600;
+  padding: 0.38rem 0.72rem;
+  border: 1px solid var(--control-border);
+  background: var(--control-bg);
+}
+
+.trend-period-btn.active {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: var(--control-border-active);
+  color: var(--accent);
+}
+
+.trends-filters-advanced {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.12);
+}
+
+/* ── Custom select (replaces native dropdown popup) ───────────────────────── */
+.select-modern {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  max-width: 100%;
+}
+
+.select-modern-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.select-modern-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 2.125rem;
+  padding: 0.42rem 2rem 0.42rem 0.75rem;
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
+  background: var(--surface3);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.select-modern-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.select-modern-chevron {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: -0.375rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b9cb8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transition: transform 0.18s ease;
+  pointer-events: none;
+}
+
+.select-modern-trigger:hover:not(:disabled) {
+  border-color: var(--control-border-active);
+  background-color: rgba(59, 130, 246, 0.06);
+}
+
+.select-modern.is-open .select-modern-trigger,
+.select-modern-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: var(--focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.select-modern.is-open .select-modern-chevron {
+  transform: rotate(180deg);
+}
+
+.select-modern.is-disabled .select-modern-trigger {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select-modern-menu {
+  position: absolute;
+  top: calc(100% + 0.28rem);
+  left: 0;
+  right: 0;
+  z-index: 240;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 1.5rem));
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.32rem;
+  border-radius: 0.72rem;
+  border: 1px solid var(--control-border);
+  background: var(--surface2);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.38),
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+  animation: selectModernIn 0.14s ease-out;
+}
+
+.select-modern-menu--up {
+  top: auto;
+  bottom: calc(100% + 0.28rem);
+}
+
+@keyframes selectModernIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.select-modern-menu--up {
+  animation-name: selectModernInUp;
+}
+
+@keyframes selectModernInUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.select-modern-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.48rem 0.62rem;
+  border: none;
+  border-radius: 0.48rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.select-modern-option:hover:not(:disabled),
+.select-modern-option:focus-visible {
+  outline: none;
+  background: var(--control-bg-hover);
+  color: var(--text);
+}
+
+.select-modern-option.is-selected {
+  background: rgba(59, 130, 246, 0.16);
+  color: var(--accent, #93c5fd);
+  font-weight: 600;
+}
+
+.select-modern-option.is-disabled,
+.select-modern-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+html.light .select-modern-menu {
+  background: #fff;
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.12),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+html.light .select-modern-option.is-selected {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+body.compact .select-modern-trigger {
+  min-height: 44px;
+}
+
+.select-modern.f-select--source,
+.select-modern.trends-f-select--source {
+  min-width: 140px;
+}
+
+.select-modern.f-select--instance,
+.select-modern.trends-f-select--instance {
+  min-width: 190px;
+}
+
+.select-modern.trends-f-select--smooth {
+  max-width: 11rem;
+}
+

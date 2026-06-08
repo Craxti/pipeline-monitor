@@ -17,7 +17,7 @@ Frontend source of truth is in `web/static/dashboard.filters.js`.
 - tests: `tstatus`, `tname`, `tsuite`
 - failures: `fname`, `fsuite`
 - services: `svstatus`
-- common: `tab`
+- common: `tab` (overview, builds, test-failures, test-runs, services, system, trends, incidents, log-intel, har)
 
 ## 2) Reset behavior (important)
 
@@ -38,6 +38,7 @@ Examples:
 - `/api/tests` (status, source, suite, name, hours)
 - `/api/services` (status)
 - `/api/trends/history-summary` (days, source, instance)
+- `/api/service-incidents` (list; opened from Incidents tab via `?tab=incidents&incident=<id>`)
 
 ## 4) Trends and KPI alignment
 

@@ -19,8 +19,10 @@ def resolve_jenkins_instance(cfg: dict[str, Any], source_instance: str | None) -
     if not insts:
         return None
     if want:
+        want_l = want.lower()
         for inst in insts:
-            if config_instance_label(inst, kind="jenkins") == want:
+            label = config_instance_label(inst, kind="jenkins")
+            if label == want or label.lower() == want_l:
                 return inst
         return None
     # Snapshot row may omit ``source_instance``; a single Jenkins entry is unambiguous.

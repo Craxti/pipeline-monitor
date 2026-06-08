@@ -295,6 +295,7 @@ function _trendsCollectGraceActive() {
 
 function shouldSkipTrendsReloadDuringCollect() {
   try {
+    if (typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh()) return false;
     if (!_trendsCollectGraceActive()) return false;
     if (typeof _dashTab !== 'undefined' && _dashTab !== 'trends') return false;
     return Array.isArray(_trendsRawCache) && _trendsRawCache.length > 0;

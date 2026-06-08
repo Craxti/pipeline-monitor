@@ -60,10 +60,17 @@ async def index_page(
         "ui_language": ui_language,
     }
     if snap:
-        ctx["builds_ok"] = sum(1 for b in snap.builds if b.status_normalized == "success")
-        ctx["builds_fail"] = sum(1 for b in snap.builds if b.status_normalized == "failure")
-        ctx["tests_fail"] = sum(1 for t in snap.tests if t.status_normalized in ("failed", "error"))
-        ctx["svc_down"] = sum(1 for s in snap.services if s.status_normalized == "down")
+        builds = list(getattr(snap, "builds", None) or [])
+        tests = list(getattr(snap, "tests", None) or [])
+        services = list(getattr(snap, "services", None) or [])
+        ctx["builds_ok"] = sum(1 for b in builds if getattr(b, "status_normalized", None) == "success")
+        ctx["builds_fail"] = sum(1 for b in builds if getattr(b, "status_normalized", None) in ("failure", "unstable"))
+        ctx["tests_total"] = len(tests)
+        ctx["tests_fail"] = sum(1 for t in tests if getattr(t, "status_normalized", None) in ("failed", "error"))
+        ctx["svcs_total"] = len(services)
+        ctx["svc_down"] = sum(1 for s in services if getattr(s, "status_normalized", None) == "down")
+        n_pass = max(0, ctx["tests_total"] - ctx["tests_fail"])
+        ctx["tests_pass_rate"] = round((n_pass / ctx["tests_total"]) * 1000) / 10 if ctx["tests_total"] else None
 
     resp = templates.TemplateResponse(request, "index.html", ctx)
     apply_no_cache_headers(resp)

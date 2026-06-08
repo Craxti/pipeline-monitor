@@ -9,12 +9,16 @@
 <link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>Settings — CI/CD Monitor</title>
-<link rel="stylesheet" href="/static/settings.css?v=20260610g"/>
-<link rel="stylesheet" href="/static/settings.modern.css?v=20260610g"/>
+<link rel="stylesheet" href="/static/tokens.css?v=20260613a"/>
+<link rel="stylesheet" href="/static/settings.css?v=20260614c"/>
+<link rel="stylesheet" href="/static/settings.modern.css?v=20260615a"/>
+<link rel="stylesheet" href="/static/dashboard.modal-unified.css?v=20260612b"/>
+<link rel="stylesheet" href="/static/dashboard.ui-polish.css?v=20260612b"/>
 </head>
 <body data-page="settings" class="ui-modern settings-app">
 
 {% include 'partials/i18n_core.html' %}
+<script src="/static/i18n_locales_extra.js?v=20260612a"></script>
 
 <div class="settings-shell">
   <aside class="settings-sidebar" aria-label="Settings navigation">
@@ -22,30 +26,21 @@
       <img src="/static/logo-mark.png?v=20260417i" width="28" height="28" alt="" decoding="async"/>
       <span data-i18n="dash.app_title">CI/CD Monitor</span>
     </div>
-    <div class="snav-group-label" data-i18n="st.nav_configuration">Configuration</div>
     <a href=".." class="snav-link">
       <span class="snav-link-ico snav-ico-dash" aria-hidden="true"></span>
       <span data-i18n="st.nav_dashboard">Dashboard</span>
     </a>
     <div class="snav-group-label" data-i18n="st.nav_integrations">Integrations</div>
-    <button type="button" class="snav-item active" data-sec="jenkins" onclick="showSec('jenkins')">
-      <img class="snav-icon-img" src="/static/icons/jenkins.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_jenkins">Jenkins</span>
-    </button>
-    <button type="button" class="snav-item" data-sec="gitlab" onclick="showSec('gitlab')">
-      <img class="snav-icon-img" src="/static/icons/gitlab.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_gitlab">GitLab</span>
-    </button>
-    <button type="button" class="snav-item" data-sec="github" onclick="showSec('github')">
-      <img class="snav-icon-img" src="/static/icons/github.svg" alt="" width="18" height="18"/><span data-i18n="st.nav_github">GitHub Actions</span>
+    <button type="button" class="snav-item active" data-sec="integrations" onclick="showSec('integrations')">
+      <span class="snav-link-ico snav-ico-connectors" aria-hidden="true"></span><span data-i18n="st.nav_integrations_hub">Integrations</span>
     </button>
     <div class="snav-divider"></div>
+    <div class="snav-group-label" data-i18n="st.nav_configuration">Configuration</div>
     <button type="button" class="snav-item" data-sec="general" onclick="showSec('general')">
       <span class="snav-link-ico snav-ico-gear" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span>
     </button>
     <button type="button" class="snav-item" data-sec="notifications" onclick="showSec('notifications')">
       <span class="snav-link-ico snav-ico-bell" aria-hidden="true"></span><span data-i18n="st.nav_notifications">Notifications</span>
-    </button>
-    <button type="button" class="snav-item" data-sec="docker" onclick="showSec('docker')">
-      <span class="snav-link-ico snav-ico-docker" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span>
     </button>
     <button type="button" class="snav-item" data-sec="ai" onclick="showSec('ai')">
       <span class="snav-link-ico snav-ico-ai" aria-hidden="true"></span><span data-i18n="st.nav_ai">AI Assistant</span>
@@ -59,11 +54,6 @@
         <h1 data-i18n="st.topbar_title">Settings — CI/CD Monitor</h1>
       </div>
       <div class="settings-topbar-actions">
-        <button type="button" class="btn btn-ghost btn-icon-round" id="btn-theme" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" data-i18n-aria-label="dash.theme" aria-label=""></button>
-        <div class="lang-toggle" data-i18n-title="dash.lang_title" title="">
-          <button type="button" data-lang="en" onclick="setUILang('en')">EN</button>
-          <button type="button" data-lang="ru" onclick="setUILang('ru')">RU</button>
-        </div>
         <span id="save-status-hdr" class="save-status-hdr"></span>
         <button type="button" class="btn" id="save-btn-hdr" onclick="saveSettings()">
           <span data-i18n="st.save">Save Settings</span>
@@ -73,112 +63,147 @@
 
     <div class="settings-content">
       <main>
-        <div class="integration-header">
-          <h2 id="settings-section-title" data-i18n="st.jenkins_integration">Jenkins Integration</h2>
-          <p id="settings-section-sub" data-i18n="st.jenkins_integration_sub">Configure and manage your Jenkins CI/CD instance connections.</p>
+        <div class="integration-header integration-header--unified">
+          <div class="integration-header-text">
+            <h2 id="settings-section-title" data-i18n="st.integrations_hub">Integrations</h2>
+            <p id="settings-section-sub" data-i18n="st.integrations_hub_sub">CI/CD sources, Docker, HTTP checks, and external monitoring connectors.</p>
+          </div>
+          <div class="integration-header-actions" id="settings-header-actions">
+            <button type="button" class="btn" onclick="openIntegrationCreateModal()" data-i18n="st.int_create">+ Create integration</button>
+          </div>
         </div>
 
-        <div id="integration-wizard" class="wizard-card panel">
+        <div id="integration-wizard" class="wizard-card panel" hidden>
           <div class="wizard-card-head panel-header">
             <h2 data-i18n="st.wz_title">Quick Start Wizard</h2>
           </div>
           <div class="form-body">
-            <div class="wizard-stepper" aria-hidden="true">
-              <div class="wizard-step-item active">
-                <span class="wizard-step-num">1</span>
-                <span class="wizard-step-label" data-i18n="st.wz_step1_short">Connection Setup</span>
-                <span class="wizard-step-sub" data-i18n="st.wz_step1_sub">URL &amp; API Token</span>
-              </div>
-              <div class="wizard-step-item">
-                <span class="wizard-step-num">2</span>
-                <span class="wizard-step-label" data-i18n="st.wz_step2_short">Select Projects</span>
-                <span class="wizard-step-sub" data-i18n="st.wz_step2_sub">Choose jobs to monitor</span>
-              </div>
-              <div class="wizard-step-item">
-                <span class="wizard-step-num">3</span>
-                <span class="wizard-step-label" data-i18n="st.wz_step3_short">Finalize &amp; Sync</span>
-                <span class="wizard-step-sub" data-i18n="st.wz_step3_sub">Save and collect</span>
-              </div>
-            </div>
-            <p class="wizard-guide" id="settings-wizard-guide" data-i18n-html="st.wz_guide_jenkins">Add an instance below, enter <b>Jenkins Server URL</b> and <b>API Token</b>, run <b>Test connection</b>, then click <b>Save Settings</b>.</p>
+            <p class="wizard-guide" id="settings-wizard-guide"></p>
             <div class="wizard-form-actions" id="settings-wizard-actions">
-              <button type="button" class="btn btn-ghost" id="wizard-add-btn" onclick="addJenkinsInst()" data-i18n="st.add_jenkins">+ Add Jenkins</button>
+              <button type="button" class="btn btn-ghost" id="wizard-add-btn"></button>
               <button type="button" class="btn" onclick="saveSettings()" data-i18n="st.save">Save Settings</button>
             </div>
           </div>
         </div>
 
-    <!-- ═══ JENKINS ════════════════════════════════════════════ -->
-    <div id="sec-jenkins" class="section active">
-      <div id="jenkins-instances"></div>
+    <!-- ═══ INTEGRATIONS (unified list) ═══════════════════════ -->
+    <div id="sec-integrations" class="section active">
+      <div class="int-filter-bar" role="tablist" aria-label="Integration filters">
+        <button type="button" class="int-filter-chip active" data-filter="all" onclick="setIntegrationFilter('all')" data-i18n="st.int_filter_all">All</button>
+        <button type="button" class="int-filter-chip" data-filter="cicd" onclick="setIntegrationFilter('cicd')" data-i18n="st.int_group_cicd">CI/CD</button>
+        <button type="button" class="int-filter-chip" data-filter="infra" onclick="setIntegrationFilter('infra')" data-i18n="st.int_group_infra">Infrastructure</button>
+        <button type="button" class="int-filter-chip" data-filter="external" onclick="setIntegrationFilter('external')" data-i18n="st.int_group_external">External monitoring</button>
+        <button type="button" class="int-filter-chip" data-filter="database" onclick="setIntegrationFilter('database')" data-i18n="st.int_group_databases">Databases</button>
+      </div>
+      <div id="integrations-list" class="integrations-list"></div>
+      <div id="integration-state-store" hidden aria-hidden="true">
+        <input type="checkbox" id="dm-enabled">
+        <input type="checkbox" id="dm-show-all">
+        <input type="number" id="dm-timeout" value="5">
+        <input type="checkbox" id="sm-enabled">
+        <input type="number" id="sm-timeout" value="15">
+      </div>
     </div>
 
-    <!-- ═══ GITLAB ═════════════════════════════════════════════ -->
-    <div id="sec-gitlab" class="section">
-      <div id="gitlab-instances"></div>
-    </div>
-
-    <!-- ═══ GITHUB ═════════════════════════════════════════════ -->
-    <div id="sec-github" class="section">
-      <div id="github-instances"></div>
-    </div>
+    <!-- legacy section anchors (hidden, for URL aliases) -->
+    <div id="sec-jenkins" class="section" hidden aria-hidden="true"></div>
+    <div id="sec-gitlab" class="section" hidden aria-hidden="true"></div>
+    <div id="sec-github" class="section" hidden aria-hidden="true"></div>
+    <div id="sec-monitoring" class="section" hidden aria-hidden="true"></div>
 
     <!-- ═══ GENERAL ════════════════════════════════════════════ -->
     <div id="sec-general" class="section">
-      <div class="sec-header">
-        <h2><span class="sec-icon snav-icon-dot" aria-hidden="true"></span><span data-i18n="st.nav_general">General</span></h2>
-      </div>
-      <div class="inst-card">
-        <div class="inst-hdr">
-          <span class="inst-badge">WEB</span>
-          <span class="inst-sec-title" data-i18n="st.auto_collect">Auto-Collection</span>
-        </div>
-        <div class="inst-body">
-          <div class="field-row">
-            <div class="field-label" data-i18n="st.auto_collect_on">Auto Collect on Startup</div>
-            <label class="toggle">
-              <input type="checkbox" id="w-auto-collect">
-              <div class="toggle-track"><div class="toggle-knob"></div></div>
-              <span data-i18n="st.auto_collect_hint">Automatically fetch data when the web server starts</span>
-            </label>
-          </div>
-          <div class="field-row">
-            <div class="field-label" data-i18n="st.auto_update_on">Auto Update in Docker</div>
-            <label class="toggle">
-              <input type="checkbox" id="w-docker-auto-update">
-              <div class="toggle-track"><div class="toggle-knob"></div></div>
-              <span data-i18n="st.auto_update_hint">Periodically check container image updates and recreate only app service (named volume keeps DB/data).</span>
-            </label>
-          </div>
-          <div class="two-col">
-            <div class="field-row">
-              <div class="field-label" data-i18n="st.interval">Collect Interval (seconds)</div>
-              <input type="number" id="w-interval" class="field-input" min="60" max="86400">
-              <div class="field-hint" data-i18n="st.interval_hint">60 = 1 min &nbsp;·&nbsp; 300 = 5 min &nbsp;·&nbsp; 3600 = 1 h</div>
+      <div class="st-general-layout">
+        <section class="st-panel st-panel--accent-ui">
+          <header class="st-panel-head">
+            <span class="st-panel-icon st-panel-icon--ui" aria-hidden="true"></span>
+            <div class="st-panel-head-text">
+              <h3 class="st-panel-title" data-i18n="st.appearance_title">Appearance</h3>
+              <p class="st-panel-desc" data-i18n="st.appearance_sub">Theme and interface language</p>
             </div>
-            <div class="field-row">
-              <div class="field-label" data-i18n="st.lookback">Default Lookback (days)</div>
-              <input type="number" id="g-lookback" class="field-input" min="1" max="90">
+          </header>
+          <div class="st-panel-body st-appearance-grid">
+            <div class="st-appearance-item">
+              <span class="st-appearance-label" data-i18n="st.theme_lbl">Theme</span>
+              <button type="button" class="st-theme-btn btn btn-ghost" id="btn-theme-settings" onclick="toggleTheme()" data-i18n-title="dash.theme" title="" data-i18n-aria-label="dash.theme" aria-label=""></button>
+              <span class="st-appearance-hint" data-i18n="st.theme_hint">Switch between dark and light interface</span>
+            </div>
+            <div class="st-appearance-item">
+              <span class="st-appearance-label" data-i18n="st.language_lbl">Language</span>
+              <select id="g-ui-language" class="field-input st-lang-select" onchange="setUILang(this.value)">
+                <option value="en">English</option>
+                <option value="ru">Русский</option>
+                <option value="zh">中文</option>
+                <option value="es">Español</option>
+                <option value="de">Deutsch</option>
+              </select>
             </div>
           </div>
-          <div class="field-row">
-            <div class="field-label">History retention (days)</div>
-            <input type="number" id="g-history-retention" class="field-input" min="0" max="3650">
-            <div class="field-hint">0 = do not delete historical data automatically.</div>
+        </section>
+
+        <section class="st-panel st-panel--accent-collect">
+          <header class="st-panel-head">
+            <span class="st-panel-icon st-panel-icon--collect" aria-hidden="true"></span>
+            <div class="st-panel-head-text">
+              <h3 class="st-panel-title" data-i18n="st.auto_collect">Auto-Collection</h3>
+              <p class="st-panel-desc" data-i18n="st.general_collect_sub">Background data collection and retention</p>
+            </div>
+          </header>
+          <div class="st-panel-body">
+            <div class="st-toggle-list">
+              <div class="st-toggle-row">
+                <div class="st-toggle-row-text">
+                  <span class="st-toggle-row-title" data-i18n="st.auto_collect_on">Auto Collect on Startup</span>
+                  <span class="st-toggle-row-hint" data-i18n="st.auto_collect_hint">Automatically fetch data when the web server starts</span>
+                </div>
+                <label class="toggle st-toggle-compact">
+                  <input type="checkbox" id="w-auto-collect">
+                  <div class="toggle-track"><div class="toggle-knob"></div></div>
+                </label>
+              </div>
+              <div class="st-toggle-row">
+                <div class="st-toggle-row-text">
+                  <span class="st-toggle-row-title" data-i18n="st.auto_update_on">Auto Update in Docker</span>
+                  <span class="st-toggle-row-hint" data-i18n="st.auto_update_hint">Periodically check container image updates and recreate only app service (named volume keeps DB/data).</span>
+                </div>
+                <label class="toggle st-toggle-compact">
+                  <input type="checkbox" id="w-docker-auto-update">
+                  <div class="toggle-track"><div class="toggle-knob"></div></div>
+                </label>
+              </div>
+            </div>
+            <div class="st-metrics-grid">
+              <div class="st-metric-field">
+                <label class="field-label" for="w-interval" data-i18n="st.interval">Collect Interval (seconds)</label>
+                <input type="number" id="w-interval" class="field-input" min="60" max="86400">
+                <span class="field-hint" data-i18n="st.interval_hint">60 = 1 min · 300 = 5 min · 3600 = 1 h</span>
+              </div>
+              <div class="st-metric-field">
+                <label class="field-label" for="g-lookback" data-i18n="st.lookback">Default Lookback (days)</label>
+                <input type="number" id="g-lookback" class="field-input" min="1" max="90">
+                <span class="field-hint" data-i18n="st.lookback_hint">How far back to load builds and tests on dashboard</span>
+              </div>
+              <div class="st-metric-field st-metric-field--wide">
+                <label class="field-label" for="g-history-retention" data-i18n="st.history_retention">History retention (days)</label>
+                <input type="number" id="g-history-retention" class="field-input" min="0" max="3650">
+                <span class="field-hint" data-i18n="st.history_retention_hint">0 = do not delete historical data automatically.</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="inst-card danger-card">
-        <div class="inst-hdr">
-          <span class="inst-badge" style="background:#b91c1c">DATA</span>
-          <span class="inst-sec-title" data-i18n="st.reset_data_title">Data reset</span>
-        </div>
-        <div class="inst-body">
-          <p class="danger-text" data-i18n="st.reset_data_hint">Delete current collected data (builds, tests, trends, services, events). Saved settings and authorization credentials stay intact.</p>
-          <div>
+        </section>
+
+        <section class="st-panel st-panel--danger">
+          <header class="st-panel-head">
+            <span class="st-panel-icon st-panel-icon--danger" aria-hidden="true"></span>
+            <div class="st-panel-head-text">
+              <h3 class="st-panel-title" data-i18n="st.reset_data_title">Data reset</h3>
+              <p class="st-panel-desc" data-i18n="st.reset_data_hint">Delete current collected data (builds, tests, trends, services, events). Saved settings and authorization credentials stay intact.</p>
+            </div>
+          </header>
+          <div class="st-panel-body st-panel-body--actions">
             <button type="button" class="btn btn-danger" id="btn-reset-data" onclick="openResetDataModal()" data-i18n="st.reset_data_btn">Reset collected data</button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
 
@@ -206,100 +231,6 @@
         </div>
       </div>
       <div id="telegram-bots"></div>
-    </div>
-
-    <!-- ═══ DOCKER ══════════════════════════════════════════════ -->
-    <div id="sec-docker" class="section">
-      <div class="sec-header">
-        <h2><span class="sec-icon snav-icon-dot snav-icon-dot--teal" aria-hidden="true"></span><span data-i18n="st.nav_docker">Docker / HTTP</span></h2>
-      </div>
-      <div class="inst-card">
-        <div class="inst-hdr">
-          <span class="inst-badge">DM</span>
-          <span class="inst-sec-title" data-i18n="st.dm_title">Docker Monitor</span>
-        </div>
-        <div class="inst-body">
-          <div class="field-row">
-            <label class="toggle">
-              <input type="checkbox" id="dm-enabled" onchange="updateDockerUI()">
-              <div class="toggle-track"><div class="toggle-knob"></div></div>
-              <span data-i18n="st.dm_enable">Enable Docker container monitoring</span>
-            </label>
-          </div>
-          <div id="dm-settings" style="display:flex;flex-direction:column;gap:1rem">
-            <div class="field-row">
-              <div class="field-label" data-i18n="st.dm_timeout">Timeout (seconds)</div>
-              <input type="number" id="dm-timeout" class="field-input" min="1" max="60">
-            </div>
-            <div class="sub-sec">
-              <div class="sub-sec-hdr">
-                <span class="field-label">Docker hosts (local + remote)</span>
-                <button class="btn btn-sm" onclick="addDockerHost()">+ Add host</button>
-              </div>
-              <div class="field-hint" style="margin:.15rem 0 .65rem">
-                Local host is always included. Add remote Docker hosts by IP/DNS. Username/password are optional.
-              </div>
-              <div class="st-table-wrap">
-                <table>
-                  <thead><tr>
-                    <th>Name</th>
-                    <th>Host / IP</th>
-                    <th>User</th>
-                    <th>Password</th>
-                    <th class="c st-col-tight">Enabled</th>
-                    <th class="st-col-actions" aria-label=""></th>
-                  </tr></thead>
-                  <tbody id="docker-hosts-body"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="field-row">
-              <label class="toggle">
-                <input type="checkbox" id="dm-show-all" onchange="updateDockerUI()">
-                <div class="toggle-track"><div class="toggle-knob"></div></div>
-                <span data-i18n="st.dm_show_all">Show all running containers on this machine</span>
-              </label>
-              <div class="field-hint" id="dm-show-all-hint"></div>
-            </div>
-            <div id="dm-containers-panel">
-              <div class="sub-sec">
-                <div class="sub-sec-hdr">
-                  <span class="field-label" data-i18n="st.dm_containers">Containers to Monitor</span>
-                  <button class="btn btn-sm" onclick="addContainer()" data-i18n="st.dm_add">+ Add</button>
-                </div>
-                <div class="st-table-wrap">
-                  <table>
-                    <thead><tr>
-                      <th data-i18n="st.th_container">Container Name</th>
-                      <th class="st-col-actions" aria-label=""></th>
-                    </tr></thead>
-                    <tbody id="containers-body"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="inst-card">
-        <div class="inst-hdr">
-          <span class="inst-badge">HTTP</span>
-          <span class="inst-sec-title" data-i18n="st.http_title">HTTP Health Checks</span>
-          <button type="button" class="btn btn-sm inst-hdr-pull" onclick="addHttpCheck()" data-i18n="st.http_add">+ Add</button>
-        </div>
-        <div class="inst-body">
-          <div class="st-table-wrap">
-            <table>
-              <thead><tr>
-                <th class="st-col-http-name" data-i18n="st.th_http_name">Name</th>
-                <th data-i18n="st.th_url">URL</th>
-                <th class="st-col-actions" aria-label=""></th>
-              </tr></thead>
-              <tbody id="httpchecks-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ═══ AI ASSISTANT ════════════════════════════════════════ -->
@@ -396,7 +327,7 @@
         <div class="inst-hdr">
           <span class="inst-badge vpn">VPN</span>
           <span class="inst-sec-title"><span data-i18n="st.ai_proxy_title">OpenAI proxy (VPN)</span></span>
-          <button type="button" class="btn btn-sm btn-ghost inst-hdr-pull" onclick="testOpenaiProxyEgress()" data-i18n-title="st.proxy_test_egress_title" title="">Test egress IP</button>
+          <button type="button" class="btn btn-sm btn-ghost inst-hdr-pull" onclick="testOpenaiProxyEgress()" data-i18n-title="st.proxy_test_egress_title" data-i18n="st.ai_test_egress">Test egress IP</button>
         </div>
         <div class="inst-body">
               <div class="field-row">
@@ -408,64 +339,48 @@
               </div>
               <div id="ai-proxy-fields" style="display:none;flex-direction:column;gap:1rem">
                 <div class="field-row" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.1rem">
-                  <div class="field-label" style="margin-bottom:.4rem">How to fill in the fields</div>
-                  <div class="field-hint" style="line-height:1.6;font-size:.82rem;color:var(--text)">
-                    <p style="margin:0 0 .5rem"><b>Manual entry</b> (if you are not using quick paste):</p>
-                    <ul style="margin:0 0 .65rem 1.15rem;padding:0">
-                      <li><b>Type</b> — <code>SOCKS5</code> / <code>SOCKS5h</code> for a SOCKS proxy (often port 1080); <code>HTTP</code> or <code>HTTPS</code> if your provider gave you an HTTP proxy (CONNECT).</li>
-                      <li><b>Host</b> — IP address or hostname of the proxy server.</li>
-                      <li><b>Port</b> — proxy port on that host.</li>
-                      <li><b>Username / Password</b> — credentials if the proxy requires auth; otherwise leave blank.</li>
-                      <li><b>Full URL</b> — a single line that overrides host/port/type below, e.g. <code>socks5://user:pass@host:1080</code>.</li>
-                    </ul>
-                    <p style="margin:0 0 .35rem"><b>String format 1</b> (SOCKS5, test data only — not a real service):</p>
-                    <code style="display:block;font-size:.72rem;word-break:break-all;margin:0 0 .5rem;padding:.45rem .55rem;background:var(--surface);border-radius:.35rem;border:1px solid var(--border)">socks5server=198.51.100.10&amp;port=1080&amp;user=vpn_user&amp;pass=vpn_pass</code>
-                    <p style="margin:0 0 .35rem;color:var(--muted)">Mapping: <code>socks5server</code> (or <code>server</code>) → <b>Host</b>; <code>port</code> → <b>Port</b>; <code>user</code> → <b>Username</b>; <code>pass</code> → <b>Password</b>. After pasting, click <b>Parse into fields</b>; type will switch to SOCKS5.</p>
-                    <p style="margin:0 0 .35rem"><b>String format 2</b> (often an HTTP proxy, test example):</p>
-                    <code style="display:block;font-size:.72rem;word-break:break-all;margin:0 0 .5rem;padding:.45rem .55rem;background:var(--surface);border-radius:.35rem;border:1px solid var(--border)">proxyserver=203.0.113.50&amp;port=8443&amp;secret=dGVzdC1zZWNyZXQtdG9rZW4tZXhhbXBsZQ</code>
-                    <p style="margin:0;color:var(--muted)">Mapping: <code>proxyserver</code> → <b>Host</b>; <code>port</code> → <b>Port</b>; <code>secret</code> is copied to <b>Password</b> (add <b>Username</b> yourself if required). Choose <b>HTTP</b> or <b>HTTPS</b> per your provider. A long <code>secret</code> from clients like VLESS is not a SOCKS/HTTP proxy by itself — run a local proxy (e.g. <code>127.0.0.1:1080</code>) and enter <em>that</em> endpoint here.</p>
-                    <p style="margin:.55rem 0 0;color:var(--muted)"><b>Ping</b> (ICMP) to the proxy host does not prove SOCKS works for HTTPS — use <b>Test egress IP</b>. If OpenAI still returns <code>unsupported_country_region_territory</code>, <b>Via proxy</b> must show an IP in a supported country (often US/EU) and differ from <b>Direct</b>. The app uses <b>socks5h</b> (remote DNS) when you choose SOCKS5. As a last resort, set <b>API base URL</b> to an OpenAI-compatible provider (e.g. OpenRouter) in an allowed region.</p>
-                  </div>
+                  <div class="field-label" style="margin-bottom:.4rem" data-i18n="st.proxy_how_title">How to fill in the fields</div>
+                  <div class="field-hint" style="line-height:1.6;font-size:.82rem;color:var(--text)" data-i18n-html="st.proxy_how_html"></div>
                 </div>
                 <div class="field-row">
-                  <div class="field-label">Quick paste (optional)</div>
+                  <div class="field-label" data-i18n="st.proxy_quick_paste">Quick paste (optional)</div>
                   <textarea id="ai-proxy-paste" class="field-input sensitive" rows="2" style="resize:vertical;font-family:monospace;font-size:.78rem"
                     placeholder="socks5server=198.51.100.10&amp;port=1080&amp;user=vpn_user&amp;pass=vpn_pass"></textarea>
-                  <button type="button" class="btn btn-sm" onclick="applyProxyPaste()" style="align-self:flex-start">Parse into fields</button>
-                  <div class="field-hint">Keys: <code>server</code>, <code>socks5server</code>, <code>proxyserver</code>, <code>port</code>, <code>user</code>, <code>pass</code> / <code>password</code>, <code>secret</code>. A line containing <code>socks5server</code> sets type to SOCKS5.</div>
+                  <button type="button" class="btn btn-sm" onclick="applyProxyPaste()" style="align-self:flex-start" data-i18n="st.proxy_parse_btn">Parse into fields</button>
+                  <div class="field-hint" data-i18n-html="st.proxy_quick_hint"></div>
                 </div>
                 <div class="field-row">
-                  <div class="field-label">Or full URL (overrides host/port below)</div>
+                  <div class="field-label" data-i18n="st.proxy_full_url_lbl">Or full URL (overrides host/port below)</div>
                   <input type="text" id="ai-proxy-url" class="field-input sensitive" placeholder="socks5://vpn_user:vpn_pass@198.51.100.10:1080">
-                  <div class="field-hint">Leave empty to use Type / Host / Port below. Otherwise one line: <code>socks5://…</code>, <code>http://…</code>.</div>
+                  <div class="field-hint" data-i18n-html="st.proxy_full_url_hint"></div>
                 </div>
                 <div class="two-col">
                   <div class="field-row">
-                    <div class="field-label">Type</div>
+                    <div class="field-label" data-i18n="st.proxy_field_type">Type</div>
                     <select id="ai-proxy-type" class="field-input">
-                      <option value="socks5">SOCKS5 (sent as socks5h — DNS via proxy)</option>
-                      <option value="socks5h">SOCKS5h (DNS via proxy)</option>
-                      <option value="http">HTTP</option>
-                      <option value="https">HTTPS</option>
+                      <option value="socks5" data-i18n="st.proxy_opt_socks5">SOCKS5 (sent as socks5h — DNS via proxy)</option>
+                      <option value="socks5h" data-i18n="st.proxy_opt_socks5h">SOCKS5h (DNS via proxy)</option>
+                      <option value="http" data-i18n="st.proxy_opt_http">HTTP</option>
+                      <option value="https" data-i18n="st.proxy_opt_https">HTTPS</option>
                     </select>
                   </div>
                   <div class="field-row">
-                    <div class="field-label">Port</div>
+                    <div class="field-label" data-i18n="st.proxy_field_port">Port</div>
                     <input type="number" id="ai-proxy-port" class="field-input" min="1" max="65535" placeholder="1080">
                   </div>
                 </div>
                 <div class="field-row">
-                  <div class="field-label">Host</div>
+                  <div class="field-label" data-i18n="st.proxy_field_host">Host</div>
                   <input type="text" id="ai-proxy-host" class="field-input sensitive" placeholder="198.51.100.10 or proxy.example.com">
                 </div>
                 <div class="field-row">
-                  <div class="field-label">Username</div>
-                  <input type="text" id="ai-proxy-user" class="field-input sensitive" placeholder="if required by proxy">
+                  <div class="field-label" data-i18n="st.proxy_field_user">Username</div>
+                  <input type="text" id="ai-proxy-user" class="field-input sensitive" data-i18n-placeholder="st.proxy_ph_optional" placeholder="if required by proxy">
                 </div>
                 <div class="field-row">
-                  <div class="field-label">Password</div>
+                  <div class="field-label" data-i18n="st.proxy_field_pass">Password</div>
                   <div class="pw-wrap">
-                    <input type="password" id="ai-proxy-password" class="field-input sensitive" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
+                    <input type="password" id="ai-proxy-password" class="field-input sensitive" data-i18n-placeholder="st.proxy_ph_optional" placeholder="if required by proxy" data-secret-path="openai.proxy.password">
                   </div>
                 </div>
               </div>
@@ -484,11 +399,43 @@
 </a>
 
 <div class="toast" id="toast"></div>
+<div class="modal-backdrop" id="integration-modal" role="dialog" aria-modal="true" aria-labelledby="integration-modal-title">
+  <div class="modal dash-modal-shell dash-modal-shell--wide">
+    <div class="dash-modal-header">
+      <h2 id="integration-modal-title" data-i18n="st.int_modal_create">Create integration</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" onclick="closeIntegrationModal()" data-i18n-title="common.close" title="">&times;</button>
+    </div>
+    <div class="modal-body dash-modal-body" id="integration-modal-body"></div>
+    <div class="modal-actions dash-modal-footer" id="integration-modal-footer">
+      <button type="button" class="btn btn-ghost" id="integration-test-btn" onclick="testIntegrationModal()" data-i18n="st.test_connection_btn">Test connection</button>
+      <button type="button" class="btn btn-ghost" onclick="closeIntegrationModal()" data-i18n="dash.action_cancel">Cancel</button>
+      <button type="button" class="btn" onclick="saveIntegrationModal()" data-i18n="st.int_apply">Apply</button>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop" id="settings-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="settings-confirm-title">
+  <div class="modal dash-modal-shell">
+    <div class="dash-modal-header">
+      <h2 id="settings-confirm-title" data-i18n="dash.action_confirm">Confirm</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" onclick="closeSettingsConfirm(false)" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
+    </div>
+    <div class="modal-body dash-modal-body dash-modal-body--compact">
+      <p id="settings-confirm-msg"></p>
+    </div>
+    <div class="modal-actions dash-modal-footer">
+      <button type="button" class="btn btn-ghost" id="settings-confirm-no" onclick="closeSettingsConfirm(false)" data-i18n="dash.action_cancel">Cancel</button>
+      <button type="button" class="btn" id="settings-confirm-yes" data-i18n="dash.action_confirm">Confirm</button>
+    </div>
+  </div>
+</div>
 <div class="modal-backdrop" id="reset-data-modal" role="dialog" aria-modal="true" aria-labelledby="reset-data-modal-title">
-  <div class="modal">
-    <div class="modal-hdr" id="reset-data-modal-title" data-i18n="st.reset_data_modal_title">Delete collected data?</div>
-    <div class="modal-body" data-i18n="st.reset_data_modal_text">This will permanently delete all collected runtime data: builds, tests, trends, services, and event history. Authorization credentials and saved settings will NOT be deleted.</div>
-    <div class="modal-actions">
+  <div class="modal dash-modal-shell">
+    <div class="dash-modal-header">
+      <h2 id="reset-data-modal-title" data-i18n="st.reset_data_modal_title">Delete collected data?</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" onclick="closeResetDataModal()" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
+    </div>
+    <div class="modal-body dash-modal-body dash-modal-body--compact" data-i18n="st.reset_data_modal_text">This will permanently delete all collected runtime data: builds, tests, trends, services, and event history. Authorization credentials and saved settings will NOT be deleted.</div>
+    <div class="modal-actions dash-modal-footer">
       <button type="button" class="btn btn-ghost" id="btn-reset-data-no" onclick="closeResetDataModal()" data-i18n="st.reset_data_no">No</button>
       <button type="button" class="btn btn-danger" id="btn-reset-data-yes" onclick="performResetData()" data-i18n="st.reset_data_yes">Yes, delete</button>
     </div>
@@ -500,8 +447,10 @@
 </div>
 
 {% include 'partials/chat_widget.html' %}
+<script src="/static/dashboard.select-modern.js?v=20260612b" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
 
+<script src="/static/settings.integrations.js?v=20260615c"></script>
 <script>
 // ── State ──────────────────────────────────────────────────────────────────────
 let _ji = [];   // jenkins instances
@@ -511,32 +460,44 @@ let _tgBots = []; // telegram bot rows
 let _hc = [];   // http checks
 let _dc = [];   // docker container names
 let _dh = [];   // docker remote hosts
+let _sm = [];   // service monitor instances
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 const _SETTINGS_SECTION_META = {
+  integrations: {
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
+  },
   jenkins: {
-    titleKey: 'st.jenkins_integration',
-    subKey: 'st.jenkins_integration_sub',
-    guideKey: 'st.wz_guide_jenkins',
-    addFn: 'addJenkinsInst()',
-    addKey: 'st.add_jenkins',
-    wizard: true,
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
   },
   gitlab: {
-    titleKey: 'st.gitlab_integration',
-    subKey: 'st.gitlab_integration_sub',
-    guideKey: 'st.wz_guide_gitlab',
-    addFn: 'addGitlabInst()',
-    addKey: 'st.add_gitlab',
-    wizard: true,
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
   },
   github: {
-    titleKey: 'st.github_integration',
-    subKey: 'st.github_integration_sub',
-    guideKey: 'st.wz_guide_github',
-    addFn: 'addGithubInst()',
-    addKey: 'st.add_github',
-    wizard: true,
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
+  },
+  monitoring: {
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
+  },
+  docker: {
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
+  },
+  svcmon: {
+    titleKey: 'st.integrations_hub',
+    subKey: 'st.integrations_hub_sub',
+    wizard: false,
   },
   general: {
     titleKey: 'st.general_integration',
@@ -548,11 +509,6 @@ const _SETTINGS_SECTION_META = {
     subKey: 'st.notifications_integration_sub',
     wizard: false,
   },
-  docker: {
-    titleKey: 'st.docker_integration',
-    subKey: 'st.docker_integration_sub',
-    wizard: false,
-  },
   ai: {
     titleKey: 'st.ai_integration',
     subKey: 'st.ai_integration_sub',
@@ -561,13 +517,15 @@ const _SETTINGS_SECTION_META = {
 };
 
 function showSec(name) {
+  const intAliases = ['jenkins', 'gitlab', 'github', 'monitoring', 'docker', 'svcmon'];
+  if (intAliases.includes(name)) name = 'integrations';
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   const sec = document.getElementById('sec-' + name);
   if (sec) sec.classList.add('active');
   document.querySelectorAll('.snav-item').forEach(b =>
     b.classList.toggle('active', b.dataset.sec === name)
   );
-  const meta = _SETTINGS_SECTION_META[name] || _SETTINGS_SECTION_META.jenkins;
+  const meta = _SETTINGS_SECTION_META[name] || _SETTINGS_SECTION_META.integrations;
   const titleEl = $('settings-section-title');
   const subEl = $('settings-section-sub');
   const wiz = $('integration-wizard');
@@ -591,6 +549,8 @@ function showSec(name) {
     addBtn.textContent = t(meta.addKey);
     addBtn.setAttribute('data-i18n', meta.addKey);
   }
+  const hdrActions = $('settings-header-actions');
+  if (hdrActions) hdrActions.hidden = name !== 'integrations';
 }
 
 // ── Tiny helpers ───────────────────────────────────────────────────────────────
@@ -610,7 +570,7 @@ function apiUrl(path) {
 
 function _applyTheme(theme) {
   document.documentElement.classList.toggle('light', theme === 'light');
-  const btn = document.getElementById('btn-theme');
+  const btn = document.getElementById('btn-theme-settings') || document.getElementById('btn-theme');
   if (btn) {
     btn.setAttribute('title', theme === 'light' ? t('dash.theme_light_hint') : t('dash.theme_dark_hint'));
     btn.textContent = '';
@@ -624,10 +584,69 @@ function toggleTheme() {
   _applyTheme(next);
 }
 
-function setUILang(code) {
-  if (code !== 'ru' && code !== 'en') return;
-  localStorage.setItem('cimon-ui-lang', code);
-  applyUITexts();
+function refreshAiModelOptionsI18n() {
+  const sel = $('ai-model');
+  if (!sel) return;
+  const ogKeys = {
+    'ai-models-openai': 'st.ai_og_openai',
+    'ai-models-gemini': 'st.ai_og_gemini',
+    'ai-models-openrouter': 'st.ai_og_openrouter',
+    'ai-models-cursor': 'st.ai_og_cursor',
+    'ai-models-ollama': 'st.ai_og_ollama',
+  };
+  Object.entries(ogKeys).forEach(([id, key]) => {
+    const g = $(id);
+    if (g) g.label = t(key);
+  });
+  const modelKeys = {
+    'gpt-4o-mini': 'st.ai_m_gpt4o_mini',
+    'gpt-4o': 'st.ai_m_gpt4o',
+    'gpt-4.1-mini': 'st.ai_m_gpt41_mini',
+    'gpt-4.1': 'st.ai_m_gpt41',
+    'o4-mini': 'st.ai_m_o4_mini',
+    'gemini-2.0-flash': 'st.ai_m_gem20_flash',
+    'gemini-2.0-flash-lite': 'st.ai_m_gem20_flash_lite',
+    'gemini-1.5-flash': 'st.ai_m_gem15_flash',
+    'gemini-2.5-pro-preview-03-25': 'st.ai_m_gem25_pro',
+    'google/gemini-2.0-flash-exp:free': 'st.ai_m_or_gem_flash',
+    'deepseek/deepseek-chat-v3-0324:free': 'st.ai_m_or_deepseek',
+    'meta-llama/llama-4-maverick:free': 'st.ai_m_or_llama4',
+    'qwen/qwen-2.5-72b-instruct:free': 'st.ai_m_or_qwen',
+    auto: 'st.ai_m_cursor_auto',
+    'gpt-5.2': 'st.ai_m_cursor_gpt52',
+    'llama3.1:8b': 'st.ai_m_llama318b',
+    'phi3:mini': 'st.ai_m_phi3mini',
+    'llama3.2': 'st.ai_m_llama32',
+    'llama3.1': 'st.ai_m_llama31',
+    mistral: 'st.ai_m_mistral',
+    codellama: 'st.ai_m_codellama',
+    'qwen2.5': 'st.ai_m_qwen25',
+    'gpt-oss': 'st.ai_m_gpt_oss',
+  };
+  sel.querySelectorAll('option').forEach((opt) => {
+    const k = modelKeys[opt.value];
+    if (k) opt.textContent = t(k);
+  });
+}
+
+function refreshAiProviderOptionsI18n() {
+  const sel = $('ai-provider');
+  if (!sel) return;
+  const keys = {
+    openai: 'st.ai_opt_openai',
+    gemini: 'st.ai_opt_gemini',
+    openrouter: 'st.ai_opt_openrouter',
+    cursor: 'st.ai_opt_cursor',
+    ollama: 'st.ai_opt_ollama',
+    custom: 'st.ai_opt_custom',
+  };
+  sel.querySelectorAll('option').forEach((opt) => {
+    const k = keys[opt.value];
+    if (k) opt.textContent = t(k);
+  });
+}
+
+function refreshSettingsDynamicUI() {
   _applyTheme(localStorage.getItem('cimon-theme') === 'light' ? 'light' : 'dark');
   renderJInsts();
   renderGInsts();
@@ -637,10 +656,22 @@ function setUILang(code) {
   renderContainers();
   renderDockerHosts();
   updateDockerUI();
+  renderSvcMonInsts();
+  updateSvcMonUI();
   updateProviderUI();
   updateProxyUI();
+  refreshAiProviderOptionsI18n();
+  refreshAiModelOptionsI18n();
+  if (typeof refreshAllModernSelects === 'function') refreshAllModernSelects();
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
+  if (typeof refreshDockerSnapshotCount === 'function') refreshDockerSnapshotCount();
   const activeSec = document.querySelector('.snav-item.active')?.dataset?.sec;
   if (activeSec) showSec(activeSec);
+}
+
+function setUILang(code) {
+  if (!applyUILang(code)) return;
+  refreshSettingsDynamicUI();
 }
 
 const _providerDefaults = {
@@ -721,7 +752,7 @@ async function testOpenaiProxyEgress() {
     } else {
       msg += t('st.egress_via') + ' ' + t('st.egress_via_off');
     }
-    alert(msg);
+    showToast(msg.replace(/\n+/g, ' · '), 'ok');
     if (via && via.ok && dir.ok && via.ip && dir.ip && via.ip === dir.ip) {
       showToast(t('st.egress_proxy_same_ip'), 'err');
     } else {
@@ -762,11 +793,39 @@ function applyProxyPaste() {
 }
 
 function showToast(msg, type = 'ok') {
-  const t = $('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('show'), 4500);
+  const el = $('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+let _settingsConfirmResolve = null;
+
+function openSettingsConfirm({ title, message, danger }) {
+  return new Promise((resolve) => {
+    const modal = $('settings-confirm-modal');
+    const titleEl = $('settings-confirm-title');
+    const msgEl = $('settings-confirm-msg');
+    const yes = $('settings-confirm-yes');
+    if (!modal || !yes) { resolve(false); return; }
+    if (titleEl) titleEl.textContent = title || t('dash.action_confirm');
+    if (msgEl) msgEl.textContent = message || '';
+    yes.classList.toggle('btn-danger', !!danger);
+    yes.classList.toggle('btn-primary', !danger);
+    _settingsConfirmResolve = resolve;
+    modal.classList.add('show');
+  });
+}
+
+function closeSettingsConfirm(result) {
+  const modal = $('settings-confirm-modal');
+  if (modal) modal.classList.remove('show');
+  if (_settingsConfirmResolve) {
+    _settingsConfirmResolve(!!result);
+    _settingsConfirmResolve = null;
+  }
 }
 
 
@@ -827,9 +886,9 @@ function jInstHtml(ii) {
           <input type="checkbox" ${inst.parse_allure ? 'checked' : ''}
                  onchange="_ji[${ii}].parse_allure=this.checked">
           <div class="toggle-track"><div class="toggle-knob"></div></div>
-          <span>${esc('Allure')}</span>
+          <span>${esc(t('st.parse_allure'))}</span>
         </label>
-        <div class="field-hint">Parse Allure report from Jenkins (…/allure). Recommended for test_gu_* jobs.</div>
+        <div class="field-hint">${esc(t('st.parse_allure_hint'))}</div>
       </div>
       <div class="field-row">
         <label class="toggle">
@@ -845,29 +904,24 @@ function jInstHtml(ii) {
 }
 
 function renderJInsts() {
-  const c = $('jenkins-instances');
-  if (!_ji.length) {
-    c.innerHTML = `<div class="empty-card">${esc(t('st.j_empty'))}</div>`;
-    return;
-  }
-  c.innerHTML = _ji.map((_, i) => jInstHtml(i)).join('');
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
 }
 
 function addJenkinsInst() {
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('jenkins');
+    return;
+  }
   _ji.push({ name: `Jenkins ${_ji.length + 1}`, enabled: true, url: '', username: '', token: '',
-             jobs: [], parse_console: true, parse_allure: false, verify_ssl: true });
+             jobs: [], parse_console: true, parse_allure: true, verify_ssl: true });
   renderJInsts();
-  $(`ji-card-${_ji.length-1}`)?.querySelector('.inst-name-inp')?.focus();
 }
 
-function removeJInst(ii) {
-  if (!confirm(tf('st.j_confirm_remove', { name: _ji[ii].name }))) return;
+async function removeJInst(ii) {
+  if (!(await openSettingsConfirm({ message: tf('st.j_confirm_remove', { name: _ji[ii].name }), danger: true }))) return;
   _ji.splice(ii, 1);
   renderJInsts();
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
-// GITLAB INSTANCES
 // ══════════════════════════════════════════════════════════════════════════════
 
 function gProjHtml(gi) {
@@ -993,45 +1047,24 @@ function toggleGProjs(gi) {
 }
 
 function renderGInsts() {
-  const c = $('gitlab-instances');
-  if (!_gi.length) {
-    c.innerHTML = `<div class="empty-card">${esc(t('st.g_empty'))}</div>`;
-    return;
-  }
-  c.innerHTML = _gi.map((_, i) => gInstHtml(i)).join('');
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
 }
 
 function addGitlabInst() {
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('gitlab');
+    return;
+  }
   _gi.push({ name: `GitLab ${_gi.length + 1}`, enabled: true, url: '', token: '',
              projects: [], max_pipelines: 10, verify_ssl: true });
   renderGInsts();
-  $(`gi-card-${_gi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
 }
 
 function startQuickSetup(kind) {
-  if (kind === 'jenkins') {
-    if (!_ji.length) addJenkinsInst();
-    showSec('jenkins');
-    const idx = Math.max(0, _ji.length - 1);
-    $(`ji-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
-    showToast(t('st.wz_toast_jenkins'), 'ok');
-    return;
-  }
-  if (kind === 'gitlab') {
-    if (!_gi.length) addGitlabInst();
-    showSec('gitlab');
-    const idx = Math.max(0, _gi.length - 1);
-    $(`gi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
-    showToast(t('st.wz_toast_gitlab'), 'ok');
-    return;
-  }
-  if (kind === 'github') {
-    if (!_ghi.length) addGithubInst();
-    showSec('github');
-    const idx = Math.max(0, _ghi.length - 1);
-    $(`ghi-card-${idx}`)?.querySelector('.inst-name-inp')?.focus();
-    showToast(t('st.wz_toast_github'), 'ok');
-  }
+  showSec('integrations');
+  if (typeof openIntegrationCreateDirect === 'function') openIntegrationCreateDirect(kind);
+  const toasts = { jenkins: 'st.wz_toast_jenkins', gitlab: 'st.wz_toast_gitlab', github: 'st.wz_toast_github' };
+  if (toasts[kind]) showToast(t(toasts[kind]), 'ok');
 }
 
 async function testInstanceConnection(kind, idx) {
@@ -1085,8 +1118,8 @@ async function testInstanceConnection(kind, idx) {
   showToast(msg, ok ? 'ok' : 'err');
 }
 
-function removeGInst(gi) {
-  if (!confirm(tf('st.g_confirm_remove', { name: _gi[gi].name }))) return;
+async function removeGInst(gi) {
+  if (!(await openSettingsConfirm({ message: tf('st.g_confirm_remove', { name: _gi[gi].name }), danger: true }))) return;
   _gi.splice(gi, 1);
   renderGInsts();
 }
@@ -1214,24 +1247,21 @@ function toggleGhRepos(gi) {
 }
 
 function renderGhInsts() {
-  const c = $('github-instances');
-  if (!c) return;
-  if (!_ghi.length) {
-    c.innerHTML = `<div class="empty-card">${esc(t('st.gh_empty'))}</div>`;
-    return;
-  }
-  c.innerHTML = _ghi.map((_, i) => ghInstHtml(i)).join('');
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
 }
 
 function addGithubInst() {
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('github');
+    return;
+  }
   _ghi.push({ name: `GitHub ${_ghi.length + 1}`, enabled: true, url: 'https://github.com', token: '',
              repos: [], max_runs: 10, verify_ssl: true, show_all_repos: false });
   renderGhInsts();
-  $(`ghi-card-${_ghi.length-1}`)?.querySelector('.inst-name-inp')?.focus();
 }
 
-function removeGhInst(gi) {
-  if (!confirm(tf('st.gh_confirm_remove', { name: _ghi[gi].name }))) return;
+async function removeGhInst(gi) {
+  if (!(await openSettingsConfirm({ message: tf('st.gh_confirm_remove', { name: _ghi[gi].name }), danger: true }))) return;
   _ghi.splice(gi, 1);
   renderGhInsts();
 }
@@ -1310,10 +1340,186 @@ function addTgBot() {
   $(`tg-card-${_tgBots.length - 1}`)?.querySelector('.inst-name-inp')?.focus();
 }
 
-function removeTgBot(i) {
-  if (!confirm(tf('st.tg_confirm_remove', { name: _tgBots[i].name || 'Telegram' }))) return;
+async function removeTgBot(i) {
+  if (!(await openSettingsConfirm({ message: tf('st.tg_confirm_remove', { name: _tgBots[i].name || 'Telegram' }), danger: true }))) return;
   _tgBots.splice(i, 1);
   renderTgBots();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SERVICE MONITORS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const _SVC_MON_TYPES = [
+  { id: 'zabbix' },
+  { id: 'prometheus' },
+  { id: 'alertmanager' },
+  { id: 'uptime_kuma' },
+  { id: 'netdata' },
+  { id: 'prtg' },
+  { id: 'checkmk' },
+  { id: 'http_json' },
+  { id: 'postgres' },
+  { id: 'redis' },
+  { id: 'mongodb' },
+  { id: 'mysql' },
+  { id: 'elasticsearch' },
+  { id: 'kafka' },
+];
+
+function _connectorLabel(id) {
+  const sid = String(id || '');
+  const key = 'st.conn_' + sid;
+  const tr = t(key);
+  return (tr && tr !== key) ? tr : sid;
+}
+
+function _svcMonTypeOptions(cur) {
+  const v = String(cur || 'zabbix');
+  return _SVC_MON_TYPES.map((row) => `<option value="${row.id}" ${row.id === v ? 'selected' : ''}>${esc(_connectorLabel(row.id))}</option>`).join('');
+}
+
+function updateSvcMonUI() {
+  /* legacy no-op */
+}
+
+function _svcMonTypeBadge(type) {
+  const sid = String(type || 'custom');
+  const slug = sid.replace(/[^a-z0-9_]/gi, '');
+  return `<span class="inst-badge inst-badge--sm inst-badge--${slug}">${esc(_connectorLabel(sid))}</span>`;
+}
+
+function svcMonInstHtml(i) {
+  const inst = _sm[i] || {};
+  const type = String(inst.type || 'zabbix');
+  const showAuth = ['zabbix', 'uptime_kuma', 'checkmk', 'prtg'].includes(type);
+  const showToken = ['zabbix', 'prometheus', 'alertmanager', 'checkmk', 'http_json', 'uptime_kuma'].includes(type);
+  const showZabbix = type === 'zabbix';
+  const showHttpJson = type === 'http_json';
+  const showCheckmk = type === 'checkmk';
+  const showPrtg = type === 'prtg';
+  return `
+  <div class="inst-card sm-connector-card" id="sm-card-${i}">
+    <div class="inst-hdr inst-hdr--compact">
+      ${_svcMonTypeBadge(type)}
+      <input class="inst-name-inp" value="${esc(inst.name || '')}" placeholder="prod-monitor"
+        oninput="_sm[${i}].name=this.value">
+      <label class="toggle" style="margin-left:auto">
+        <input type="checkbox" ${inst.enabled !== false ? 'checked' : ''} onchange="_sm[${i}].enabled=this.checked">
+        <div class="toggle-track"><div class="toggle-knob"></div></div>
+      </label>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="testSvcMonInst(${i})" data-i18n="st.test_connection_btn">Test</button>
+      <button type="button" class="btn btn-sm btn-ghost" onclick="removeSvcMonInst(${i})" title="Remove">&times;</button>
+    </div>
+    <div class="inst-body two-col">
+      <div class="field-row">
+        <div class="field-label">Type</div>
+        <select class="field-input" onchange="_sm[${i}].type=this.value; renderSvcMonInsts()">${_svcMonTypeOptions(type)}</select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">URL</div>
+        <input class="field-input" value="${esc(inst.url || '')}" placeholder="https://zabbix.example.com"
+          oninput="_sm[${i}].url=this.value">
+      </div>
+      ${showToken ? `<div class="field-row">
+        <div class="field-label">API token</div>
+        <input type="password" class="field-input sensitive" value="${esc(inst.token || inst.api_key || '')}" autocomplete="new-password"
+          oninput="_sm[${i}].token=this.value">
+      </div>` : ''}
+      ${showAuth ? `<div class="field-row">
+        <div class="field-label">Username</div>
+        <input class="field-input" value="${esc(inst.username || '')}" oninput="_sm[${i}].username=this.value">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Password</div>
+        <input type="password" class="field-input sensitive" value="${esc(inst.password || '')}" autocomplete="new-password"
+          oninput="_sm[${i}].password=this.value">
+      </div>` : ''}
+      ${showZabbix ? `<div class="field-row">
+        <div class="field-label">Mode</div>
+        <select class="field-input" onchange="_sm[${i}].mode=this.value">
+          <option value="problems" ${(inst.mode || 'problems') === 'problems' ? 'selected' : ''}>Active problems</option>
+          <option value="hosts" ${inst.mode === 'hosts' ? 'selected' : ''}>Hosts availability</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Min severity (problems)</div>
+        <input type="number" class="field-input" min="0" max="5" value="${esc(String(inst.min_severity ?? 2))}"
+          oninput="_sm[${i}].min_severity=toInt(this.value)">
+      </div>` : ''}
+      ${showCheckmk ? `<div class="field-row">
+        <div class="field-label">Checkmk site</div>
+        <input class="field-input" value="${esc(inst.site || '')}" placeholder="monitoring"
+          oninput="_sm[${i}].site=this.value">
+      </div>` : ''}
+      ${showPrtg ? `<div class="field-row">
+        <div class="field-label">PRTG passhash</div>
+        <input type="password" class="field-input sensitive" value="${esc(inst.passhash || '')}" autocomplete="new-password"
+          oninput="_sm[${i}].passhash=this.value">
+      </div>` : ''}
+      ${showHttpJson ? `<div class="field-row">
+        <div class="field-label">Items JSON path</div>
+        <input class="field-input" value="${esc(inst.items_path || 'data')}" oninput="_sm[${i}].items_path=this.value">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Name / status / detail fields</div>
+        <input class="field-input" value="${esc(inst.name_field || 'name')}" placeholder="name"
+          oninput="_sm[${i}].name_field=this.value" style="margin-bottom:.35rem">
+        <input class="field-input" value="${esc(inst.status_field || 'status')}" placeholder="status"
+          oninput="_sm[${i}].status_field=this.value" style="margin-bottom:.35rem">
+        <input class="field-input" value="${esc(inst.detail_field || 'detail')}" placeholder="detail"
+          oninput="_sm[${i}].detail_field=this.value">
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderSvcMonInsts() {
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
+}
+
+function addSvcMonInst() {
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('connector', 'zabbix');
+    return;
+  }
+  sC('sm-enabled', true);
+  _sm.push({
+    type: 'zabbix',
+    name: `Connector ${_sm.length + 1}`,
+    enabled: true,
+    url: '', token: '', username: '', password: '',
+    mode: 'problems', min_severity: 2,
+    items_path: 'data', name_field: 'name', status_field: 'status', detail_field: 'detail',
+  });
+  renderSvcMonInsts();
+}
+
+async function removeSvcMonInst(i) {
+  const name = (_sm[i] && _sm[i].name) || 'monitor';
+  if (!(await openSettingsConfirm({ message: `Remove monitor "${name}"?`, danger: true }))) return;
+  _sm.splice(i, 1);
+  renderSvcMonInsts();
+}
+
+async function testSvcMonInst(i) {
+  const inst = _sm[i];
+  if (!inst) return;
+  const btn = document.querySelector(`#sm-card-${i} .btn`);
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch(apiUrl('api/settings/test-connection'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: inst.type, instance: inst }),
+    });
+    const data = await res.json().catch(() => ({}));
+    showToast(data.message || (data.ok ? 'OK' : 'Failed'), data.ok ? 'ok' : 'err');
+  } catch (e) {
+    showToast(String(e), 'err');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1325,86 +1531,35 @@ function removeTgBot(i) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function updateDockerUI() {
-  const enabled  = gC('dm-enabled');
-  const showAll  = gC('dm-show-all');
-  $('dm-settings').style.display = enabled ? '' : 'none';
-  $('dm-containers-panel').style.display = (enabled && !showAll) ? '' : 'none';
-  const hint = $('dm-show-all-hint');
-  if (hint) hint.textContent = showAll
-    ? t('st.dm_hint_all')
-    : t('st.dm_hint_list');
+  /* legacy no-op — docker UI lives in integration modal */
 }
 
 function renderDockerHosts() {
-  const tb = $('docker-hosts-body');
-  if (!tb) return;
-  if (!_dh.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="6">No remote hosts. Local docker host is still monitored.</td></tr>`;
-    return;
-  }
-  tb.innerHTML = _dh.map((h, i) => `
-    <tr>
-      <td><input class="tbl-input" value="${esc(h.name || '')}" placeholder="prod-docker-1"
-          oninput="_dh[${i}].name=this.value"></td>
-      <td><input class="tbl-input" value="${esc(h.host || '')}" placeholder="10.10.10.15"
-          oninput="_dh[${i}].host=this.value"></td>
-      <td><input class="tbl-input" value="${esc(h.username || '')}" placeholder="root"
-          oninput="_dh[${i}].username=this.value"></td>
-      <td><input type="password" class="tbl-input sensitive" value="${esc(h.password || '')}" placeholder="optional"
-          autocomplete="new-password" oninput="_dh[${i}].password=this.value"></td>
-      <td class="c st-col-tight"><input type="checkbox" ${h.enabled !== false ? 'checked' : ''}
-          onchange="_dh[${i}].enabled=this.checked"></td>
-      <td class="st-col-actions"><button class="btn-icon" onclick="_dh.splice(${i},1);renderDockerHosts()" title="${esc(t('st.remove'))}">&#10005;</button></td>
-    </tr>`).join('');
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
 }
 
 function addDockerHost() {
-  _dh.push({ name: '', host: '', username: '', password: '', enabled: true });
-  renderDockerHosts();
-  $('docker-hosts-body')?.querySelector('tr:last-child .tbl-input')?.focus();
-}
-
-function renderContainers() {
-  const tb = $('containers-body');
-  if (!tb) return;
-  if (!_dc.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="2">${esc(t('st.dm_empty_cont'))}</td></tr>`;
-    return;
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('docker_host');
   }
-  tb.innerHTML = _dc.map((name, i) => `
-    <tr>
-      <td><input class="tbl-input" value="${esc(name)}" placeholder="${esc(t('st.dm_placeholder_cont'))}"
-          oninput="_dc[${i}]=this.value"></td>
-      <td class="st-col-actions"><button class="btn-icon" onclick="_dc.splice(${i},1);renderContainers()" title="${esc(t('st.remove'))}">&#10005;</button></td>
-    </tr>`).join('');
-}
-
-function addContainer() {
-  _dc.push('');
-  renderContainers();
-  $('containers-body')?.querySelector('tr:last-child .tbl-input')?.focus();
-}
-
-function renderHttpChecks() {
-  const tb = $('httpchecks-body');
-  if (!_hc.length) {
-    tb.innerHTML = `<tr class="empty-row"><td colspan="3">${esc(t('st.http_empty'))}</td></tr>`;
-    return;
-  }
-  tb.innerHTML = _hc.map((c, i) => `
-    <tr>
-      <td class="st-col-http-name"><input class="tbl-input" value="${esc(c.name)}" placeholder="${esc(t('st.th_http_name'))}"
-          oninput="_hc[${i}].name=this.value"></td>
-      <td><input class="tbl-input" value="${esc(c.url)}" placeholder="http://..."
-          oninput="_hc[${i}].url=this.value"></td>
-      <td class="st-col-actions"><button class="btn-icon" onclick="_hc.splice(${i},1);renderHttpChecks()" title="${esc(t('st.remove'))}">&#10005;</button></td>
-    </tr>`).join('');
 }
 
 function addHttpCheck() {
-  _hc.push({ name: '', url: '' });
-  renderHttpChecks();
-  $('httpchecks-body')?.querySelector('tr:last-child .tbl-input')?.focus();
+  if (typeof openIntegrationCreateDirect === 'function') {
+    openIntegrationCreateDirect('http');
+  }
+}
+
+function renderContainers() {
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
+}
+
+function addContainer() {
+  if (typeof openIntegrationEdit === 'function') openIntegrationEdit('docker', 0);
+}
+
+function renderHttpChecks() {
+  if (typeof renderIntegrationsList === 'function') renderIntegrationsList();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1432,6 +1587,7 @@ function populateForm(cfg) {
 
   sV('g-lookback',      g.default_lookback_days ?? 7);
   sV('g-history-retention', g.history_retention_days ?? 0);
+  sV('g-ui-language', g.ui_language || localStorage.getItem('cimon-ui-lang') || 'en');
   sC('w-auto-collect',  w.auto_collect            ?? true);
   sC('w-docker-auto-update',  w.docker_auto_update_enabled ?? false);
   sV('w-interval',      w.collect_interval_seconds ?? 300);
@@ -1454,11 +1610,11 @@ function populateForm(cfg) {
   _hc = JSON.parse(JSON.stringify(dm.http_checks || []));
   _dc = JSON.parse(JSON.stringify((dm.containers || []).map(c => String(c))));
   _dh = JSON.parse(JSON.stringify(dm.docker_hosts || []));
-  renderHttpChecks();
-  renderContainers();
-  renderDockerHosts();
-  updateDockerUI();
 
+  const sm = cfg.service_monitors || {};
+  sC('sm-enabled', sm.enabled ?? false);
+  sV('sm-timeout', sm.timeout_seconds ?? 15);
+  _sm = JSON.parse(JSON.stringify(sm.instances || []));
   const ai = cfg.openai || {};
   sV('ai-provider', ai.provider || 'openai');
   sV('ai-api-key', ai.api_key || '');
@@ -1480,6 +1636,8 @@ function populateForm(cfg) {
   sV('ai-proxy-url',     px.url || '');
   sV('ai-proxy-paste',   '');
   updateProxyUI();
+  const lang = (gV('g-ui-language') || 'en').trim();
+  if (lang) setUILang(lang);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1492,6 +1650,7 @@ function collectForm() {
       project_name: 'CI/CD Monitor',
       default_lookback_days: toInt(gV('g-lookback')),
       history_retention_days: toInt(gV('g-history-retention')),
+      ui_language: (gV('g-ui-language') || 'en').trim().slice(0, 5),
       data_dir: 'data',
       log_level: 'DEBUG',
     },
@@ -1540,6 +1699,36 @@ function collectForm() {
         .filter((h) => h.host),
       http_checks:          _hc,
       timeout_seconds:      toInt(gV('dm-timeout')),
+    },
+    service_monitors: {
+      enabled: gC('sm-enabled'),
+      timeout_seconds: toInt(gV('sm-timeout')) || 15,
+      instances: _sm.map((inst) => {
+        const row = {
+          type: String(inst.type || 'zabbix').trim(),
+          name: String(inst.name || '').trim(),
+          enabled: inst.enabled !== false,
+          url: String(inst.url || '').trim(),
+        };
+        if (inst.host) row.host = String(inst.host || '').trim();
+        if (inst.port != null && inst.port !== '') row.port = toInt(inst.port);
+        if (inst.database) row.database = String(inst.database || '').trim();
+        if (inst.verify_ssl === false) row.verify_ssl = false;
+        if (inst.token) row.token = String(inst.token);
+        if (inst.api_key) row.api_key = String(inst.api_key);
+        if (inst.username) row.username = String(inst.username);
+        if (inst.password) row.password = String(inst.password);
+        if (inst.passhash) row.passhash = String(inst.passhash);
+        if (inst.site) row.site = String(inst.site);
+        if (inst.mode) row.mode = String(inst.mode);
+        if (inst.min_severity != null) row.min_severity = toInt(inst.min_severity);
+        if (inst.items_path) row.items_path = String(inst.items_path);
+        if (inst.name_field) row.name_field = String(inst.name_field);
+        if (inst.status_field) row.status_field = String(inst.status_field);
+        if (inst.detail_field) row.detail_field = String(inst.detail_field);
+        if (inst.status_map && typeof inst.status_map === 'object') row.status_map = inst.status_map;
+        return row;
+      }),
     },
     openai: {
       provider: gV('ai-provider'),
@@ -1592,6 +1781,10 @@ async function saveSettings() {
     let toastType = 'ok';
     if (cp && cp.ok === false) toastType = cp.warning ? 'warn' : 'err';
     showToast(j.message || t('st.saved_toast'), toastType);
+    try {
+      const lang = (gV('g-ui-language') || 'en').trim();
+      if (lang) setUILang(lang);
+    } catch { /* ignore */ }
   } else {
     showToast(t('st.save_failed'), 'err');
   }
@@ -1738,12 +1931,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   applyUITexts();
   _applyTheme(localStorage.getItem('cimon-theme') || 'dark');
-  loadSettings();
+  if (typeof initModernSelects === 'function') initModernSelects();
+  loadSettings().then(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hashSec = (window.location.hash || '').replace(/^#/, '').trim();
+    const sec = params.get('sec') || hashSec;
+    if (sec) showSec(sec);
+  });
+  const confirmYes = $('settings-confirm-yes');
+  if (confirmYes) confirmYes.addEventListener('click', () => closeSettingsConfirm(true));
   $('reset-data-modal')?.addEventListener('click', (e) => {
     if (e.target === $('reset-data-modal')) closeResetDataModal();
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeResetDataModal();
+    if (e.key === 'Escape') {
+      closeResetDataModal();
+      if (typeof closeIntegrationModal === 'function') closeIntegrationModal();
+    }
+  });
+  $('integration-modal')?.addEventListener('click', (e) => {
+    if (e.target === $('integration-modal') && typeof closeIntegrationModal === 'function') closeIntegrationModal();
   });
 });
 </script>

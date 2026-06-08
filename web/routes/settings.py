@@ -104,14 +104,12 @@ async def api_settings_save_route(request: Request):
     from web.services import cursor_proxy
     from web.services import collect_runner_factory
 
-    task_ref = {"task": None}
-
     out = await settings_save_endpoint.api_save_settings(
         request,
         settings_api_save=settings_api.save_settings_and_restart_collect,
         load_cfg=load_yaml_config,
         collect_state=rt.collect_state,
-        collect_loop_task_ref=task_ref,
+        collect_loop_task_ref=rt.collect_loop_task_ref,
         create_collect_loop_task=collect_runner_factory.create_collect_loop_task,
         create_do_collect_task=collect_runner_factory.create_do_collect_task_factory(force_full=False),
         sync_cursor_proxy=lambda cfg: asyncio.to_thread(

@@ -33,7 +33,7 @@ from models.models import normalize_build_status
 logger = logging.getLogger(__name__)
 
 _DB_PATH: Optional[Path] = None
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 9
 
 # ``meta`` keys for dashboard document storage (formerly data/*.json).
 META_LATEST_SNAPSHOT = "latest_snapshot_json"
@@ -197,6 +197,8 @@ def _apply_schema(conn: sqlite3.Connection) -> None:
     """
     )
     _ensure_compact_columns(conn)
+    _ensure_service_incidents_table(conn)
+    _ensure_service_analysis_models_table(conn)
     _backfill_epoch_columns(conn)
     _migrate_meta_blobs_to_tables(conn)
     _backfill_compact_refs(conn)
@@ -263,6 +265,16 @@ def _ensure_compact_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tests ADD COLUMN test_name_id INTEGER")
     if not _column_exists(conn, "tests", "status_id"):
         conn.execute("ALTER TABLE tests ADD COLUMN status_id INTEGER")
+    if not _column_exists(conn, "tests", "source_instance"):
+        conn.execute("ALTER TABLE tests ADD COLUMN source_instance TEXT")
+    if not _column_exists(conn, "tests", "build_number"):
+        conn.execute("ALTER TABLE tests ADD COLUMN build_number INTEGER")
+    if not _column_exists(conn, "tests", "allure_uid"):
+        conn.execute("ALTER TABLE tests ADD COLUMN allure_uid TEXT")
+    if not _column_exists(conn, "tests", "allure_description_hash"):
+        conn.execute("ALTER TABLE tests ADD COLUMN allure_description_hash TEXT")
+    if not _column_exists(conn, "tests", "allure_attachments_hash"):
+        conn.execute("ALTER TABLE tests ADD COLUMN allure_attachments_hash TEXT")
     if not _column_exists(conn, "services", "name_id"):
         conn.execute("ALTER TABLE services ADD COLUMN name_id INTEGER")
     if not _column_exists(conn, "services", "kind_id"):
@@ -781,6 +793,259 @@ def set_log_intel_models_json(body: str) -> None:
         logger.debug("set_log_intel_models_json failed: %s", exc)
 
 
+def _ensure_service_incidents_table(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS service_incidents (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            service_key      TEXT NOT NULL,
+            service_name     TEXT,
+            service_kind     TEXT,
+            source_instance  TEXT,
+            status           TEXT NOT NULL DEFAULT 'open',
+            severity         TEXT,
+            title            TEXT,
+            detail           TEXT,
+            anomaly_kind     TEXT,
+            template_id      TEXT,
+            graph_json       TEXT,
+            root_nodes_json  TEXT,
+            opened_at        TEXT,
+            resolved_at      TEXT,
+            updated_at       TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_svc_inc_status ON service_incidents(status);
+        CREATE INDEX IF NOT EXISTS idx_svc_inc_key ON service_incidents(service_key);
+        CREATE INDEX IF NOT EXISTS idx_svc_inc_opened ON service_incidents(opened_at);
+        """
+    )
+
+
+def insert_service_incident(row: dict[str, Any]) -> int:
+    if _DB_PATH is None:
+        return 0
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO service_incidents (service_key,service_name,service_kind,source_instance,"
+            "status,severity,title,detail,anomaly_kind,template_id,graph_json,root_nodes_json,"
+            "opened_at,resolved_at,updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                row.get("service_key"),
+                row.get("service_name"),
+                row.get("service_kind"),
+                row.get("source_instance"),
+                row.get("status") or "open",
+                row.get("severity"),
+                row.get("title"),
+                row.get("detail"),
+                row.get("anomaly_kind"),
+                row.get("template_id"),
+                row.get("graph_json"),
+                row.get("root_nodes_json"),
+                row.get("opened_at"),
+                row.get("resolved_at"),
+                row.get("updated_at"),
+            ),
+        )
+        return int(cur.lastrowid or 0)
+
+
+def update_service_incident(incident_id: int, **fields: Any) -> None:
+    if _DB_PATH is None or not fields:
+        return
+    allowed = {
+        "status",
+        "severity",
+        "title",
+        "detail",
+        "graph_json",
+        "root_nodes_json",
+        "resolved_at",
+        "updated_at",
+    }
+    parts = []
+    vals: list[Any] = []
+    for k, v in fields.items():
+        if k not in allowed:
+            continue
+        parts.append(f"{k}=?")
+        vals.append(v)
+    if not parts:
+        return
+    vals.append(int(incident_id))
+    with _conn() as conn:
+        conn.execute(f"UPDATE service_incidents SET {', '.join(parts)} WHERE id=?", vals)
+
+
+def _service_incident_row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
+    import json as _json
+
+    out = dict(row)
+    for jf in ("graph_json", "root_nodes_json"):
+        raw = out.get(jf)
+        if isinstance(raw, str) and raw.strip():
+            try:
+                out[jf.replace("_json", "")] = _json.loads(raw)
+            except _json.JSONDecodeError:
+                out[jf.replace("_json", "")] = None
+    return out
+
+
+def list_service_incidents(*, status: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    if _DB_PATH is None:
+        return []
+    lim = max(1, min(500, int(limit or 100)))
+    q = "SELECT * FROM service_incidents"
+    params: list[Any] = []
+    if status:
+        q += " WHERE status=?"
+        params.append(str(status))
+    q += " ORDER BY CASE WHEN status='open' THEN 0 ELSE 1 END, datetime(opened_at) DESC LIMIT ?"
+    params.append(lim)
+    with _conn() as conn:
+        rows = conn.execute(q, params).fetchall()
+    return [_service_incident_row_to_dict(r) for r in rows]
+
+
+def get_service_incident(incident_id: int) -> dict[str, Any] | None:
+    if _DB_PATH is None:
+        return None
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM service_incidents WHERE id=?", (int(incident_id),)).fetchone()
+    return _service_incident_row_to_dict(row) if row else None
+
+
+def find_open_service_incident(service_key: str) -> dict[str, Any] | None:
+    if _DB_PATH is None:
+        return None
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM service_incidents WHERE service_key=? AND status='open' "
+            "ORDER BY datetime(opened_at) DESC LIMIT 1",
+            (str(service_key),),
+        ).fetchone()
+    return _service_incident_row_to_dict(row) if row else None
+
+
+def _ensure_service_analysis_models_table(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS service_analysis_models (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            display_name     TEXT NOT NULL,
+            service_key      TEXT NOT NULL UNIQUE,
+            service_kind     TEXT,
+            service_name     TEXT,
+            source_instance  TEXT,
+            enabled          INTEGER NOT NULL DEFAULT 1,
+            created_at       TEXT NOT NULL,
+            updated_at       TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_svc_am_key ON service_analysis_models(service_key);
+        CREATE INDEX IF NOT EXISTS idx_svc_am_enabled ON service_analysis_models(enabled);
+        """
+    )
+
+
+def _service_analysis_model_row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    d = dict(row)
+    d["enabled"] = bool(d.get("enabled"))
+    return d
+
+
+def count_service_analysis_models() -> int:
+    if _DB_PATH is None:
+        return 0
+    with _conn() as conn:
+        row = conn.execute("SELECT COUNT(*) AS c FROM service_analysis_models").fetchone()
+    return int(row["c"]) if row else 0
+
+
+def list_service_analysis_models() -> list[dict[str, Any]]:
+    if _DB_PATH is None:
+        return []
+    with _conn() as conn:
+        rows = conn.execute("SELECT * FROM service_analysis_models ORDER BY display_name COLLATE NOCASE, id").fetchall()
+    return [_service_analysis_model_row_to_dict(r) for r in rows if r]
+
+
+def get_service_analysis_model(model_id: int) -> dict[str, Any] | None:
+    if _DB_PATH is None:
+        return None
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM service_analysis_models WHERE id=?", (int(model_id),)).fetchone()
+    return _service_analysis_model_row_to_dict(row)
+
+
+def get_service_analysis_model_by_key(service_key: str) -> dict[str, Any] | None:
+    if _DB_PATH is None:
+        return None
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM service_analysis_models WHERE service_key=?", (str(service_key),)).fetchone()
+    return _service_analysis_model_row_to_dict(row)
+
+
+def insert_service_analysis_model(row: dict[str, Any]) -> int:
+    if _DB_PATH is None:
+        return 0
+    now = row.get("created_at") or datetime.now(tz=timezone.utc).isoformat()
+    with _conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO service_analysis_models "
+            "(display_name, service_key, service_kind, service_name, source_instance, enabled, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (
+                row.get("display_name"),
+                row.get("service_key"),
+                row.get("service_kind"),
+                row.get("service_name"),
+                row.get("source_instance"),
+                1 if row.get("enabled", True) else 0,
+                now,
+                row.get("updated_at") or now,
+            ),
+        )
+        return int(cur.lastrowid or 0)
+
+
+def update_service_analysis_model(model_id: int, **fields: Any) -> None:
+    if _DB_PATH is None or not fields:
+        return
+    allowed = {
+        "display_name",
+        "service_key",
+        "service_kind",
+        "service_name",
+        "source_instance",
+        "enabled",
+        "updated_at",
+    }
+    parts: list[str] = []
+    vals: list[Any] = []
+    for k, v in fields.items():
+        if k not in allowed:
+            continue
+        if k == "enabled":
+            v = 1 if v else 0
+        parts.append(f"{k}=?")
+        vals.append(v)
+    if not parts:
+        return
+    vals.append(int(model_id))
+    with _conn() as conn:
+        conn.execute(f"UPDATE service_analysis_models SET {', '.join(parts)} WHERE id=?", vals)
+
+
+def delete_service_analysis_model(model_id: int) -> None:
+    if _DB_PATH is None:
+        return
+    with _conn() as conn:
+        conn.execute("DELETE FROM service_analysis_models WHERE id=?", (int(model_id),))
+
+
 def is_db_ready() -> bool:
     return _DB_PATH is not None
 
@@ -1094,6 +1359,18 @@ def append_snapshot(snapshot: Any) -> None:
                     file_path=t.file_path,
                 )
                 failure_hash = _blob_put(conn, t.failure_message[:2000] if t.failure_message else None)
+                desc_hash = _blob_put(
+                    conn,
+                    (str(t.allure_description)[:12000] if getattr(t, "allure_description", None) else None),
+                )
+                att_json = None
+                att = getattr(t, "allure_attachments", None)
+                if att:
+                    try:
+                        att_json = json.dumps(att, ensure_ascii=False)
+                    except Exception:
+                        att_json = None
+                att_hash = _blob_put(conn, att_json)
                 ts_iso = t.timestamp.isoformat() if t.timestamp else None
                 ts_epoch = _to_epoch_seconds(ts_iso)
                 source_id = _dim_get_or_create_id(conn, "test_source", t.source)
@@ -1101,13 +1378,15 @@ def append_snapshot(snapshot: Any) -> None:
                 test_name_id = _dim_get_or_create_id(conn, "test_test_name", t.test_name)
                 status_id = _dim_get_or_create_id(conn, "test_status", t.status)
                 conn.execute(
-                    "INSERT OR IGNORE INTO tests (snapshot_id,source,suite,test_name,status,"
+                    "INSERT OR IGNORE INTO tests (snapshot_id,source,source_instance,suite,test_name,status,"
                     "duration_seconds,failure_message,failure_message_hash,timestamp,timestamp_epoch,file_path,dedup_key,"
+                    "build_number,allure_uid,allure_description_hash,allure_attachments_hash,"
                     "source_id,suite_id,test_name_id,status_id) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         snap_id,
                         t.source,
+                        getattr(t, "source_instance", None),
                         t.suite,
                         t.test_name,
                         t.status,
@@ -1118,6 +1397,10 @@ def append_snapshot(snapshot: Any) -> None:
                         ts_epoch,
                         t.file_path,
                         dedup_key,
+                        getattr(t, "build_number", None),
+                        getattr(t, "allure_uid", None),
+                        desc_hash,
+                        att_hash,
                         source_id,
                         suite_id,
                         test_name_id,
@@ -1301,6 +1584,236 @@ def build_duration_history(job_name: str, limit: int = 20) -> list[dict]:
         return [{"d": r["duration_seconds"], "s": r["status"], "n": r["build_number"]} for r in reversed(rows)]
     except Exception as exc:
         logger.debug("SQLite build_duration_history failed: %s", exc)
+        return []
+
+
+def _tests_history_lookback(hours: int = 0, days: int = 0) -> tuple[int, str] | None:
+    """UTC cutoff for tests history queries; ``None`` = no time limit."""
+    lookback_h = 0
+    if days and int(days) > 0:
+        lookback_h = int(days) * 24
+    elif hours and int(hours) > 0:
+        lookback_h = int(hours)
+    elif int(hours or 0) == 0 and int(days or 0) == 0:
+        retention = _get_history_retention_days()
+        if retention > 0:
+            lookback_h = retention * 24
+    if lookback_h <= 0:
+        return None
+    cutoff_dt = datetime.now(tz=timezone.utc) - timedelta(hours=lookback_h)
+    cutoff_iso = cutoff_dt.isoformat()
+    return _to_epoch_seconds(cutoff_iso) or 0, cutoff_iso
+
+
+def _tests_history_source_clause(source: str) -> tuple[str, list[Any]]:
+    """SQL fragment + params for dashboard source filter (jenkins/gitlab/github)."""
+    s = (source or "").strip().lower()
+    if not s:
+        return "", []
+    if s in ("jenkins", "jenkins_merged", "jenkins_unified"):
+        return (
+            "COALESCE(t.source, t_src.value) IN (?,?,?)",
+            ["jenkins_unified", "jenkins_allure", "jenkins_console"],
+        )
+    if s == "jenkins_allure":
+        return ("COALESCE(t.source, t_src.value) = ?", ["jenkins_allure"])
+    if s == "jenkins_console":
+        return ("COALESCE(t.source, t_src.value) = ?", ["jenkins_console"])
+    if s == "synthetic":
+        return ("COALESCE(t.source, t_src.value) = ?", ["jenkins_build"])
+    if s == "real":
+        return (
+            "COALESCE(t.source, t_src.value) NOT IN (?,?)",
+            ["jenkins_build", "jenkins_console"],
+        )
+    if s in ("gitlab", "github"):
+        return ("COALESCE(t.source, t_src.value) = ?", [s])
+    return ("COALESCE(t.source, t_src.value) = ?", [s])
+
+
+def _tests_history_base_from() -> str:
+    return (
+        "FROM tests t "
+        "LEFT JOIN dim_values t_src ON t_src.id = t.source_id AND t_src.domain = 'test_source' "
+        "LEFT JOIN dim_values t_suite ON t_suite.id = t.suite_id AND t_suite.domain = 'test_suite' "
+        "LEFT JOIN dim_values t_name ON t_name.id = t.test_name_id AND t_name.domain = 'test_test_name' "
+        "LEFT JOIN dim_values t_st ON t_st.id = t.status_id AND t_st.domain = 'test_status' "
+    )
+
+
+def _tests_history_where(
+    *,
+    status: str = "",
+    suite: str = "",
+    name: str = "",
+    source: str = "",
+    hours: int = 0,
+    days: int = 0,
+) -> tuple[str, list[Any]]:
+    conditions: list[str] = []
+    params: list[Any] = []
+    lookback = _tests_history_lookback(hours=hours, days=days)
+    if lookback is not None:
+        cutoff_epoch, cutoff_iso = lookback
+        conditions.append(
+            "((t.timestamp_epoch IS NOT NULL AND t.timestamp_epoch >= ?) "
+            "OR (t.timestamp_epoch IS NULL AND t.timestamp >= ?))"
+        )
+        params.extend([cutoff_epoch, cutoff_iso])
+    if status:
+        want = normalize_test_status(status)
+        conditions.append("LOWER(COALESCE(t.status, t_st.value)) = ?")
+        params.append(want)
+    if suite:
+        conditions.append("LOWER(COALESCE(t.suite, t_suite.value)) LIKE ?")
+        params.append(f"%{suite.lower()}%")
+    if name:
+        conditions.append("LOWER(COALESCE(t.test_name, t_name.value)) LIKE ?")
+        params.append(f"%{name.lower()}%")
+    src_clause, src_params = _tests_history_source_clause(source)
+    if src_clause:
+        conditions.append(src_clause)
+        params.extend(src_params)
+    where = " AND ".join(conditions) if conditions else "1=1"
+    return where, params
+
+
+def _tests_history_allure_attachments(
+    conn: sqlite3.Connection, row: sqlite3.Row, keys: set[str]
+) -> list[dict[str, Any]] | None:
+    att_hash = row["allure_attachments_hash"] if "allure_attachments_hash" in keys else None
+    if not att_hash:
+        return None
+    raw = _blob_get(conn, att_hash)
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, list) else None
+    except Exception:
+        return None
+
+
+def _tests_history_row_to_dict(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
+    keys = set(row.keys())
+    fm = row["failure_message"] if "failure_message" in keys else None
+    fm_hash = row["failure_message_hash"] if "failure_message_hash" in keys else None
+    if fm is None and fm_hash:
+        fm = _blob_get(conn, fm_hash)
+    desc = None
+    desc_hash = row["allure_description_hash"] if "allure_description_hash" in keys else None
+    if desc_hash:
+        desc = _blob_get(conn, desc_hash)
+    return {
+        "source": (row["source"] if "source" in keys else None) or "",
+        "source_instance": row["source_instance"] if "source_instance" in keys else None,
+        "suite": row["suite"] if "suite" in keys else None,
+        "test_name": (row["test_name"] if "test_name" in keys else None) or "",
+        "status": (row["status"] if "status" in keys else None) or "",
+        "duration_seconds": row["duration_seconds"] if "duration_seconds" in keys else None,
+        "failure_message": fm,
+        "timestamp": row["timestamp"] if "timestamp" in keys else None,
+        "file_path": row["file_path"] if "file_path" in keys else None,
+        "build_number": row["build_number"] if "build_number" in keys else None,
+        "allure_uid": row["allure_uid"] if "allure_uid" in keys else None,
+        "allure_description": desc,
+        "allure_attachments": _tests_history_allure_attachments(conn, row, keys),
+    }
+
+
+def query_tests_history(
+    *,
+    status: str = "",
+    suite: str = "",
+    name: str = "",
+    source: str = "",
+    hours: int = 0,
+    days: int = 0,
+    page: int = 1,
+    per_page: int = 50,
+) -> dict:
+    """Paginated test runs from SQLite history (across collect cycles)."""
+    if not ensure_database_initialized():
+        return {"items": [], "total": 0, "has_more": False}
+    try:
+        where, params = _tests_history_where(
+            status=status,
+            suite=suite,
+            name=name,
+            source=source,
+            hours=hours,
+            days=days,
+        )
+        base_from = _tests_history_base_from()
+        select_cols = (
+            "t.id, COALESCE(t.source, t_src.value) AS source, t.source_instance, "
+            "COALESCE(t.suite, t_suite.value) AS suite, "
+            "COALESCE(t.test_name, t_name.value) AS test_name, "
+            "COALESCE(t.status, t_st.value) AS status, "
+            "t.duration_seconds, t.failure_message, t.failure_message_hash, "
+            "t.timestamp, t.timestamp_epoch, t.file_path, "
+            "t.build_number, t.allure_uid, t.allure_description_hash, t.allure_attachments_hash"
+        )
+        with _conn() as conn:
+            total = conn.execute(f"SELECT COUNT(*) {base_from} WHERE {where}", params).fetchone()[0]
+            rows = conn.execute(
+                f"SELECT {select_cols} {base_from} WHERE {where} "
+                "ORDER BY COALESCE(t.timestamp_epoch,0) DESC, t.timestamp DESC LIMIT ? OFFSET ?",
+                params + [per_page, (page - 1) * per_page],
+            ).fetchall()
+            items = [_tests_history_row_to_dict(conn, r) for r in rows]
+        return {
+            "items": items,
+            "total": total,
+            "has_more": (page * per_page) < total,
+        }
+    except Exception as exc:
+        logger.debug("SQLite query_tests_history failed: %s", exc)
+        return {"items": [], "total": 0, "has_more": False}
+
+
+def query_tests_history_for_aggregate(
+    *,
+    status_failed_only: bool = True,
+    suite: str = "",
+    name: str = "",
+    source: str = "",
+    hours: int = 0,
+    days: int = 0,
+    limit: int = 50000,
+) -> list[dict[str, Any]]:
+    """Load test rows for in-process aggregation (top failures, breakdown)."""
+    if not ensure_database_initialized():
+        return []
+    try:
+        where, params = _tests_history_where(
+            suite=suite,
+            name=name,
+            source=source,
+            hours=hours,
+            days=days,
+        )
+        if status_failed_only:
+            where = f"({where}) AND LOWER(COALESCE(t.status, t_st.value)) IN ('failed','error','fail','failure')"
+        base_from = _tests_history_base_from()
+        select_cols = (
+            "COALESCE(t.source, t_src.value) AS source, t.source_instance, "
+            "COALESCE(t.suite, t_suite.value) AS suite, "
+            "COALESCE(t.test_name, t_name.value) AS test_name, "
+            "COALESCE(t.status, t_st.value) AS status, "
+            "t.duration_seconds, t.failure_message, t.failure_message_hash, "
+            "t.timestamp, t.timestamp_epoch, "
+            "t.build_number, t.allure_uid, t.allure_description_hash, t.allure_attachments_hash"
+        )
+        with _conn() as conn:
+            rows = conn.execute(
+                f"SELECT {select_cols} {base_from} WHERE {where} "
+                "ORDER BY COALESCE(t.timestamp_epoch,0) DESC, t.timestamp DESC LIMIT ?",
+                params + [max(1, int(limit))],
+            ).fetchall()
+            return [_tests_history_row_to_dict(conn, r) for r in rows]
+    except Exception as exc:
+        logger.debug("SQLite query_tests_history_for_aggregate failed: %s", exc)
         return []
 
 

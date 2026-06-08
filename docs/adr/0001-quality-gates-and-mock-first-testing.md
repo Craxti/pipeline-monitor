@@ -5,7 +5,7 @@
 
 ## Context
 
-The project integrates with external systems (Jenkins, GitLab, containers, webhooks).  
+The project integrates with external systems (Jenkins, GitLab, GitHub, Docker, Zabbix/Prometheus-style monitors, webhooks).  
 Direct dependency on live infrastructure makes CI flaky, slow, and hard to reproduce.
 
 At the same time, we need stronger stability guarantees before merge and during nightly runs.
@@ -17,8 +17,9 @@ At the same time, we need stronger stability guarantees before merge and during 
    - **Canary stage**: very fast smoke against mocked integrations.
    - **Regression stage**: wider mocked suite.
 3. Keep tests independent from:
-   - real Jenkins/GitLab instances
-   - real containers
+   - real Jenkins/GitLab/GitHub instances
+   - real containers or remote Docker hosts
+   - real external monitoring APIs (Zabbix, Prometheus, …)
    - pre-existing external databases
 4. Add nightly auto-alerting by creating a GitHub issue when regression failures are detected.
 

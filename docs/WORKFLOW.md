@@ -1,6 +1,6 @@
 # CI/CD Monitor — Issues & Pull Requests workflow
 
-This document defines how we file issues and propose changes. It is intentionally aligned with how this repo works today (CLI + FastAPI dashboard, YAML config, JSON/SQLite data artifacts, Ruff/Black linting).
+This document defines how we file issues and propose changes. It aligns with the current repo (CLI + FastAPI dashboard, SQLite-backed settings in `monitor.db`, Ruff/Black linting).
 
 ## Repository links
 
@@ -12,26 +12,26 @@ This document defines how we file issues and propose changes. It is intentionall
 Use GitHub Issues to track:
 
 - bugs (incorrect data, crashes, wrong UI state)
-- feature requests (new sources, analytics, exports)
+- feature requests (new sources, monitors, analytics, exports)
 - questions/support (setup, configuration, runtime behavior)
 
 ### Before creating an issue
 
 - Check `README.md`, `docs/USER_GUIDE.md`, and `docs/DEVELOPER_GUIDE.md`
 - Make sure you are running the latest code from `main`
-- Sanitize secrets (tokens/passwords) before sharing logs/config
+- Sanitize secrets (tokens/passwords) before sharing logs or config exports
 
 ### What to include (bugs)
 
 - minimal reproduction steps
 - expected vs actual behavior
-- environment (OS, Python version, run mode)
+- environment (OS, Python version, Docker vs local, run mode)
 - relevant logs (redacted)
-- optional: sanitized export of the latest snapshot (from `monitor.db` / API) or legacy `data/snapshot.json` if migrating
+- optional: sanitized snapshot from `/api/status` or `monitor.db` export
 
-## Pull requests (merge requests)
+## Pull requests
 
-This repo uses GitHub PRs. The PR template is stored at `.github/PULL_REQUEST_TEMPLATE.md`.
+GitHub PRs; template at `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ### PR expectations
 
@@ -40,11 +40,10 @@ This repo uses GitHub PRs. The PR template is stored at `.github/PULL_REQUEST_TE
   - `README.md`
   - `docs/USER_GUIDE.md`
   - `docs/DEVELOPER_GUIDE.md`
-- Do not commit secrets or local artifacts (tokens, `.db`, large `data/*.json`).
+  - supporting docs (`HOW_FILTERS`, `RUNBOOK`, `KPI_FAQ`) when affected
+- Do not commit secrets or local artifacts (tokens, `data/monitor.db`, `__pycache__`).
 
 ### Recommended test checklist
-
-Run at least:
 
 ```bash
 py -m pytest -q
@@ -56,7 +55,7 @@ Lint/format:
 make lint
 ```
 
-If you do not have `make` on Windows:
+Windows without `make`:
 
 ```bash
 py -m ruff check .
@@ -64,11 +63,11 @@ py -m ruff format --check .
 py -m black --check web/routes web/services web/schemas.py
 ```
 
-Smoke run (optional but helpful for UI/API changes):
+Smoke run (UI/API changes):
 
 ```bash
-py ci_monitor.py collect
 py ci_monitor.py web
+# open http://127.0.0.1:8020
 ```
 
 ### What reviewers look for
@@ -76,5 +75,5 @@ py ci_monitor.py web
 - correctness and resilience to partial/missing config
 - safe handling of secrets (masking/merging for settings)
 - no regressions in shared token auth behavior
+- service monitor / collect_sync wiring when adding integrations
 - minimal, readable diffs and clear PR description
-

@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from threading import Lock
 
+from service_monitors.base import MONITOR_KINDS
 from web.services.collect_sync import parallel_util
 from web.services.collect_sync.exceptions import CollectCancelled
 
@@ -20,6 +21,7 @@ def collect_docker_services(
     check_cancelled,
     snap_lock=None,
     maybe_save_partial=None,
+    touch_live_snapshot=None,
 ) -> None:
     """Collect container/service status via Docker monitor (parallel per host)."""
     from docker_monitor.monitor import DockerMonitor
@@ -49,6 +51,27 @@ def collect_docker_services(
         all_services: list = []
         services_lock = Lock()
 
+        def _publish_services_chunk() -> None:
+            def _merge(current_services: list) -> list:
+                ext = [s for s in current_services if str(getattr(s, "kind", "")).lower() in MONITOR_KINDS]
+                return ext + list(all_services)
+
+            if snap_lock is not None:
+                with snap_lock:
+                    snapshot.services = _merge(snapshot.services)
+            else:
+                snapshot.services = _merge(snapshot.services)
+            if maybe_save_partial is not None:
+                try:
+                    maybe_save_partial(snapshot)
+                except Exception:
+                    pass
+            if touch_live_snapshot is not None:
+                try:
+                    touch_live_snapshot()
+                except Exception:
+                    pass
+
         def _check_host(h: dict) -> None:
             check_cancelled()
             logger.info("Docker monitor host check started: %s", h.get("name") or h.get("host") or "unknown")
@@ -64,6 +87,7 @@ def collect_docker_services(
             if chunk:
                 with services_lock:
                     all_services.extend(chunk)
+                _publish_services_chunk()
 
         parallel_util.run_parallel_items(
             hosts,
@@ -80,18 +104,13 @@ def collect_docker_services(
             show_all=False,
             docker_host={"name": "local", "host": "local"},
         )
-        all_services.extend(http_monitor._check_http())
+        http_chunk = http_monitor._check_http()
         check_cancelled()
-        if snap_lock is not None:
-            with snap_lock:
-                snapshot.services = all_services
-        else:
-            snapshot.services = all_services
-        if maybe_save_partial is not None:
-            try:
-                maybe_save_partial(snapshot)
-            except Exception:
-                pass
+        if http_chunk:
+            all_services.extend(http_chunk)
+            _publish_services_chunk()
+        elif not all_services:
+            _publish_services_chunk()
         logger.info(
             "Docker monitor completed: hosts=%d, http_checks=%d, services=%d",
             len(hosts),

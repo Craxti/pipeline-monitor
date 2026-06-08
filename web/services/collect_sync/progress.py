@@ -35,12 +35,39 @@ def progress_update(
         collect_state["_phase_timing_phase"] = phase
         collect_state["_phase_timing_started"] = now_mono
         collect_state["phase"] = phase
-        collect_state["progress_main"] = main
-        collect_state["progress_sub"] = sub
+
+        active = collect_state.setdefault("active_progress", {})
+        active[phase] = {"main": main, "sub": sub, "ts": now_mono}
+        stale_cutoff = now_mono - 20.0
+        for key in list(active.keys()):
+            try:
+                if float(active[key].get("ts", 0) or 0) < stale_cutoff:
+                    del active[key]
+            except Exception:
+                del active[key]
+        mains = [v.get("main") or "" for v in sorted(active.values(), key=lambda x: float(x.get("ts", 0) or 0))]
+        mains = [m for m in mains if m]
+        if len(mains) > 1:
+            collect_state["progress_main"] = " · ".join(mains[:5])
+            subs = [v.get("sub") for v in active.values() if v.get("sub")]
+            collect_state["progress_sub"] = subs[0] if len(subs) == 1 else f"{len(active)} sources in parallel"
+        else:
+            collect_state["progress_main"] = main
+            collect_state["progress_sub"] = sub
+        collect_state["active_phases"] = list(active.keys())
+
+        pub = snapshot
+        if collect_state.get("is_collecting"):
+            try:
+                from web.services.snapshot_store import _patch_snapshot_for_collect_publish
+
+                pub = _patch_snapshot_for_collect_publish(snapshot, collect_state)
+            except Exception:
+                pub = snapshot
         collect_state["progress_counts"] = {
-            "builds": len(getattr(snapshot, "builds", None) or []),
-            "tests": len(getattr(snapshot, "tests", None) or []),
-            "services": len(getattr(snapshot, "services", None) or []),
+            "builds": len(getattr(pub, "builds", None) or []),
+            "tests": len(getattr(pub, "tests", None) or []),
+            "services": len(getattr(pub, "services", None) or []),
         }
         lvl = "info"
         s = (sub or "").lower()

@@ -59,6 +59,71 @@ function tbodyHasDataRows(tbody) {
   }
 }
 
+/** True during live collect refresh that should only re-render page 1. */
+function isCollectIncrFirstPage(state) {
+  try {
+    return typeof isCollectIncrementalRefresh === 'function'
+      && isCollectIncrementalRefresh()
+      && state
+      && state.page === 1;
+  } catch {
+    return false;
+  }
+}
+
+/** Infinite scroll: after page 1 is rendered, advance cursor for the next fetch. */
+function panelScrollContinuePage(state, tbody) {
+  try {
+    if (!state || state.done || state.loading || state.page !== 1) return;
+    if (!tbodyHasDataRows(tbody)) return;
+    state.page = 2;
+  } catch { /* ignore */ }
+}
+
+function tableRowCount(tbody) {
+  try {
+    return tbody ? tbody.querySelectorAll('tr:not(.empty-row)').length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** True when API reports more rows than currently rendered. */
+function needsFullTableLoad(state, tbody) {
+  try {
+    const total = Number(state && state.total || 0);
+    if (total <= 0 || !state || state.loading) return false;
+    const rows = tableRowCount(tbody);
+    return rows > 0 && rows < total;
+  } catch {
+    return false;
+  }
+}
+
+/** Auto-fetch remaining API pages after page 1 (no manual scroll required). */
+function scheduleTablePageChain(state, loadFn, tbody) {
+  try {
+    if (!state || state.done || state._pageChain) return;
+    state._pageChain = true;
+    (async () => {
+      try {
+        for (let guard = 0; guard < 200 && !state.done; guard++) {
+          if (state.loading) {
+            await new Promise((r) => setTimeout(r, 48));
+            continue;
+          }
+          if (state.page === 1 && tbodyHasDataRows(tbody)) state.page = 2;
+          await loadFn();
+          if (typeof yieldToBrowser === 'function') await yieldToBrowser(32);
+          if (state.done) break;
+        }
+      } finally {
+        state._pageChain = false;
+      }
+    })();
+  } catch { /* ignore */ }
+}
+
 /** Timestamp (ms) of last collect_done — transient empty API right after refresh should not blank tables. */
 let _lastCollectFinishedAt = 0;
 
@@ -191,24 +256,17 @@ function yieldToBrowser(ms) {
   });
 }
 
-/** Pause table/API churn while collect runs — keeps UI responsive. */
+/** Pause in-flight fetches while collect runs — keep observers and visible rows for live SSE updates. */
 function pauseTableLoadsForCollect() {
   document.body.classList.add('dashboard-collecting');
   _TABLE_FETCH_KEYS.forEach((k) => {
     try { abortFetchKey(k); } catch { /* ignore */ }
   });
-  ['summary.status', 'summary.events', 'summary.meta', 'summary.summary'].forEach((k) => {
-    try { abortFetchKey(k); } catch { /* ignore */ }
-  });
   try {
     Object.values(_state).forEach((s) => {
       s.loading = false;
-      s.done = true;
     });
   } catch { /* ignore */ }
-  if (typeof _disconnectAllTableObservers === 'function') {
-    _disconnectAllTableObservers();
-  }
 }
 
 function resumeTableLoadsAfterCollect() {
@@ -272,11 +330,15 @@ function keepTableOnTransientApiError(tbody, res, state, cacheKey) {
   }
 }
 
-/** Block table/API reload while collect is in progress (keep current rows visible). */
+/** Block only redundant page-1 reloads during collect; always allow the visible tab + scroll. */
 function guardPanelLoadDuringCollect(tableKey, tbody, state) {
   try {
     if (typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh()) return false;
     if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
+    const tabFor = { builds: 'builds', tests: 'test-runs', failures: 'test-failures', svcs: 'services' };
+    if (typeof _dashTab !== 'undefined' && _dashTab === tabFor[tableKey]) return false;
+    if (state && state.page > 1) return false;
+    if (state && state.page === 1 && !tbodyHasDataRows(tbody)) return false;
     if (state) {
       state.loading = false;
       state.done = true;
@@ -290,6 +352,7 @@ function guardPanelLoadDuringCollect(tableKey, tbody, state) {
 /** Skip LIVE refreshAll reload for a tab that already shows data while collect is running. */
 function shouldSkipTableReloadDuringCollect(tableKey, tbody) {
   try {
+    if (typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh()) return false;
     if (!_collectGraceActive()) return false;
     if (typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return false;
     const tabFor = { builds: 'builds', tests: 'test-runs', failures: 'test-failures', svcs: 'services' };
@@ -424,12 +487,20 @@ function updateTopStatusBar(metaObj, summaryObj, nFail, nTFail, nDown) {
   if (srcDot) srcDot.className = 'topdot ' + (total ? (down ? 'warn' : 'ok') : '');
 }
 
+let _sseReconnectTimer = null;
+let _sseReconnectDelayMs = 1000;
+
 function initEventSource() {
   if (typeof EventSource === 'undefined') return;
   try {
+    if (_sseReconnectTimer) {
+      clearTimeout(_sseReconnectTimer);
+      _sseReconnectTimer = null;
+    }
     // Ensure only one stream is active.
     try { if (_eventSource) _eventSource.close(); } catch { /* ignore */ }
     _eventSource = new EventSource(apiUrl('api/stream/events'));
+    _eventSource.onopen = () => { _sseReconnectDelayMs = 1000; };
     _eventSource.onmessage = (ev) => {
       try {
         const d = JSON.parse(ev.data);
@@ -449,7 +520,17 @@ function initEventSource() {
         }
       } catch { /* ignore */ }
     };
-    _eventSource.onerror = () => { try { _eventSource.close(); } catch (e) { /* ignore */ } };
+    _eventSource.onerror = () => {
+      try { _eventSource.close(); } catch { /* ignore */ }
+      _eventSource = null;
+      if (typeof _liveMode === 'undefined' || !_liveMode) return;
+      if (_sseReconnectTimer) return;
+      _sseReconnectTimer = setTimeout(() => {
+        _sseReconnectTimer = null;
+        _sseReconnectDelayMs = Math.min((_sseReconnectDelayMs || 1000) * 2, 15000);
+        initEventSource();
+      }, _sseReconnectDelayMs || 1000);
+    };
   } catch { /* ignore */ }
 }
 
@@ -567,7 +648,7 @@ function runbookFocusBuildFailures() {
   goToInTab('builds', 'panel-builds');
   const el = document.getElementById('f-bstatus');
   if (el) el.value = 'failure';
-  resetBuilds();
+  resetBuilds(false, true);
 }
 
 function runbookFocusTestFailures() {
@@ -672,17 +753,25 @@ function initDashFormControlBindings() {
   const fTsource = byId('f-tsource');
   if (fTsource) {
     fTsource.addEventListener('change', () => {
-      resetFailures();
-      resetTests();
-      updateTestsExportLinks();
-      updateFailuresExportLinks();
+      if (typeof _onTestSourceFilterChange === 'function') _onTestSourceFilterChange('runs');
+    });
+  }
+  const fTinstance = byId('f-tinstance');
+  if (fTinstance) {
+    fTinstance.addEventListener('change', () => {
+      if (typeof _onTestInstanceFilterChange === 'function') _onTestInstanceFilterChange('runs');
     });
   }
   const fFsource = byId('f-fsource');
   if (fFsource) {
     fFsource.addEventListener('change', () => {
-      resetFailures();
-      updateFailuresExportLinks();
+      if (typeof _onTestSourceFilterChange === 'function') _onTestSourceFilterChange('failures');
+    });
+  }
+  const fFinstance = byId('f-finstance');
+  if (fFinstance) {
+    fFinstance.addEventListener('change', () => {
+      if (typeof _onTestInstanceFilterChange === 'function') _onTestInstanceFilterChange('failures');
     });
   }
   const fTstatus = byId('f-tstatus');
@@ -760,7 +849,7 @@ function refreshActivePanel() {
   }
   if (_dashTab === 'incidents') { loadSummary(); return; }
   if (_dashTab === 'log-intel') {
-    if (_logIntelSelectedKey) return;
+    if (_logIntelSelectedKey || _logIntelSelectedModelId) return;
     if (typeof loadLogIntelList === 'function') loadLogIntelList();
     return;
   }
@@ -900,7 +989,7 @@ function applyIncidentFilter(inc) {
   const fj = document.getElementById('f-job');
   if (fs) fs.value = 'failure';
   if (fj) fj.value = (inc.jobs && inc.jobs.length === 1) ? inc.jobs[0] : '';
-  resetBuilds();
+  resetBuilds(false, true);
   goToInTab('builds', 'panel-builds');
 }
 
@@ -1179,7 +1268,7 @@ function renderIncidentCards(snap) {
         if (finst) finst.value = '';
         if (fs) fs.value = st;
         if (fj) fj.value = String(b.job_name || '');
-        resetBuilds();
+        resetBuilds(false, true);
         window.requestAnimationFrame(() => _flashBuildRowForJob(b.job_name, b.build_number));
       },
     });
@@ -1234,8 +1323,7 @@ function renderIncidentCards(snap) {
       });
   };
   const all = dedupSort(events);
-  const MAX_FEED = 80;
-  all.slice(0, MAX_FEED).forEach((ev) => _icAppendEventRow(wrap, ev));
+  all.forEach((ev) => _icAppendEventRow(wrap, ev));
 
   const feedHead = document.getElementById('ic-feed-head');
   const feedCount = document.getElementById('ic-feed-count');
@@ -1269,31 +1357,18 @@ function renderIcTimeline(incidents) {
     wrap.style.display = 'none';
     return;
   }
-  const MAX = 12;
-  // Persist expand/collapse across refreshes during the session.
-  if (typeof window._icTlExpanded === 'undefined') window._icTlExpanded = false;
-  const expanded = !!window._icTlExpanded;
-  const shown = expanded ? incidents : incidents.slice(0, MAX);
-  const more = Math.max(0, incidents.length - (expanded ? incidents.length : shown.length));
   wrap.style.display = 'block';
   wrap.innerHTML = `<div class="ic-tl-title">${esc(t('icenter.timeline_title'))}</div><div class="ic-tl-row">${
-    shown.map((inc, i) => {
+    incidents.map((inc, i) => {
       const job = (inc && inc.jobs && inc.jobs[0]) ? String(inc.jobs[0]) : '';
       const short = job.length > 18 ? (job.slice(0, 18) + '…') : job;
       const title = job ? ` title="${_svgTitleAttr(job)}"` : '';
       return `<button type="button" class="ic-tl-seg" data-ic-tl="${i}"${title}>${esc(short || (String(inc.count || 1) + '×'))}</button>`;
-    }).join('') + (incidents.length > MAX ? `<button type="button" class="ic-tl-seg" data-ic-tl-toggle style="color:var(--muted)">${expanded ? esc(t('icenter.tl_collapse')) : ('+' + more + ' ' + esc(t('icenter.tl_more')))}</button>` : '')
+    }).join('')
   }</div>`;
-  shown.forEach((inc, i) => {
+  incidents.forEach((inc, i) => {
     wrap.querySelector(`[data-ic-tl="${i}"]`)?.addEventListener('click', () => applyIncidentFilter(inc));
   });
-  const tg = wrap.querySelector('[data-ic-tl-toggle]');
-  if (tg) {
-    tg.addEventListener('click', () => {
-      window._icTlExpanded = !window._icTlExpanded;
-      renderIcTimeline(incidents);
-    });
-  }
 }
 
 function renderIncidentCenter(snap, summary, _metaObj) {
@@ -1414,11 +1489,11 @@ function renderIncidentCenter(snap, summary, _metaObj) {
 
   el.style.display = 'block';
 
-  renderIncidentCards(snap);
-  const incidents = (typeof analyzeCorrelation === 'function')
-    ? analyzeCorrelation(builds)
-    : [];
-  renderIcTimeline(incidents);
+  if (typeof loadServiceIncidentsForCenter === 'function') {
+    loadServiceIncidentsForCenter(true);
+  } else {
+    renderIncidentCards(snap);
+  }
 }
 
 function openRunbook() {
@@ -1550,9 +1625,7 @@ function updateExecHealthLine() {
 }
 
 function setUILang(code) {
-  if (code !== 'ru' && code !== 'en') return;
-  localStorage.setItem('cimon-ui-lang', code);
-  applyUITexts();
+  if (!applyUILang(code)) return;
   try { refreshIncidentReasonsI18n(); } catch (e) { /* ignore */ }
   _setCollectLines(t('dash.connecting'), '');
   _applyTheme(localStorage.getItem('cimon-theme') === 'light' ? 'light' : 'dark');
@@ -1578,11 +1651,9 @@ function _gid(id) {
 
 function _finalizeStatTrends() {
   const cur = {
-    builds: _gid('s-builds'),
     ok: _gid('hero-builds-ok'),
-    fail: _gid('s-fail'),
-    run: _gid('s-run'),
-    tfail: _gid('s-tfail'),
+    fail: _gid('hero-builds-fail'),
+    tfail: _gid('hero-tests-fail'),
     tpass: (() => {
       const total = _gid('hero-tests-total');
       const fail = _gid('hero-tests-fail');
@@ -1590,35 +1661,5 @@ function _finalizeStatTrends() {
     })(),
     down: _gid('hero-svcs-down'),
   };
-  const prev = JSON.parse(sessionStorage.getItem('cimon-stat-snap') || 'null');
-  const pairs = [
-    ['tr-builds', 'builds'],
-    ['tr-ok', 'ok'],
-    ['tr-fail', 'fail'],
-    ['tr-run', 'run'],
-    ['tr-tfail', 'tfail'],
-    ['tr-tpass', 'tpass'],
-    ['tr-down', 'down'],
-  ];
-  pairs.forEach(([tid, k]) => {
-    const el = document.getElementById(tid);
-    if (!el || cur[k] == null) return;
-    if (!prev || prev[k] == null) {
-      el.textContent = '';
-      el.className = 'stat-trend';
-      return;
-    }
-    const d = cur[k] - prev[k];
-    if (d > 0) {
-      el.textContent = '↑' + d;
-      el.className = 'stat-trend up';
-    } else if (d < 0) {
-      el.textContent = '↓' + Math.abs(d);
-      el.className = 'stat-trend down';
-    } else {
-      el.textContent = '→';
-      el.className = 'stat-trend';
-    }
-  });
   sessionStorage.setItem('cimon-stat-snap', JSON.stringify(cur));
 }

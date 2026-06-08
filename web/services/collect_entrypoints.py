@@ -78,7 +78,7 @@ def save_snapshot_partial(snapshot: CISnapshot, *, data_dir: str | None = None) 
 def maybe_save_partial(
     snapshot: CISnapshot,
     *,
-    min_interval_s: float = 15.0,
+    min_interval_s: float = 1.5,
     force: bool = False,
 ) -> None:
     """Save partial snapshot if enough time passed (throttled)."""
@@ -190,4 +190,5 @@ async def collect_loop(cfg: dict) -> None:
         auto_collect_enabled_getter=lambda: bool(rt.auto_collect_rt.enabled),
         interval_seconds_getter=lambda: int(rt.collect_state.get("interval_seconds") or 300),
         do_collect_fn=lambda c: do_collect(c, force_full=False),
+        load_cfg=load_yaml_config,
     )

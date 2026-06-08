@@ -61,9 +61,9 @@ def normalize_service_status(raw: str) -> str:
     s = (raw or "").strip().lower()
     if s in ("up", "healthy", "ok", "running"):
         return "up"
-    if s in ("down", "unhealthy", "offline", "stopped"):
+    if s in ("down", "unhealthy", "offline", "stopped", "firing", "critical", "disaster", "high", "failed", "error"):
         return "down"
-    if s in ("degraded", "warn", "warning"):
+    if s in ("degraded", "warn", "warning", "pending", "average", "maintenance", "unknown"):
         return "degraded"
     return s or "unknown"
 
@@ -140,10 +140,13 @@ class TestRecord(BaseModel):
 
 
 class ServiceStatus(BaseModel):
-    """Result of a Docker / HTTP health check."""
+    """Result of a service health check (Docker, HTTP, or external monitor)."""
 
     name: str
-    kind: str = Field(..., description="docker | http")
+    kind: str = Field(
+        ...,
+        description="docker | http | zabbix | prometheus | alertmanager | uptime_kuma | netdata | prtg | checkmk | http_json",
+    )
     source_instance: Optional[str] = Field(
         default=None,
         description="Logical source instance label (e.g. docker host)",

@@ -4,7 +4,8 @@
 
 
 
-let _lastPartialLiveCounts = null;
+/** Counts last applied to table panels — distinct from SSE payload (which is set before debounced refresh). */
+let _lastIncrementalAppliedCounts = null;
 
 let _partialLiveRefreshTimer = null;
 
@@ -16,19 +17,22 @@ let _lastIncrementalRunTs = 0;
 
 let _lastPartialSsePayload = null;
 
+let _collectIncrementalPending = false;
+
 
 
 /** Debounce SSE partial updates; min gap between DOM refreshes. */
 
-const COLLECT_INCREMENTAL_DEBOUNCE_MS = 600;
+const COLLECT_INCREMENTAL_DEBOUNCE_MS = 280;
 
-const COLLECT_INCREMENTAL_MIN_INTERVAL_MS = 1100;
+const COLLECT_INCREMENTAL_MIN_INTERVAL_MS = 350;
 
-/** First page only during collect — avoids multi-page fetches that freeze the UI. */
+/** Heavy endpoints (full /api/status, trends) — throttle during collect so tables stay responsive. */
+const COLLECT_HEAVY_PANEL_MIN_INTERVAL_MS = 5000;
 
-const COLLECT_INCREMENTAL_PER_PAGE = 48;
+let _lastIncidentsLiveRefreshTs = 0;
 
-
+let _lastTrendsLiveRefreshTs = 0;
 
 function isCollectIncrementalRefresh() {
 
@@ -40,9 +44,7 @@ function isCollectIncrementalRefresh() {
 
 function collectIncrementalPerPage(defaultPerPage) {
 
-  const d = Number(defaultPerPage) || 200;
-
-  return Math.min(COLLECT_INCREMENTAL_PER_PAGE, d);
+  return Number(defaultPerPage) || 200;
 
 }
 
@@ -134,7 +136,43 @@ function _partialPayloadChanged(prev, next) {
 
   }
 
+  if (prev.phase != null && next.phase != null && String(prev.phase) !== String(next.phase)) {
+
+    return true;
+
+  }
+
+  const prevPhases = Array.isArray(prev.active_phases) ? prev.active_phases.join(',') : '';
+
+  const nextPhases = Array.isArray(next.active_phases) ? next.active_phases.join(',') : '';
+
+  if (nextPhases && prevPhases !== nextPhases) return true;
+
   return _partialCountsChanged(prev.counts, next.counts);
+
+}
+
+
+
+function _incrTabNeedsBuilds(tab, buildsCountDelta) {
+
+  return buildsCountDelta || tab === 'builds';
+
+}
+
+
+
+function _incrTabNeedsTests(tab, testsCountDelta) {
+
+  return testsCountDelta || tab === 'test-runs' || tab === 'test-failures';
+
+}
+
+
+
+function _incrTabNeedsSvcs(tab, svcsCountDelta) {
+
+  return svcsCountDelta || tab === 'services';
 
 }
 
@@ -172,7 +210,68 @@ async function _fetchSummaryDuringCollect() {
 
 
 
+/** Lightweight top-bar / meta refresh — avoids full /api/status (~MB JSON) every tick. */
+async function _applyLightSummaryDuringCollect(summaryObj) {
+
+  if (summaryObj && summaryObj.counts && typeof _applySummaryCountsLight === 'function') {
+
+    _applySummaryCountsLight(summaryObj.counts);
+
+  }
+
+  try { updateTestsParseNote(summaryObj); } catch { /* ignore */ }
+
+  const metaRes = await fetchKeyed('summary.meta.live', apiUrl('api/meta')).catch(() => null);
+
+  if (metaRes === FETCH_ABORTED) return;
+
+  let metaObj = null;
+
+  if (metaRes && metaRes.ok) {
+
+    try { metaObj = await metaRes.json(); } catch { /* ignore */ }
+
+  }
+
+  if (metaObj) {
+
+    _jobAnalytics = metaObj.job_analytics || {};
+
+    try { updateCorrelationHint(metaObj); } catch { /* ignore */ }
+
+  }
+
+  try {
+
+    updateTopStatusBar(
+
+      metaObj,
+
+      summaryObj,
+
+      _lastTopRedCounts.nFail,
+
+      _lastTopRedCounts.nTFail,
+
+      _lastTopRedCounts.nDown,
+
+    );
+
+  } catch { /* ignore */ }
+
+}
+
+
+
 async function _refreshIncidentsDuringCollect(summaryObj) {
+
+  const now = Date.now();
+
+  if (now - _lastIncidentsLiveRefreshTs < COLLECT_HEAVY_PANEL_MIN_INTERVAL_MS) return;
+
+  if (typeof _dashTab !== 'undefined' && _dashTab !== 'overview') return;
+
+  _lastIncidentsLiveRefreshTs = now;
 
   const statusRes = await fetchKeyed('summary.status.inc', apiUrl('api/status')).catch(() => null);
 
@@ -210,10 +309,6 @@ function refreshLivePanelsDuringCollect(payload) {
 
   if (!_partialPayloadChanged(prev, payload)) return;
 
-  const counts = payload && payload.counts;
-
-  _lastPartialLiveCounts = counts ? { ...counts } : null;
-
   _lastPartialSsePayload = payload;
 
 
@@ -246,7 +341,13 @@ async function _runCollectIncrementalRefresh() {
 
   if (!_liveMode || typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return;
 
-  if (_collectIncrementalBusy) return;
+  if (_collectIncrementalBusy) {
+
+    _collectIncrementalPending = true;
+
+    return;
+
+  }
 
   const now = Date.now();
 
@@ -296,7 +397,11 @@ async function _runCollectIncrementalRefresh() {
 
         tests_total: Number(c.tests_total ?? counts?.tests ?? 0),
 
+        successful_builds: Number(c.successful_builds ?? Math.max(0, Number(c.builds ?? counts?.builds ?? 0) - Number(c.failed_builds ?? (_lastTopRedCounts && _lastTopRedCounts.nFail) ?? 0))),
+
         failed_builds: Number(c.failed_builds ?? (_lastTopRedCounts && _lastTopRedCounts.nFail) ?? 0),
+
+        services_total: Number(c.services_total ?? counts?.services ?? 0),
 
         failed_tests: Number(c.failed_tests ?? (_lastTopRedCounts && _lastTopRedCounts.nTFail) ?? 0),
 
@@ -308,53 +413,111 @@ async function _runCollectIncrementalRefresh() {
 
 
 
-    const steps = [
+    const prev = _lastIncrementalAppliedCounts ? { ..._lastIncrementalAppliedCounts } : null;
 
-      async () => {
+    const nextBuilds = Number((counts && counts.builds) ?? (c.builds ?? 0));
 
-        _prepIncrementalPanel(_state.builds, 'builds');
+    const nextTests = Number((counts && counts.tests) ?? (c.tests_total ?? c.tests ?? 0));
 
-        if (typeof loadBuilds === 'function') await loadBuilds();
+    const nextSvcs = Number((counts && counts.services) ?? (c.services_total ?? c.services ?? 0));
 
-      },
+    const buildsCountDelta = !prev || Number(prev.builds || 0) !== nextBuilds;
 
-      async () => {
+    const testsCountDelta = !prev || Number(prev.tests || 0) !== nextTests;
 
-        _prepIncrementalPanel(_state.failures, 'failures', () => { _failuresLoadGen++; });
+    const svcsCountDelta = !prev || Number(prev.services || 0) !== nextSvcs;
 
-        if (typeof loadFailures === 'function') await loadFailures();
+    const tab = typeof _dashTab !== 'undefined' ? _dashTab : '';
 
-      },
+    const steps = [];
 
-      async () => {
+    steps.push(async () => {
 
-        _prepIncrementalPanel(_state.tests, 'tests', () => { _testsLoadGen++; });
+      if (typeof populateSourcesAndInstances === 'function') await populateSourcesAndInstances();
 
-        if (typeof loadTests === 'function') await loadTests();
+    });
 
-      },
+    steps.push(async () => {
 
-      async () => {
+      await _applyLightSummaryDuringCollect(summaryObj);
 
-        _prepIncrementalPanel(_state.svcs, 'services');
+    });
 
-        if (typeof loadUptimeData === 'function') await loadUptimeData();
+    steps.push(async () => { await _refreshIncidentsDuringCollect(summaryObj); });
 
-        if (typeof loadServices === 'function') await loadServices();
+    if (typeof _dashTab !== 'undefined' && _dashTab === 'system' && typeof loadSystemStats === 'function') {
 
-      },
+      steps.push(async () => { await loadSystemStats(); });
 
-      async () => { await _refreshIncidentsDuringCollect(summaryObj); },
+    }
 
-    ];
+    steps.push(async () => {
+
+      _prepIncrementalPanel(_state.builds, 'builds');
+
+      _prepIncrementalPanel(_state.failures, 'failures', () => { _failuresLoadGen++; });
+
+      _prepIncrementalPanel(_state.tests, 'tests', () => { _testsLoadGen++; });
+
+      _prepIncrementalPanel(_state.svcs, 'services');
+
+      const tableLoads = [];
+
+      if (typeof loadBuilds === 'function') tableLoads.push(loadBuilds());
+
+      if (typeof loadFailures === 'function') tableLoads.push(loadFailures());
+
+      if (typeof loadTests === 'function') tableLoads.push(loadTests());
+
+      if (typeof loadUptimeData === 'function') {
+
+        tableLoads.push(loadUptimeData().then(() => {
+
+          if (typeof loadServices === 'function') return loadServices();
+
+        }));
+
+      } else if (typeof loadServices === 'function') {
+
+        tableLoads.push(loadServices());
+
+      }
+
+      await Promise.all(tableLoads.map((p) => p.catch(() => {})));
+
+    });
+
+    if (typeof loadTrends === 'function') {
+
+      const trendsNow = Date.now();
+
+      if (trendsNow - _lastTrendsLiveRefreshTs >= COLLECT_HEAVY_PANEL_MIN_INTERVAL_MS) {
+
+        _lastTrendsLiveRefreshTs = trendsNow;
+
+        steps.push(async () => {
+
+          await loadTrends(typeof _trendsViewDays === 'number' ? _trendsViewDays : 14, null);
+
+        });
+
+      }
+
+    }
 
 
 
     for (const step of steps) {
 
-      await step();
+      await step().catch(() => {});
 
-      if (typeof yieldToBrowser === 'function') await yieldToBrowser(36);
+      if (typeof yieldToBrowser === 'function') await yieldToBrowser(20);
+
+    }
+
+    if (buildsCountDelta || testsCountDelta || svcsCountDelta) {
+
+      _lastIncrementalAppliedCounts = { builds: nextBuilds, tests: nextTests, services: nextSvcs };
 
     }
 
@@ -366,6 +529,14 @@ async function _runCollectIncrementalRefresh() {
 
     _collectIncrementalBusy = false;
 
+    if (_collectIncrementalPending) {
+
+      _collectIncrementalPending = false;
+
+      setTimeout(() => { _runCollectIncrementalRefresh(); }, 80);
+
+    }
+
   }
 
 }
@@ -374,11 +545,17 @@ async function _runCollectIncrementalRefresh() {
 
 function _resetPartialLiveRefreshState() {
 
-  _lastPartialLiveCounts = null;
+  _collectIncrementalPending = false;
+
+  _lastIncrementalAppliedCounts = null;
 
   _lastPartialSsePayload = null;
 
   _lastIncrementalRunTs = 0;
+
+  _lastIncidentsLiveRefreshTs = 0;
+
+  _lastTrendsLiveRefreshTs = 0;
 
   _collectIncrementalRefresh = false;
 
@@ -416,8 +593,30 @@ function _autoRefreshVisiblePanelsDuringCollect(summaryObj) {
 
 
 
+/** Fallback when SSE is slow — pollCollect passes fresh progress_counts. */
+
+function notifyCollectCountsChanged(counts, phase, revision, activePhases) {
+
+  if (!_liveMode || typeof _dashIsCollecting === 'undefined' || !_dashIsCollecting) return;
+
+  if (!counts || typeof counts !== 'object') return;
+
+  refreshLivePanelsDuringCollect({
+    type: 'snapshot_partial',
+    counts,
+    phase: phase ?? null,
+    revision: revision != null ? revision : null,
+    active_phases: Array.isArray(activePhases) ? activePhases : null,
+  });
+
+}
+
+
+
 window.isCollectIncrementalRefresh = isCollectIncrementalRefresh;
 
 window.collectIncrementalPerPage = collectIncrementalPerPage;
+
+window.notifyCollectCountsChanged = notifyCollectCountsChanged;
 
 

@@ -4,24 +4,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ALL TEST RUNS
 // ─────────────────────────────────────────────────────────────────────────────
-function _normalizeTestSourceUi(uiSource) {
-  const s = String(uiSource || '').trim().toLowerCase();
-  if (!s || s === 'pipelines' || s === 'gitlab_test') return 'real';
-  return String(uiSource || '').trim() || 'real';
-}
-
 function _mapTestSourceForApi(uiSource) {
-  return _normalizeTestSourceUi(uiSource);
+  if (typeof _pickTestSourceValue === 'function') return _pickTestSourceValue(uiSource);
+  const s = String(uiSource || '').trim().toLowerCase();
+  if (s === 'jenkins' || s.startsWith('jenkins')) return 'jenkins';
+  if (s === 'gitlab' || s.startsWith('gitlab')) return 'gitlab';
+  if (s === 'github' || s.startsWith('github')) return 'github';
+  return 'jenkins';
 }
 
 function _migrateLegacyTestSourceSelect() {
-  const sel = document.getElementById('f-tsource');
-  if (!sel) return;
-  const v = String(sel.value || '').trim().toLowerCase();
-  if (v === 'pipelines' || v === 'gitlab_test') {
-    sel.value = 'real';
-    try { localStorage.setItem('cimon-f-tsource', 'real'); } catch { /* ignore */ }
-  }
+  ['f-tsource', 'f-fsource'].forEach((id) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const mapped = _mapTestSourceForApi(sel.value);
+    if (mapped !== sel.value) {
+      sel.value = mapped;
+      const key = id === 'f-tsource' ? 'tsource' : 'fsource';
+      try { localStorage.setItem('cimon-f-' + key, mapped); } catch { /* ignore */ }
+    }
+  });
 }
 
 let _lastTestsPageSig = '';
@@ -688,7 +690,8 @@ function openAllureScreensModal(ctx) {
  */
 function buildAllureActionButtonsFragment(row) {
   const src = String(row.source || '').toLowerCase();
-  const j = src === 'jenkins_unified' || src === 'jenkins_allure';
+  const j = src === 'jenkins_unified' || src === 'jenkins_allure'
+    || (src.startsWith('jenkins_') && src !== 'jenkins_build');
   const hasBn = row.build_number != null && Number.isFinite(Number(row.build_number));
   const uid = (row.allure_uid != null && String(row.allure_uid).trim())
     ? String(row.allure_uid).trim()
@@ -743,7 +746,7 @@ window.buildAllureActionButtonsFragment = buildAllureActionButtonsFragment;
 
 function _allureActionsCell(row) {
   const td = document.createElement('td');
-  td.className = 'col-compact-hide';
+  td.className = 'allure-actions-cell';
   td.style.whiteSpace = 'nowrap';
   const frag = buildAllureActionButtonsFragment(row);
   if (!frag) {
@@ -769,19 +772,25 @@ function summarizeFailureMessage(raw) {
 }
 
 function resetTests() {
-  resetTestsSoft(!!_liveMode);
+  resetTestsSoft(false, true);
 }
-function resetTestsSoft(soft=false) {
+function resetTestsSoft(soft=false, force=false) {
   abortFetchKey('tests');
   _testsLoadGen++;
   const s = _state.tests; s.page=1; s.done=false; s.loading = false;
+  if (force || !soft) _lastTestsPageSig = '';
   const tb = document.getElementById('tbody-tests');
+  if (!soft && !force && typeof _collectGraceActive === 'function' && _collectGraceActive() && tbodyHasDataRows(tb)) {
+    soft = true;
+  }
   if (!soft && tb) tb.innerHTML = tableLoadingRowHtml(7);
   loadTests();
 }
 function clearTestFilters() {
   document.getElementById('f-tstatus').value = '';
-  document.getElementById('f-tsource').value = 'real';
+  document.getElementById('f-tsource').value = 'jenkins';
+  const tinst = document.getElementById('f-tinstance');
+  if (tinst) tinst.value = '';
   document.getElementById('f-tname').value   = '';
   document.getElementById('f-tsuite').value  = '';
   _testsHours = 0;
@@ -793,21 +802,30 @@ function clearTestFilters() {
   resetTests();
 }
 
+function _testExportQuery() {
+  const src = _mapTestSourceForApi(document.getElementById('f-tsource')?.value || '');
+  const inst = document.getElementById('f-tinstance')?.value || '';
+  let q = src ? `&source=${encodeURIComponent(src)}` : '';
+  if (inst) q += `&instance=${encodeURIComponent(inst)}`;
+  return q;
+}
+
 function updateTestsExportLinks() {
-  const uiSrc = document.getElementById('f-tsource')?.value || '';
-  const src = _mapTestSourceForApi(uiSrc);
+  const q = _testExportQuery();
   const a1 = document.getElementById('exp-tests-csv');
   const a2 = document.getElementById('exp-tests-xlsx');
   const a3 = document.getElementById('exp-tests-failed-csv');
-  if (a1) a1.href = `api/export/tests?fmt=csv${src ? '&source=' + encodeURIComponent(src) : ''}`;
-  if (a2) a2.href = `api/export/tests?fmt=xlsx${src ? '&source=' + encodeURIComponent(src) : ''}`;
-  if (a3) a3.href = `api/export/tests?fmt=csv&status=failed${src ? '&source=' + encodeURIComponent(src) : ''}`;
+  if (a1) a1.href = `api/export/tests?fmt=csv${q}`;
+  if (a2) a2.href = `api/export/tests?fmt=xlsx${q}`;
+  if (a3) a3.href = `api/export/tests?fmt=csv&status=failed${q}`;
 }
 
 function updateFailuresExportLinks() {
-  const src = document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '';
+  const src = _mapTestSourceForApi(document.getElementById('f-fsource')?.value || document.getElementById('f-tsource')?.value || '');
+  const inst = document.getElementById('f-finstance')?.value || '';
   const d = _failuresDays > 0 ? `&days=${_failuresDays}` : '';
-  const q = (extra) => `api/export/failures?fmt=${extra}&n=10000${src ? '&source=' + encodeURIComponent(src) : ''}${d}`;
+  const iq = inst ? `&instance=${encodeURIComponent(inst)}` : '';
+  const q = (extra) => `api/export/failures?fmt=${extra}&n=500${src ? '&source=' + encodeURIComponent(src) : ''}${iq}${d}`;
   const c = document.getElementById('exp-failures-csv');
   const x = document.getElementById('exp-failures-xlsx');
   if (c) c.href = q('csv');
@@ -826,7 +844,7 @@ function toggleFailuresDayFilter(days) {
   try { localStorage.setItem('cimon-failures-days', String(_failuresDays)); } catch { /* ignore */ }
   updateFailuresExportLinks();
   updateFilterSummary();
-  resetFailures();
+  resetFailures(false, true);
 }
 
 function _mkTestSrcBadge(src) {
@@ -886,6 +904,33 @@ function _appendTestResultCells(tr, row, opts = {}) {
   }
 
   tr.append(td1, td2, td3, td4, td5, td6);
+}
+
+function _renderTestRunsTable(runs) {
+  const frag = document.createDocumentFragment();
+  (runs || []).forEach((row) => {
+    const tr = document.createElement('tr');
+    tr.className = 'test-run-row';
+    tr.setAttribute('data-test-name', String(row.test_name || ''));
+    tr.setAttribute('data-test-suite', String(row.suite || ''));
+
+    const td0 = document.createElement('td');
+    td0.style.maxWidth = '260px';
+    td0.style.wordBreak = 'break-word';
+    td0.title = String(row.test_name || '');
+    const stack = document.createElement('div');
+    stack.className = 'cell-stack test-name-stack';
+    if (row.source) stack.appendChild(_mkTestSrcBadge(row.source));
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'cell-main';
+    nameSpan.textContent = String(row.test_name || '');
+    stack.appendChild(nameSpan);
+    td0.appendChild(stack);
+    tr.appendChild(td0);
+    _appendTestResultCells(tr, row);
+    frag.appendChild(tr);
+  });
+  return frag;
 }
 
 function _renderTestGroupsTable(groups) {
@@ -971,8 +1016,9 @@ async function loadTests() {
 
   const tbody = document.getElementById('tbody-tests');
   if (guardPanelLoadDuringCollect('tests', tbody, s)) return;
-  const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
-  if (!incr && s.page === 1 && typeof shouldSkipTableReloadDuringCollect === 'function' && shouldSkipTableReloadDuringCollect('tests', tbody)) {
+  panelScrollContinuePage(s, tbody);
+  const incrFirstPage = typeof isCollectIncrFirstPage === 'function' && isCollectIncrFirstPage(s);
+  if (!incrFirstPage && s.page === 1 && typeof shouldSkipTableReloadDuringCollect === 'function' && shouldSkipTableReloadDuringCollect('tests', tbody)) {
     s.done = true;
     s.loading = false;
     return;
@@ -982,23 +1028,48 @@ async function loadTests() {
   s.loading = true;
 
   try {
-    _syncTestSourceQuickButtons();
     const status = document.getElementById('f-tstatus').value;
-    const uiSource = _normalizeTestSourceUi(document.getElementById('f-tsource').value);
-    const apiSource = _mapTestSourceForApi(uiSource);
+    const apiSource = _mapTestSourceForApi(document.getElementById('f-tsource').value);
+    const instance = document.getElementById('f-tinstance')?.value || '';
     const name = document.getElementById('f-tname').value;
     const suite = document.getElementById('f-tsuite').value;
     const allRuns = [];
     let breakdown = null;
     let apiTotal = 0;
-    const pageSize = incr && typeof collectIncrementalPerPage === 'function'
-      ? collectIncrementalPerPage(s.per_page)
-      : s.per_page;
+    let lastHasMore = false;
+    const pageSize = s.per_page;
+
+    if (s.page > 1) {
+      const url = apiUrl(
+        `api/tests?page=${s.page}&per_page=${pageSize}&status=${encodeURIComponent(status)}`
+        + `&source=${encodeURIComponent(apiSource)}&instance=${encodeURIComponent(instance)}`
+        + `&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`
+      );
+      const res = await fetchKeyed('tests', url).catch(() => null);
+      if (myGen !== _testsLoadGen) return;
+      if (res === FETCH_ABORTED) return;
+      if (!res || !res.ok) {
+        s.done = true;
+        return;
+      }
+      const data = await res.json();
+      if (myGen !== _testsLoadGen) return;
+      const rows = _sortTestsRows(data.items || []);
+      if (rows.length) {
+        tbody.appendChild(_renderTestRunsTable(rows));
+      }
+      s.done = !data.has_more;
+      if (!s.done) s.page++;
+      _applyGlobalSearch();
+      updateFilterSummary();
+      return;
+    }
 
     while (myGen === _testsLoadGen && !s.done) {
       const url = apiUrl(
         `api/tests?page=${s.page}&per_page=${pageSize}&status=${encodeURIComponent(status)}`
-        + `&source=${encodeURIComponent(apiSource)}&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`
+        + `&source=${encodeURIComponent(apiSource)}&instance=${encodeURIComponent(instance)}`
+        + `&name=${encodeURIComponent(name)}&suite=${encodeURIComponent(suite)}&hours=${_testsHours}`
       );
       const res = await fetchKeyed('tests', url).catch(() => null);
       if (myGen !== _testsLoadGen) return;
@@ -1022,24 +1093,26 @@ async function loadTests() {
       const data = await res.json();
       if (myGen !== _testsLoadGen) return;
       apiTotal = Number(data.total || 0);
+      lastHasMore = !!data.has_more;
       if (data.breakdown) breakdown = data.breakdown;
       allRuns.push(...(data.items || []));
-      if (incr || !data.has_more) break;
+      if (incrFirstPage || !data.has_more) break;
       s.page++;
+      if (typeof yieldToBrowser === 'function') await yieldToBrowser(24);
     }
 
-    const groups = _sortTestGroups(_groupTestRuns(allRuns));
-    s.total = groups.length;
+    const rows = _sortTestsRows(allRuns);
+    s.total = apiTotal > 0 ? apiTotal : rows.length;
     const countEl = document.getElementById('tests-count');
-    if (countEl) countEl.textContent = String(groups.length);
+    if (countEl) countEl.textContent = String(s.total);
     if (breakdown) {
       const b = breakdown;
       const el = document.getElementById('tests-breakdown');
       if (el) el.textContent = `Jenkins: ${b.real_total || 0} (${b.real_failed || 0} failed) · runs: ${apiTotal}`;
     }
 
-    if (!groups.length) {
-      if (keepTableOnTransientEmpty(tbody, groups, s, 'tests')) return;
+    if (!rows.length) {
+      if (keepTableOnTransientEmpty(tbody, rows, s, 'tests')) return;
       tbody.innerHTML = `<tr class="empty-row"><td colspan="7"><div>${esc(t('dash.table_no_tests'))}</div><div class="empty-hint">${t('dash.empty_tests_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
       s.done = true;
       updateFilterSummary();
@@ -1047,13 +1120,14 @@ async function loadTests() {
       return;
     }
 
-    const pageSig = groups.map((g) => [
-      g.key,
-      String(g.runs.length),
-      String(g.latest.status_normalized || g.latest.status || ''),
-      String(g.latest.timestamp || ''),
+    const pageSig = `${_testsHours}\x1e` + rows.map((r) => [
+      String(r.test_name || ''),
+      String(r.suite || ''),
+      String(r.status_normalized || r.status || ''),
+      String(r.timestamp || ''),
+      String(r.build_number ?? ''),
     ].join('\x1f')).join('\x1e');
-    if (_liveMode && pageSig && pageSig === _lastTestsPageSig) {
+    if (!incrFirstPage && _liveMode && pageSig && pageSig === _lastTestsPageSig) {
       s.done = true;
       updateFilterSummary();
       _applyGlobalSearch();
@@ -1061,19 +1135,19 @@ async function loadTests() {
     }
     _lastTestsPageSig = pageSig;
 
-    const frag = _renderTestGroupsTable(groups);
+    const frag = _renderTestRunsTable(rows);
     swapTableContentSmooth(tbody, () => {
       tbody.replaceChildren(frag);
       try { cacheStaleTableHtml('tests', tbody); } catch { /* ignore */ }
-      groups.forEach((g) => {
-        if (_expandedTestGroups.has(g.key)) applyTestGroupVisibility(encodeURIComponent(g.key));
-      });
     });
 
-    s.done = true;
+    s.done = incrFirstPage ? !(lastHasMore || (apiTotal > 0 && allRuns.length < apiTotal)) : true;
     _applyGlobalSearch();
     updateFilterSummary();
   } finally {
-    if (myGen === _testsLoadGen) s.loading = false;
+    if (myGen === _testsLoadGen) {
+      s.loading = false;
+      if (!s.done) scheduleTablePageChain(s, loadTests, tbody);
+    }
   }
 }

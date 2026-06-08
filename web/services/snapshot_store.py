@@ -7,19 +7,27 @@ from pathlib import Path
 from typing import Any, Callable
 
 _COLLECT_SSE_TS_REF: dict[str, float] = {"ts": 0.0}
-_COLLECT_SSE_MIN_INTERVAL_S = 2.0
+_COLLECT_SSE_MIN_INTERVAL_S = 0.45
 
 
 def _patch_snapshot_for_collect_publish(snapshot: Any, collect_state: dict) -> Any:
-    """Merge empty in-progress sections with the last cached snapshot (avoid blank tables)."""
+    """Merge shrinking in-progress sections with the last good snapshot (cache or DB)."""
     if not collect_state.get("is_collecting"):
         return snapshot
+    prev = None
     try:
         from web.core.snapshot_cache import peek_snapshot_cache
 
         prev = peek_snapshot_cache()
     except Exception:
         prev = None
+    if prev is None:
+        try:
+            from web.services.snapshot_boot import get_persisted_baseline_cached
+
+            prev = get_persisted_baseline_cached()
+        except Exception:
+            prev = None
     if prev is None:
         return snapshot
     cur_builds = list(getattr(snapshot, "builds", None) or [])
@@ -29,9 +37,9 @@ def _patch_snapshot_for_collect_publish(snapshot: Any, collect_state: dict) -> A
     prev_tests = list(getattr(prev, "tests", None) or [])
     prev_services = list(getattr(prev, "services", None) or [])
 
-    patch_builds = len(cur_builds) == 0 and len(prev_builds) > 0
-    patch_tests = len(cur_tests) == 0 and len(prev_tests) > 0
-    patch_services = len(cur_services) == 0 and len(prev_services) > 0
+    patch_builds = len(prev_builds) > 0 and len(cur_builds) < len(prev_builds)
+    patch_tests = len(prev_tests) > 0 and len(cur_tests) < len(prev_tests)
+    patch_services = len(prev_services) > 0 and len(cur_services) < len(prev_services)
     if not (patch_builds or patch_tests or patch_services):
         return snapshot
     patch: dict[str, list] = {}
@@ -85,6 +93,7 @@ def _maybe_broadcast_collect_snapshot_sse(snapshot: Any, collect_state: dict) ->
                 "revision": rt.revision_rt.revision,
                 "counts": counts,
                 "phase": collect_state.get("phase"),
+                "active_phases": list(collect_state.get("active_phases") or []),
             }
         )
     except Exception:
@@ -95,12 +104,18 @@ def touch_collect_snapshot_live(
     snapshot: Any,
     *,
     prime_snapshot_cache: Callable[[Any, int | None], None],
+    bump_revision: Callable[[], int] | None = None,
     collect_state: dict,
 ) -> None:
     """Refresh in-memory snapshot during collect and notify SSE clients (throttled)."""
     if not collect_state.get("is_collecting"):
         return
     snapshot_to_publish = _patch_snapshot_for_collect_publish(snapshot, collect_state)
+    if bump_revision is not None:
+        try:
+            bump_revision()
+        except Exception:
+            pass
     try:
         prime_snapshot_cache(snapshot_to_publish, store_seq=None)
     except Exception:
@@ -132,6 +147,12 @@ def save_snapshot(
         seq = set_latest_snapshot_json(snapshot.model_dump_json())
         bump_revision()
         prime_snapshot_cache(snapshot, seq)
+        try:
+            from web.services.snapshot_boot import prime_persisted_baseline_cache
+
+            prime_persisted_baseline_cache(snapshot)
+        except Exception:
+            pass
     try:
         append_trends(snapshot)
     except Exception as exc:
@@ -166,6 +187,10 @@ def save_snapshot_partial(
 
     if collect_state.get("is_collecting"):
         # Memory-only while collect runs — SQLite writes here block readers and freeze the UI.
+        try:
+            bump_revision()
+        except Exception:
+            pass
         try:
             prime_snapshot_cache(snapshot_to_save, store_seq=None)
         except Exception:

@@ -143,7 +143,9 @@ header .btn-primary:hover:not(:disabled),
 /* ── Global tables ────────────────────────────────────────────────────────── */
 .tbl-wrap {
   border-radius: 0 0 var(--radius, 0.75rem) var(--radius, 0.75rem);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
 }
 
 table th,

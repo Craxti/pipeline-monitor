@@ -71,6 +71,17 @@ def build_url_matches_ci_bases(b: Any, bases: list[str]) -> bool:
 
 
 def is_snapshot_build_enabled(b: Any, cfg: dict[str, Any]) -> bool:
+    """Whether a collected build row should appear on the dashboard.
+
+    Instance ``enabled`` controls collection only. Rows already in the snapshot
+    (tagged with ``source_instance`` during collect) are always shown.
+    """
+    try:
+        stored = getattr(b, "source_instance", None)
+    except Exception:
+        stored = None
+    if isinstance(stored, str) and stored.strip():
+        return True
     try:
         src = (b.source or "").lower()
     except Exception:

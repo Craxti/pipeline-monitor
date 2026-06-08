@@ -38,7 +38,7 @@ function _buildLogCell(b) {
     const diffArgs = JSON.stringify(['gitlab', b.job_name, bn, gitlabBaseFromPipelineUrl(b.url)]);
     return `<span style="display:inline-flex;gap:3px">
       <button type="button" class="act-btn log-btn" onclick='openLogViewer("gitlab",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.pipeline_job_logs'))}">&#128466;</button>
-      <button type="button" class="act-btn log-btn" style="background:var(--info);color:#fff" onclick='openStagesModal(...${stagesArgs})' title="${_svgTitleAttr(t('dash.pipeline_stages_short'))}">&#9646;</button>
+      <button type="button" class="act-btn log-btn act-btn--stages" onclick='openStagesModal(...${stagesArgs})' title="${_svgTitleAttr(t('dash.pipeline_stages_short'))}">&#9646;</button>
       ${showDiff ? `<button type="button" class="act-btn log-btn" style="font-size:.65rem" onclick='openLogDiff(...${diffArgs})' title="${_svgTitleAttr(t('log.compare_title'))}">&#8644;</button>` : ''}
     </span>`;
   }

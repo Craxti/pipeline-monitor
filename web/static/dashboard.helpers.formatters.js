@@ -26,7 +26,7 @@ const badge = (s) => {
   return `<span class="b ${cls}" role="status" data-status="${_svgTitleAttr(s)}"><span class="b-code" aria-hidden="true">${code}</span>${esc(s)}</span>`;
 };
 
-/** Mockup-style status: colorful mini icon + text pill (Builds tab). */
+/** Mockup-style status: text pill only (Builds / Pipelines tab). */
 const badgeMockup = (s) => {
   s = (s || '').toLowerCase();
   const cls = ['success', 'passed', 'up'].includes(s) ? 'b-ok'
@@ -34,17 +34,12 @@ const badgeMockup = (s) => {
     : ['unstable', 'degraded', 'skipped'].includes(s) ? 'b-warn'
     : ['running', 'pending'].includes(s) ? 'b-info'
     : 'b-dim';
-  const ico = ['success', 'passed', 'up'].includes(s) ? 'st-ico-ok'
-    : ['failure', 'failed', 'error', 'down'].includes(s) ? 'st-ico-fail'
-    : ['unstable', 'degraded', 'skipped'].includes(s) ? 'st-ico-warn'
-    : ['running', 'pending'].includes(s) ? 'st-ico-run'
-    : 'st-ico-dim';
   const label = ['success', 'passed', 'up'].includes(s) ? 'Success'
     : ['failure', 'failed', 'error', 'down'].includes(s) ? 'Failed'
     : ['unstable', 'degraded', 'skipped'].includes(s) ? 'Unstable'
     : ['running', 'pending'].includes(s) ? 'Running'
     : (s || '—');
-  return `<span class="status-mockup" role="status" data-status="${_svgTitleAttr(s)}"><span class="st-ico ${ico}" aria-hidden="true"></span><span class="b b-mockup-pill ${cls}">${esc(label)}</span></span>`;
+  return `<span class="status-mockup" role="status" data-status="${_svgTitleAttr(s)}"><span class="b b-mockup-pill ${cls}">${esc(label)}</span></span>`;
 };
 const fmt = (v) => {
   if (!v) return '—';

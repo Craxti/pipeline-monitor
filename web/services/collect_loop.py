@@ -36,7 +36,21 @@ async def do_collect(
     collect_state["phase"] = "starting"
     collect_state["progress_main"] = "Starting collect…"
     collect_state["progress_sub"] = None
-    collect_state["progress_counts"] = {"builds": 0, "tests": 0, "services": 0}
+    try:
+        from web.core.snapshot_cache import peek_snapshot_cache
+
+        snap = peek_snapshot_cache()
+        if snap is not None:
+            collect_state["progress_counts"] = {
+                "builds": len(getattr(snap, "builds", None) or []),
+                "tests": len(getattr(snap, "tests", None) or []),
+                "services": len(getattr(snap, "services", None) or []),
+            }
+        else:
+            collect_state["progress_counts"] = {"builds": 0, "tests": 0, "services": 0}
+    except Exception:
+        collect_state["progress_counts"] = {"builds": 0, "tests": 0, "services": 0}
+    collect_state["active_progress"] = {}
     collect_state["last_error"] = None
     collect_state["stop_reason"] = None
     collect_state["phase_timings_ms"] = {}
@@ -104,6 +118,7 @@ async def collect_loop(
     auto_collect_enabled_getter: Callable[[], bool],
     interval_seconds_getter: Callable[[], int],
     do_collect_fn: Callable[[dict], Awaitable[None]],
+    load_cfg: Callable[[], dict] | None = None,
 ) -> None:
     """Collect immediately on start, then repeat every interval.
 
@@ -111,7 +126,16 @@ async def collect_loop(
     (task is only started when background collect is enabled in config / lifespan).
     """
     _ = auto_collect_enabled_getter  # kept for call-site compatibility
+    startup_delay = 4.0
+    try:
+        w_cfg = (cfg or {}).get("web", {}) or {}
+        startup_delay = float(w_cfg.get("startup_collect_delay_seconds", 4) or 0)
+    except Exception:
+        startup_delay = 4.0
+    if startup_delay > 0:
+        await asyncio.sleep(startup_delay)
     while True:
         interval = int(interval_seconds_getter() or 300)
-        await do_collect_fn(cfg)  # force_full is decided by the wrapper bound in app.py
+        active_cfg = load_cfg() if load_cfg is not None else cfg
+        await do_collect_fn(active_cfg)  # force_full is decided by the wrapper bound in app.py
         await asyncio.sleep(max(5, interval))

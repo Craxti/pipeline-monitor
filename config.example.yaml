@@ -46,15 +46,6 @@ github_instances:
   max_runs: 10
   show_all_repos: false
   verify_ssl: true
-github_instances:
-- name: GitHub
-  enabled: false
-  url: https://github.com
-  token: ""
-  repos: []
-  max_runs: 10
-  show_all_repos: false
-  verify_ssl: true
 parsers:
   pytest_xml_dirs: []
   allure_json_dirs: []
@@ -68,6 +59,62 @@ notifications:
   telegram:
     enabled: false
     bots: []
+service_monitors:
+  enabled: false
+  timeout_seconds: 15
+  instances:
+  - type: zabbix
+    name: prod-zabbix
+    enabled: false
+    url: https://zabbix.example.com
+    token: ""
+    username: ""
+    password: ""
+    mode: problems
+    min_severity: 2
+  - type: prometheus
+    name: prod-prometheus
+    enabled: false
+    url: http://prometheus:9090
+    token: ""
+  - type: alertmanager
+    name: prod-alertmanager
+    enabled: false
+    url: http://alertmanager:9093
+  - type: uptime_kuma
+    name: uptime-kuma
+    enabled: false
+    url: http://uptime-kuma:3001
+    username: ""
+    password: ""
+    api_key: ""
+  - type: netdata
+    name: netdata
+    enabled: false
+    url: http://netdata:19999
+  - type: prtg
+    name: prtg
+    enabled: false
+    url: https://prtg.example.com
+    username: prtgadmin
+    passhash: ""
+  - type: checkmk
+    name: checkmk
+    enabled: false
+    url: https://checkmk.example.com
+    site: monitoring
+    token: ""
+  - type: http_json
+    name: custom-api
+    enabled: false
+    url: https://monitor.example.com/api/status
+    items_path: data
+    name_field: name
+    status_field: status
+    detail_field: message
+    status_map:
+      ok: up
+      fail: down
 docker_monitor:
   enabled: true
   include_local_host: true

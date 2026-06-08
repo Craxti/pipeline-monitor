@@ -709,6 +709,12 @@ html.light .trends-filters-bar{background:rgba(0,0,0,.03)}
 .incident-card-clickable{cursor:pointer;transition:background .12s ease,border-color .12s ease,box-shadow .12s ease}
 .incident-card-clickable:hover{background:rgba(239,68,68,.07);box-shadow:0 1px 0 rgba(0,0,0,.04)}
 .incident-card-clickable:focus{outline:2px solid var(--info);outline-offset:2px}
+.svc-inc-card.ic-resolved{border-left-color:var(--ok)}
+.svc-inc-card.ic-resolved:hover{background:rgba(34,197,94,.06)}
+.svc-inc-badge{font-size:.68rem;font-weight:700;padding:.1rem .4rem;border-radius:.35rem;margin-left:.35rem;vertical-align:middle}
+.svc-inc-badge.bad{background:rgba(239,68,68,.15);color:var(--fail)}
+.svc-inc-badge.ok{background:rgba(34,197,94,.15);color:var(--ok)}
+.ic-intro{margin:0 1rem .75rem;font-size:.82rem;color:var(--muted);line-height:1.45}
 .incident-title{font-weight:700;color:var(--fail);margin-bottom:.25rem}
 .incident-jobs{color:var(--muted);font-size:.78rem;line-height:1.6}
 .cl-line{display:block;white-space:pre-wrap;word-break:break-word}

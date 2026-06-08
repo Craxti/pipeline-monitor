@@ -24,7 +24,7 @@ async def api_builds_route(
     job: str = "",
     hours: int = 0,
 ):
-    """Return paginated builds list (with filtering)."""
+    """Return paginated builds list (snapshot + SQLite history when available)."""
     from models.models import normalize_build_status
     from web.core.config import load_yaml_config
     from web.core import runtime as rt

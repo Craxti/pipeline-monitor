@@ -93,29 +93,26 @@ function _harRenderPairs(containerId, items, keyName) {
   `).join('');
 }
 
-function _harRenderRequests(containerId, items, kind) {
-  const el = _harEl(containerId);
+function _harRenderRequestsTable(tbodyId, items, kind) {
+  const el = _harEl(tbodyId);
   if (!el) return;
+  const cols = kind === 'failed' ? 4 : 4;
   if (!items || !items.length) {
-    el.innerHTML = `<div class="dhar-row">${_harEsc(_harT('dash.har_nothing_found'))}</div>`;
+    el.innerHTML = `<tr class="empty-row"><td colspan="${cols}">${_harEsc(_harT('dash.har_nothing_found'))}</td></tr>`;
     return;
   }
   el.innerHTML = items.map((r) => {
     const status = Number(r?.status || 0);
-    const cls = status >= 500 ? 'err' : (status >= 400 ? 'warn' : 'ok');
-    const right = kind === 'failed'
+    const cls = status >= 500 ? 'st-err' : (status >= 400 ? 'st-warn' : 'st-ok');
+    const detail = kind === 'failed'
       ? (r?.error ? _harEsc(r.error) : `${_harEsc(_harT('dash.har_status_label'))} ${_harEsc(String(r?.status ?? 'n/a'))}`)
       : `${_harEsc(_harMetric(r?.time_ms))} ms`;
-    return `
-      <div class="dhar-row">
-        <div class="dhar-row-top">
-          <span class="dhar-method mono">${_harEsc(r?.method || 'GET')}</span>
-          <span class="dhar-status ${cls} mono">${_harEsc(String(r?.status ?? 'n/a'))}</span>
-          <span class="mono" style="margin-left:auto">${right}</span>
-        </div>
-        <div class="dhar-url">${_harEsc(r?.url || '')}</div>
-      </div>
-    `;
+    return `<tr>
+      <td class="mono">${_harEsc(r?.method || 'GET')}</td>
+      <td class="mono ${cls}">${_harEsc(String(r?.status ?? 'n/a'))}</td>
+      <td class="dhar-url-cell" title="${_harEsc(r?.url || '')}">${_harEsc(r?.url || '')}</td>
+      <td class="mono">${detail}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -217,8 +214,8 @@ function applyHarFilters() {
   const f = _harGetFilters();
   const failed = (_harLast.failed_requests || []).filter((r) => _harMatch(r, f));
   const slow = (_harLast.slow_requests || []).filter((r) => _harMatch(r, f) && Number(r?.time_ms || 0) >= f.slowMs);
-  _harRenderRequests('har-failed', failed, 'failed');
-  _harRenderRequests('har-slow', slow, 'slow');
+  _harRenderRequestsTable('har-failed', failed, 'failed');
+  _harRenderRequestsTable('har-slow', slow, 'slow');
   const meta = _harEl('har-filter-meta');
   if (meta) {
     meta.textContent = `${_harT('dash.har_failed_requests')}: ${failed.length} · ${_harT('dash.har_slow_requests')}: ${slow.length}`;
@@ -272,7 +269,56 @@ async function analyzeHar() {
   if (typeof showToast === 'function') showToast(_harT('dash.har_analyzed_toast'), 'ok');
 }
 
+function _harSetFileLabel(name) {
+  const lbl = _harEl('har-drop-filename');
+  if (lbl) lbl.textContent = name || '';
+}
+
+function _harBindDropzone() {
+  const zone = _harEl('har-dropzone');
+  const input = _harEl('har-file');
+  if (!zone || !input) return;
+
+  const pick = () => input.click();
+  zone.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    pick();
+  });
+  zone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+  });
+  input.addEventListener('change', () => {
+    const f = input.files?.[0];
+    _harSetFileLabel(f ? f.name : '');
+  });
+  ['dragenter', 'dragover'].forEach((ev) => {
+    zone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      zone.classList.add('is-dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach((ev) => {
+    zone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      zone.classList.remove('is-dragover');
+    });
+  });
+  zone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+    } catch {
+      /* ignore — user can pick via dialog */
+    }
+    _harSetFileLabel(file.name);
+  });
+}
+
 function initHarPanelBindings() {
+  _harBindDropzone();
   ['har-filter-status', 'har-filter-host', 'har-filter-url', 'har-slow-threshold'].forEach((id) => {
     const el = _harEl(id);
     if (!el) return;

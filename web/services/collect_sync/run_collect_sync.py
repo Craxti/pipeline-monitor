@@ -8,6 +8,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from web.services.collect_sync import docker_collect as _docker_collect
+from web.services.collect_sync import service_monitors_collect as _service_monitors_collect
+from service_monitors.runner import service_monitors_enabled
 from web.services.collect_sync import gitlab_collect as _gitlab_collect
 from web.services.collect_sync import github_collect as _github_collect
 from web.services.collect_sync import jenkins_collect as _jenkins_collect
@@ -15,6 +17,7 @@ from web.services.collect_sync import local_parsers as _local_parsers
 from web.services.collect_sync import merge as _merge
 from web.services.collect_sync import parallel_util
 from web.services.collect_sync import progress as _progress
+from web.services.collect_sync import jenkins_incremental as _jenkins_incremental
 from web.services.collect_sync import jenkins_merge_unified_tests as _jenkins_merge_unified
 from web.services.collect_sync import synth_tests as _synth_tests
 from web.services.collect_sync.exceptions import CollectCancelled
@@ -44,12 +47,13 @@ def run_collect_sync(
     g_enabled = sum(1 for i in cfg.get("gitlab_instances", []) if i.get("enabled", True))
     gh_enabled = sum(1 for i in cfg.get("github_instances", []) if i.get("enabled", True))
     dm_enabled = bool(cfg.get("docker_monitor", {}).get("enabled"))
+    sm_enabled = service_monitors_enabled(cfg)
     parallel_sources = bool(cfg.get("general", {}).get("parallel_collect_sources", True))
     incremental_collect = (
         (not force_full) and sqlite_available and bool(cfg.get("general", {}).get("incremental_collect", True))
     )
     logger.info(
-        "Collect cycle started (force_full=%s, incremental=%s, parallel_sources=%s, lookback_days=%s, jenkins=%d, gitlab=%d, github=%d, docker=%s)",
+        "Collect cycle started (force_full=%s, incremental=%s, parallel_sources=%s, lookback_days=%s, jenkins=%d, gitlab=%d, github=%d, docker=%s, service_monitors=%s)",
         force_full,
         incremental_collect,
         parallel_sources,
@@ -58,6 +62,7 @@ def run_collect_sync(
         g_enabled,
         gh_enabled,
         "on" if dm_enabled else "off",
+        "on" if sm_enabled else "off",
     )
     since = datetime.now(tz=timezone.utc) - timedelta(days=cfg.get("general", {}).get("default_lookback_days", 7))
     now = datetime.now(tz=timezone.utc)
@@ -66,6 +71,13 @@ def run_collect_sync(
         snapshot = CISnapshot(collected_at=now, collect_meta={}, tests=[])
     else:
         prev_snapshot = load_snapshot() or CISnapshot()
+        # Keep API/cache on the last persisted snapshot until partial publishes grow sections.
+        try:
+            from web.core import runtime as rt
+
+            rt.prime_snapshot_cache(prev_snapshot)
+        except Exception:
+            pass
         snapshot = prev_snapshot.model_copy(update={"tests": [], "collect_meta": {}, "collected_at": now})
 
     snap_lock = threading.Lock()
@@ -77,6 +89,8 @@ def run_collect_sync(
     incremental_stats = {
         "jenkins_checked": 0,
         "jenkins_skipped": 0,
+        "jenkins_allure_builds_skipped": 0,
+        "jenkins_console_builds_skipped": 0,
         "gitlab_checked": 0,
         "gitlab_skipped": 0,
     }
@@ -95,6 +109,7 @@ def run_collect_sync(
             touch_collect_snapshot_live(
                 snapshot,
                 prime_snapshot_cache=rt.prime_snapshot_cache,
+                bump_revision=rt.bump_revision,
                 collect_state=collect_state,
             )
         except Exception:
@@ -119,9 +134,30 @@ def run_collect_sync(
         if collect_state.get("cancel_requested"):
             raise CollectCancelled("Stopped by user")
 
+    def _touch_live_snapshot() -> None:
+        try:
+            from web.core import runtime as rt
+            from web.services.snapshot_store import touch_collect_snapshot_live
+
+            touch_collect_snapshot_live(
+                snapshot,
+                prime_snapshot_cache=rt.prime_snapshot_cache,
+                bump_revision=rt.bump_revision,
+                collect_state=collect_state,
+            )
+        except Exception:
+            pass
+
     def merge_build_records(new_records: list) -> None:
+        if not new_records:
+            return
         with snap_lock:
-            return _merge.merge_build_records(snapshot, new_records)
+            _merge.merge_build_records(snapshot, new_records)
+        try:
+            maybe_save_partial(snapshot)
+        except Exception:
+            pass
+        _touch_live_snapshot()
 
     def _collect_gitlab_phase() -> None:
         _gitlab_collect.collect_gitlab_builds(
@@ -169,23 +205,37 @@ def run_collect_sync(
             check_cancelled=check_cancelled,
             snap_lock=snap_lock,
             maybe_save_partial=maybe_save_partial,
+            touch_live_snapshot=_touch_live_snapshot,
         )
         logger.info("Docker/HTTP phase completed: services=%d", len(snapshot.services))
 
-    def _touch_live_snapshot() -> None:
-        try:
-            from web.core import runtime as rt
-            from web.services.snapshot_store import touch_collect_snapshot_live
-
-            touch_collect_snapshot_live(
-                snapshot,
-                prime_snapshot_cache=rt.prime_snapshot_cache,
-                collect_state=collect_state,
-            )
-        except Exception:
-            pass
+    def _collect_service_monitors_phase() -> None:
+        _service_monitors_collect.collect_external_service_monitors(
+            cfg=cfg,
+            snapshot=snapshot,
+            progress=progress,
+            health=health,
+            health_lock=health_lock,
+            logger=logger,
+            check_cancelled=check_cancelled,
+            snap_lock=snap_lock,
+            maybe_save_partial=maybe_save_partial,
+            touch_live_snapshot=_touch_live_snapshot,
+        )
+        logger.info("Service monitors phase completed: services=%d", len(snapshot.services))
 
     def _collect_jenkins_phase() -> None:
+        if incremental_collect and prev_snapshot is not None:
+            n_restored = _jenkins_incremental.restore_prev_jenkins_tests(
+                snapshot,
+                prev_snapshot,
+                snap_lock=snap_lock,
+            )
+            if n_restored:
+                logger.info(
+                    "Incremental collect: restored %d Jenkins test rows from previous snapshot",
+                    n_restored,
+                )
         _jenkins_collect.collect_jenkins(
             cfg=cfg,
             since=since,
@@ -212,6 +262,7 @@ def run_collect_sync(
             incremental_stats=incremental_stats,
             snap_lock=snap_lock,
             touch_live_snapshot=_touch_live_snapshot,
+            prev_snapshot=prev_snapshot,
         )
         logger.info(
             "Jenkins phase completed: builds=%d tests=%d",
@@ -220,12 +271,14 @@ def run_collect_sync(
         )
 
     # GitLab, GitHub, Jenkins and Docker/HTTP are independent — run in parallel when enabled.
-    docker_in_parallel = bool(parallel_sources and dm_enabled)
+    infra_in_parallel = bool(parallel_sources and (dm_enabled or sm_enabled))
     if parallel_sources:
-        workers = 4 if dm_enabled else 3
+        workers = 3 + int(dm_enabled) + int(sm_enabled)
         phases = "GitLab + GitHub + Jenkins"
         if dm_enabled:
             phases += " + Docker/HTTP"
+        if sm_enabled:
+            phases += " + Service monitors"
         inst_parallel = parallel_util.parallel_instances_enabled(cfg)
         inst_workers = parallel_util.instance_worker_cap(cfg, 99)
         logger.info(
@@ -242,6 +295,8 @@ def run_collect_sync(
             ]
             if dm_enabled:
                 futures.append(pool.submit(_collect_docker_phase))
+            if sm_enabled:
+                futures.append(pool.submit(_collect_service_monitors_phase))
             for fut in futures:
                 fut.result()
     else:
@@ -269,8 +324,11 @@ def run_collect_sync(
     logger.info("Local parsers phase completed: tests=%d", len(snapshot.tests))
     _between_phases()
 
-    if not docker_in_parallel:
-        _collect_docker_phase()
+    if not infra_in_parallel:
+        if dm_enabled:
+            _collect_docker_phase()
+        if sm_enabled:
+            _collect_service_monitors_phase()
     collect_state["incremental_stats"] = dict(incremental_stats)
 
     # Guard against transient source outages: if this pass produced zero tests

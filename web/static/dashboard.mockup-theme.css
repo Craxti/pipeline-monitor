@@ -3373,7 +3373,7 @@ body.ui-modern .dash-page-tabs {
 }
 
 /* Action buttons: text labels instead of emoji */
-.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn::before { content: none; }
 .act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
 .act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
 .act-btn.lintel-btn { font-size: 0; min-width: 2rem; }
@@ -3811,7 +3811,7 @@ body.ui-modern .lang-toggle {
 }
 
 /* Action buttons: text labels instead of emoji */
-.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn::before { content: none; }
 .act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
 .act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
 .act-btn.lintel-btn { font-size: 0; min-width: 2rem; }
@@ -4249,7 +4249,7 @@ body.ui-modern .lang-toggle {
 }
 
 /* Action buttons: text labels instead of emoji */
-.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn::before { content: none; }
 .act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
 .act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
 .act-btn.lintel-btn { font-size: 0; min-width: 2rem; }
@@ -4687,7 +4687,7 @@ body.ui-modern .lang-toggle {
 }
 
 /* Action buttons: text labels instead of emoji */
-.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn::before { content: none; }
 .act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
 .act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
 .act-btn.lintel-btn { font-size: 0; min-width: 2rem; }
@@ -5125,7 +5125,7 @@ body.ui-modern .lang-toggle {
 }
 
 /* Action buttons: text labels instead of emoji */
-.act-btn.log-btn::before { content: "Log"; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; }
+.act-btn.log-btn::before { content: none; }
 .act-btn.log-btn { font-size: 0; min-width: 2.1rem; }
 .act-btn.lintel-btn::before { content: "AI"; font-size: 0.58rem; font-weight: 800; }
 .act-btn.lintel-btn { font-size: 0; min-width: 2rem; }

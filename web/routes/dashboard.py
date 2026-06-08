@@ -64,9 +64,10 @@ async def api_status():
     from web.services import status_endpoints
     from web.services.build_filters import inst_label_for_build_with_cfg
 
+    snap = await rt.load_snapshot_async()
     return await asyncio.to_thread(
         status_endpoints.api_status,
-        load_snapshot=rt.load_snapshot,
+        load_snapshot=lambda: snap,
         load_yaml_config=load_yaml_config,
         is_snapshot_build_enabled=is_snapshot_build_enabled,
         inst_label_for_build_with_cfg=inst_label_for_build_with_cfg,
@@ -148,6 +149,27 @@ async def api_trends(days: int = 14):
         )
 
     def _trends_compute(d: int):
+        from web.core import snapshot_cache as sc
+        from web.core import trends as trends_core
+        from web.services.build_filters import inst_label_for_build_with_cfg as _inst_label
+        from web.services.snapshot_store import _patch_snapshot_for_collect_publish
+
+        live = None
+        if rt.collect_state.get("is_collecting"):
+            live = sc.peek_snapshot_cache()
+            if live is not None:
+                try:
+                    live = _patch_snapshot_for_collect_publish(live, rt.collect_state)
+                except Exception:
+                    pass
+        if live is not None:
+            return trends_core.compute_trends_with_live_overlay(
+                d,
+                live,
+                history_path=None,
+                load_cfg=load_yaml_config,
+                inst_label_for_build=_inst_label,
+            )
         return trends_uptime.trends_compute(d, history_path=None)
 
     return await asyncio.to_thread(

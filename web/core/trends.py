@@ -59,25 +59,16 @@ def _save_history_list(history: list[dict[str, Any]], history_path: Path | None)
         logger.warning("trends save failed: %s", exc)
 
 
-def append_trends(
+def day_entry_from_snapshot(
     snapshot: CISnapshot,
     *,
-    history_path: Path | None = None,
-    history_max_days: int = HISTORY_MAX_DAYS,
+    now: datetime | None = None,
     load_cfg: Optional[Callable[[], dict[str, Any]]] = None,
     inst_label_for_build: Optional[InstLabeler] = None,
-) -> None:
-    """Append a daily summary bucket (one entry per day)."""
-    now = datetime.now(tz=timezone.utc)
-    day_key = now.strftime("%Y-%m-%d")
-
-    try:
-        history: list[dict[str, Any]] = _load_history_list(history_path)
-    except Exception:
-        history = []
-
-    # Remove today's existing entry (will be replaced with fresh data)
-    history = [e for e in history if e.get("date") != day_key]
+) -> dict[str, Any]:
+    """Build one daily trends bucket from a snapshot (no persistence)."""
+    ts = now or datetime.now(tz=timezone.utc)
+    day_key = ts.strftime("%Y-%m-%d")
 
     cfg_for_inst: dict[str, Any] | None = None
     if load_cfg is not None and inst_label_for_build is not None:
@@ -183,31 +174,59 @@ def append_trends(
         else:
             services_down_by_kind["other"] += 1
 
+    return {
+        "date": day_key,
+        "ts": ts.isoformat(),
+        "builds_total": len(snapshot.builds),
+        "builds_failed": sum(1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")),
+        "tests_total": len(snapshot.tests),
+        "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
+        "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
+        "services_down_by_kind": services_down_by_kind,
+        "service_health": service_health,
+        "builds_by_source": builds_by_source,
+        "builds_by_instance": builds_by_instance,
+        "tests_by_source": tests_by_source,
+        "job_failures": job_failures,
+        "job_totals": job_totals,
+        "job_failures_by_source": job_failures_by_source,
+        "job_totals_by_source": job_totals_by_source,
+        "job_failures_by_instance": job_failures_by_instance,
+        "job_totals_by_instance": job_totals_by_instance,
+        "top_test_failures": sorted(test_failures.items(), key=lambda x: -x[1])[:20],
+        "top_test_failures_by_source": {
+            src: sorted(m.items(), key=lambda x: -x[1])[:20] for src, m in test_failures_by_source.items()
+        },
+    }
+
+
+def append_trends(
+    snapshot: CISnapshot,
+    *,
+    history_path: Path | None = None,
+    history_max_days: int = HISTORY_MAX_DAYS,
+    load_cfg: Optional[Callable[[], dict[str, Any]]] = None,
+    inst_label_for_build: Optional[InstLabeler] = None,
+) -> None:
+    """Append a daily summary bucket (one entry per day)."""
+    now = datetime.now(tz=timezone.utc)
+    day_key = now.strftime("%Y-%m-%d")
+
+    try:
+        history: list[dict[str, Any]] = _load_history_list(history_path)
+    except Exception:
+        history = []
+
+    # Remove today's existing entry (will be replaced with fresh data)
+    history = [e for e in history if e.get("date") != day_key]
+
     history.append(
-        {
-            "date": day_key,
-            "ts": now.isoformat(),
-            "builds_total": len(snapshot.builds),
-            "builds_failed": sum(1 for b in snapshot.builds if b.status_normalized in ("failure", "unstable")),
-            "tests_total": len(snapshot.tests),
-            "tests_failed": sum(1 for t in snapshot.tests if t.status_normalized in ("failed", "error")),
-            "services_down": sum(1 for s in snapshot.services if s.status_normalized == "down"),
-            "services_down_by_kind": services_down_by_kind,
-            "service_health": service_health,
-            "builds_by_source": builds_by_source,
-            "builds_by_instance": builds_by_instance,
-            "tests_by_source": tests_by_source,
-            "job_failures": job_failures,
-            "job_totals": job_totals,
-            "job_failures_by_source": job_failures_by_source,
-            "job_totals_by_source": job_totals_by_source,
-            "job_failures_by_instance": job_failures_by_instance,
-            "job_totals_by_instance": job_totals_by_instance,
-            "top_test_failures": sorted(test_failures.items(), key=lambda x: -x[1])[:20],
-            "top_test_failures_by_source": {
-                src: sorted(m.items(), key=lambda x: -x[1])[:20] for src, m in test_failures_by_source.items()
-            },
-        }
+        day_entry_from_snapshot(
+            snapshot,
+            now=now,
+            load_cfg=load_cfg,
+            inst_label_for_build=inst_label_for_build,
+        )
     )
 
     # Keep only last N days
@@ -227,3 +246,34 @@ def compute_trends(days: int, *, history_path: Path | None = None) -> list[dict[
         return []
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
     return [e for e in history if str(e.get("date", "")) >= cutoff]
+
+
+def compute_trends_with_live_overlay(
+    days: int,
+    live_snapshot: CISnapshot | None,
+    *,
+    history_path: Path | None = None,
+    load_cfg: Optional[Callable[[], dict[str, Any]]] = None,
+    inst_label_for_build: Optional[InstLabeler] = None,
+) -> list[dict[str, Any]]:
+    """Like ``compute_trends``, but replace today's bucket with live snapshot data during collect."""
+    base = compute_trends(days, history_path=history_path)
+    if live_snapshot is None:
+        return base
+    try:
+        live_entry = day_entry_from_snapshot(
+            live_snapshot,
+            load_cfg=load_cfg,
+            inst_label_for_build=inst_label_for_build,
+        )
+    except Exception as exc:
+        logger.warning("Live trends overlay skipped: %s", exc)
+        return base
+    day_key = live_entry.get("date")
+    if not day_key:
+        return base
+    merged = [e for e in base if e.get("date") != day_key]
+    merged.append(live_entry)
+    merged.sort(key=lambda e: str(e.get("date", "")))
+    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    return [e for e in merged if str(e.get("date", "")) >= cutoff]

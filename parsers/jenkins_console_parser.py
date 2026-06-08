@@ -236,6 +236,8 @@ class JenkinsConsoleParser:
         progress_cb: callable | None = None,
         timing_cb: callable | None = None,
         should_cancel: callable | None = None,
+        build_should_parse: callable | None = None,
+        build_mark_parsed: callable | None = None,
     ) -> None:
         self.base_url = url.rstrip("/")
         self.auth = (username, token)
@@ -250,6 +252,8 @@ class JenkinsConsoleParser:
         self.progress_cb = progress_cb
         self.timing_cb = timing_cb
         self.should_cancel = should_cancel
+        self.build_should_parse = build_should_parse
+        self.build_mark_parsed = build_mark_parsed
 
     # ── private helpers ───────────────────────────────────────────────────
 
@@ -632,7 +636,14 @@ class JenkinsConsoleParser:
                 continue
             for build_num in self._fetch_build_numbers(job_name):
                 self._check_cancelled()
-                tasks.append((job_name, int(build_num)))
+                bn = int(build_num)
+                if self.build_should_parse is not None:
+                    try:
+                        if not self.build_should_parse(job_name, bn):
+                            continue
+                    except Exception:
+                        pass
+                tasks.append((job_name, bn))
 
         if not tasks:
             return []
@@ -654,6 +665,11 @@ class JenkinsConsoleParser:
             bts, _dur_ignored = self._fetch_build_timing(job_name, build_num)
             rec_ts = bts if bts is not None else datetime.now(tz=timezone.utc)
             recs = self._parse_console(console, job_name, build_num, record_ts=rec_ts, duration_seconds=None)
+            if self.build_mark_parsed is not None:
+                try:
+                    self.build_mark_parsed(job_name, int(build_num))
+                except Exception:
+                    pass
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             if self.timing_cb:
                 try:

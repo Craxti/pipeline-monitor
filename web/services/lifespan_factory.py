@@ -31,7 +31,7 @@ def make_lifespan(
         set_main_loop(asyncio.get_running_loop())
         w_cfg = cfg.get("web", {})
 
-        init_sqlite(cfg)
+        await asyncio.to_thread(init_sqlite, cfg)
         collect_task = start_collect_task(cfg, w_cfg)
 
         paths = proxy_paths(app)

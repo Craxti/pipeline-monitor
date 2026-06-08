@@ -126,4 +126,17 @@ def build_incident_bundle(snap: Optional[CISnapshot]) -> tuple[IncidentBundlePay
         lines.extend(["", "## Services down", ""])
         for s in down_svcs:
             lines.append(f"- `{s.name}` ({s.kind}) — {s.detail or s.status}")
+    try:
+        from web.services.log_intelligence import incident_store
+
+        svc_inc = incident_store.list_service_incidents(limit=30)
+        if svc_inc:
+            lines.extend(["", "## Service analysis incidents", ""])
+            for inc in svc_inc:
+                st = inc.get("status") or "open"
+                lines.append(
+                    f"- [{st}] `{inc.get('service_kind')}` **{inc.get('service_name')}** — {inc.get('title') or ''}"
+                )
+    except Exception:
+        pass
     return payload, "\n".join(lines)

@@ -57,7 +57,7 @@ function _initBuildSort() {
       if (_buildSort.key === key) _buildSort.dir = _buildSort.dir === 'asc' ? 'desc' : 'asc';
       else { _buildSort.key = key; _buildSort.dir = (key === 'num' || key === 'duration' || key === 'started') ? 'desc' : 'asc'; }
       _updateBuildSortHdr();
-      resetBuilds();
+      resetBuilds(false, true);
     });
   });
   _buildSortInit = true;
@@ -90,7 +90,7 @@ function clearBuildFilters() {
   try { localStorage.setItem('cimon-builds-hours', '0'); } catch { /* ignore */ }
   try { _persistFiltersFromForm(); } catch { /* ignore */ }
   _renderInstanceOptions?.();
-  resetBuilds();
+  resetBuilds(false, true);
 }
 
 function filterBuilds(source, status, job, instance) {
@@ -100,7 +100,7 @@ function filterBuilds(source, status, job, instance) {
   document.getElementById('f-job').value     = job    || '';
   try { _persistFiltersFromForm(); } catch { /* ignore */ }
   _renderInstanceOptions?.();
-  resetBuilds();
+  resetBuilds(false, true);
   goToInTab('builds', 'panel-builds');
 }
 
@@ -110,46 +110,15 @@ async function loadBuilds() {
   if (s.loading || s.done) return;
   const tbody = document.getElementById('tbody-builds');
   if (guardPanelLoadDuringCollect('builds', tbody, s)) return;
+  panelScrollContinuePage(s, tbody);
   s.loading = true;
   try {
     const source  = document.getElementById('f-source').value;
     const inst    = document.getElementById('f-instance').value;
     const status  = document.getElementById('f-bstatus').value;
     const job     = document.getElementById('f-job').value;
-    const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
-    const perPage = incr && typeof collectIncrementalPerPage === 'function'
-      ? collectIncrementalPerPage(s.per_page)
-      : s.per_page;
-    const url = apiUrl(`api/builds?page=${s.page}&per_page=${perPage}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
-
-    const res = await fetchKeyed('builds', url).catch(()=>null);
-    const tbody = document.getElementById('tbody-builds');
-    if (res === FETCH_ABORTED) return;
-    if (!res || !res.ok) {
-      if (keepTableOnTransientApiError(tbody, res, s, 'builds')) return;
-      const detail = await fetchApiErrorDetail(res);
-      srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
-      const extra = detail ? ` — ${esc(detail)}` : '';
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
-      _applyGlobalSearch();
-      return;
-    }
-    const data = await res.json();
-    s.total = data.total;
-    document.getElementById('builds-count').textContent = data.total;
-
-    const rows = data.items;
-    if (s.page === 1 && !rows.length) {
-      if (keepTableOnTransientEmpty(tbody, rows, s, 'builds')) return;
-      const instF = document.getElementById('f-instance')?.value || '';
-      const srcF = document.getElementById('f-source')?.value || '';
-      let extraHint = '';
-      if (instF) extraHint = `<div class="empty-hint">${esc(tf('dash.empty_builds_instance', { name: instF }))}</div>`;
-      else if (srcF === 'gitlab') extraHint = `<div class="empty-hint">${esc(t('dash.empty_builds_gitlab'))}</div>`;
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}"><div>${esc(t('dash.table_no_builds'))}</div>${extraHint || `<div class="empty-hint">${t('dash.empty_builds_hint')}</div>`}${emptyStateActionsHtml()}</td></tr>`;
-      s.done = true; updateFilterSummary(); _applyGlobalSearch(); return;
-    }
-
+    const incrFirstPage = typeof isCollectIncrFirstPage === 'function' && isCollectIncrFirstPage(s);
+    const perPage = s.per_page;
     const favKeys = _loadFavKeys();
     const _buildsRowSig = (b) => [
       String(b.source || '').trim().toLowerCase(),
@@ -160,34 +129,85 @@ async function loadBuilds() {
       String(b.duration_seconds ?? ''),
       String(b.started_at || ''),
     ].join('\x1f');
-    const sorted = _sortBuildRows(rows || []);
-    const html = sorted.map((b) => _buildMockupRow(b, { favKeys })).join('');
 
-    if (s.page === 1) {
-      const pageSig = sorted.map(_buildsRowSig).join('\x1e');
-      if (_liveMode && pageSig && pageSig === _lastBuildsPageSig) {
-        updateFilterSummary();
+    while (!s.done) {
+      const url = apiUrl(`api/builds?page=${s.page}&per_page=${perPage}&source=${encodeURIComponent(source)}&instance=${encodeURIComponent(inst)}&status=${encodeURIComponent(status)}&job=${encodeURIComponent(job)}&hours=${_buildsHours}`);
+      const res = await fetchKeyed('builds', url).catch(() => null);
+      if (res === FETCH_ABORTED) return;
+      if (!res || !res.ok) {
+        if (keepTableOnTransientApiError(tbody, res, s, 'builds')) return;
+        const detail = await fetchApiErrorDetail(res);
+        srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+        const extra = detail ? ` — ${esc(detail)}` : '';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+        s.done = true;
         _applyGlobalSearch();
-        if (incr) { s.done = true; return; }
-        if (!data.has_more) { s.done = true; return; }
-        s.page++;
-        window.requestAnimationFrame(() => { loadBuilds(); });
         return;
       }
-      _lastBuildsPageSig = pageSig;
-      swapTableContentSmooth(tbody, () => {
-        tbody.innerHTML = html;
-        try { cacheStaleTableHtml('builds', tbody); } catch { /* ignore */ }
-      });
-    } else tbody.insertAdjacentHTML('beforeend', html);
 
+      const data = await res.json();
+      s.total = data.total;
+      document.getElementById('builds-count').textContent = data.total;
+
+      const rows = data.items;
+      if (s.page === 1 && !rows.length) {
+        if (keepTableOnTransientEmpty(tbody, rows, s, 'builds')) return;
+        const instF = document.getElementById('f-instance')?.value || '';
+        const srcF = document.getElementById('f-source')?.value || '';
+        let extraHint = '';
+        if (instF) extraHint = `<div class="empty-hint">${esc(tf('dash.empty_builds_instance', { name: instF }))}</div>`;
+        else if (srcF === 'gitlab') extraHint = `<div class="empty-hint">${esc(t('dash.empty_builds_gitlab'))}</div>`;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="${BUILDS_TBL_COLS}"><div>${esc(t('dash.table_no_builds'))}</div>${extraHint || `<div class="empty-hint">${t('dash.empty_builds_hint')}</div>`}${emptyStateActionsHtml()}</td></tr>`;
+        s.done = true;
+        updateFilterSummary();
+        _applyGlobalSearch();
+        return;
+      }
+
+      const sorted = _sortBuildRows(rows || []);
+      const html = sorted.map((b) => _buildMockupRow(b, { favKeys })).join('');
+
+      if (s.page === 1) {
+        const pageSig = `${_buildsHours}\x1e` + sorted.map(_buildsRowSig).join('\x1e');
+        if (!incrFirstPage && _liveMode && pageSig && pageSig === _lastBuildsPageSig) {
+          if (!data.has_more) {
+            s.done = true;
+            updateFilterSummary();
+            _applyGlobalSearch();
+            return;
+          }
+          s.page++;
+          continue;
+        }
+        _lastBuildsPageSig = pageSig;
+        swapTableContentSmooth(tbody, () => {
+          tbody.innerHTML = html;
+          try { cacheStaleTableHtml('builds', tbody); } catch { /* ignore */ }
+        });
+      } else {
+        tbody.insertAdjacentHTML('beforeend', html);
+      }
+
+      if (incrFirstPage) {
+        s.done = !data.has_more;
+        break;
+      }
+
+      if (!data.has_more) {
+        s.done = true;
+        break;
+      }
+      s.page++;
+      if (typeof yieldToBrowser === 'function') await yieldToBrowser(24);
+    }
+
+    if (s.done && tbodyHasDataRows(tbody)) {
+      try { cacheStaleTableHtml('builds', tbody); } catch { /* ignore */ }
+    }
     _applyGlobalSearch();
     updateFilterSummary();
-    if (incr) { s.done = true; return; }
-    if (!data.has_more) { s.done = true; return; }
-    s.page++;
-    window.requestAnimationFrame(() => { loadBuilds(); });
   } finally {
     s.loading = false;
+    if (!s.done) scheduleTablePageChain(s, loadBuilds, tbody);
   }
 }

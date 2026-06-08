@@ -67,67 +67,73 @@ async function loadServices() {
   if (s.loading || s.done) return;
   const tbody = document.getElementById('tbody-svcs');
   if (guardPanelLoadDuringCollect('svcs', tbody, s)) return;
+  panelScrollContinuePage(s, tbody);
   s.loading = true;
   try {
     const rawStatus = document.getElementById('f-svstatus')?.value || '';
     const status = rawStatus;
-    const incr = typeof isCollectIncrementalRefresh === 'function' && isCollectIncrementalRefresh();
-    const perPage = incr && typeof collectIncrementalPerPage === 'function'
-      ? collectIncrementalPerPage(s.per_page)
-      : s.per_page;
-    const url = apiUrl(`api/services?page=${s.page}&per_page=${perPage}&status=${encodeURIComponent(status)}`);
+    const incrFirstPage = typeof isCollectIncrFirstPage === 'function' && isCollectIncrFirstPage(s);
+    const perPage = s.per_page;
 
-    const res = await fetchKeyed('services', url).catch(()=>null);
-
-    const tbody = document.getElementById('tbody-svcs');
-    if (res === FETCH_ABORTED) return;
-    if (!res || !res.ok) {
-      if (res && res.status === 404) {
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
-      } else {
-        const detail = await fetchApiErrorDetail(res);
-        srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
-        const extra = detail ? ` — ${esc(detail)}` : '';
-        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+    while (!s.done) {
+      const url = apiUrl(`api/services?page=${s.page}&per_page=${perPage}&status=${encodeURIComponent(status)}`);
+      const res = await fetchKeyed('services', url).catch(() => null);
+      if (res === FETCH_ABORTED) return;
+      if (!res || !res.ok) {
+        if (keepTableOnTransientApiError(tbody, res, s, 'svcs')) return;
+        if (res && res.status === 404) {
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_no_test_data'))}${emptyStateActionsHtml()}</td></tr>`;
+        } else {
+          const detail = await fetchApiErrorDetail(res);
+          srAnnounce(t('dash.table_api_err') + (detail ? ': ' + detail : ''), 'assertive');
+          const extra = detail ? ` — ${esc(detail)}` : '';
+          tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(t('dash.table_api_err'))}${extra}<br/><span class="err-hint">${esc(t('err.hint_retry'))}</span> <button type="button" class="btn btn-ghost" onclick="refreshAll()">${esc(t('common.retry'))}</button></td></tr>`;
+        }
+        s.done = true;
+        updateFilterSummary();
+        return;
       }
-      s.done = true; updateFilterSummary(); return;
-    }
-    const data = await res.json();
-    s.total = data.total;
-    document.getElementById('svcs-count').textContent = data.total;
 
-    const rows = data.items;
-    if (s.page === 1 && !rows.length) {
-      if (keepTableOnTransientEmpty(tbody, rows, s, 'svcs')) return;
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
-      s.done = true; updateFilterSummary(); return;
-    }
-    // Services header summary (Docker/HTTP groups) — computed from current snapshot via persisted events.
-    try {
-      const sumEl = document.getElementById('svcs-summary');
-      if (sumEl) {
-        const allSvcs = (_lastSnap && Array.isArray(_lastSnap.services)) ? _lastSnap.services : null;
-        const items = allSvcs || rows;
-        const byKind = {};
-        items.forEach((sv) => {
-          const k = String((sv && sv.kind) || 'unknown');
-          const st = String((sv && sv.status) || '').toLowerCase();
-          if (!byKind[k]) byKind[k] = { up:0, down:0, degraded:0, total:0 };
-          byKind[k].total++;
-          if (st === 'down') byKind[k].down++;
-          else if (st === 'degraded') byKind[k].degraded++;
-          else if (st === 'up') byKind[k].up++;
-        });
-        const parts = Object.keys(byKind).sort().map((k) => {
-          const v = byKind[k];
-          return `${k}: ${v.down}↓ ${v.degraded}~ ${v.up}↑`;
-        });
-        sumEl.textContent = parts.length ? parts.join(' · ') : '—';
+      const data = await res.json();
+      s.total = data.total;
+      document.getElementById('svcs-count').textContent = data.total;
+
+      const rows = data.items;
+      if (s.page === 1 && !rows.length) {
+        if (keepTableOnTransientEmpty(tbody, rows, s, 'svcs')) return;
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8"><div>${esc(t('dash.table_no_svcs'))}</div><div class="empty-hint">${t('dash.empty_svcs_hint')}</div>${emptyStateActionsHtml()}</td></tr>`;
+        s.done = true;
+        updateFilterSummary();
+        return;
       }
-    } catch { /* ignore */ }
 
-    const lastCh = _svcLastChangeMap();
-    const html = rows.map(sv => {
+      if (s.page === 1) {
+        try {
+          const sumEl = document.getElementById('svcs-summary');
+          if (sumEl) {
+            const allSvcs = (_lastSnap && Array.isArray(_lastSnap.services)) ? _lastSnap.services : null;
+            const items = allSvcs || rows;
+            const byKind = {};
+            items.forEach((sv) => {
+              const k = String((sv && sv.kind) || 'unknown');
+              const st = String((sv && sv.status) || '').toLowerCase();
+              if (!byKind[k]) byKind[k] = { up:0, down:0, degraded:0, total:0 };
+              byKind[k].total++;
+              if (st === 'down') byKind[k].down++;
+              else if (st === 'degraded') byKind[k].degraded++;
+              else if (st === 'up') byKind[k].up++;
+            });
+            const parts = Object.keys(byKind).sort().map((k) => {
+              const v = byKind[k];
+              return `${k}: ${v.down}↓ ${v.degraded}~ ${v.up}↑`;
+            });
+            sumEl.textContent = parts.length ? parts.join(' · ') : '—';
+          }
+        } catch { /* ignore */ }
+      }
+
+      const lastCh = _svcLastChangeMap();
+      const html = rows.map(sv => {
     let actionBtn = '';
     let logCell = '—';
     if (sv.kind === 'docker') {
@@ -140,14 +146,14 @@ async function loadServices() {
       logCell = `<button type="button" class="act-btn log-btn" onclick='openLogViewer("docker",${JSON.stringify(p)})' title="${_svgTitleAttr(t('dash.log_title'))}">&#128466;</button>
         <button type="button" class="act-btn lintel-btn" onclick='openLogIntelTab(${keyArg})' title="${_svgTitleAttr(t('dash.log_intel_open'))}"></button>`;
       if (up) {
-        actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-stop" title="Остановить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"stop",${hostArg}]'>&#9632; Stop</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635; Restart</button>
+        actionBtn = `<div class="act-group svc-docker-actions">
+          <button type="button" class="act-btn docker-stop" title="Остановить" aria-label="Остановить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"stop",${hostArg}]'>&#9632;</button>
+          <button type="button" class="act-btn docker-restart" title="Перезапустить" aria-label="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635;</button>
         </div>`;
       } else {
-        actionBtn = `<div class="act-group">
-          <button type="button" class="act-btn docker-start" title="Запустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"start",${hostArg}]'>&#9654; Start</button>
-          <button type="button" class="act-btn docker-btn" title="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635; Restart</button>
+        actionBtn = `<div class="act-group svc-docker-actions">
+          <button type="button" class="act-btn docker-start" title="Запустить" aria-label="Запустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"start",${hostArg}]'>&#9654;</button>
+          <button type="button" class="act-btn docker-restart" title="Перезапустить" aria-label="Перезапустить" data-dash-action="dockerContainerAction" data-dash-args='[${nm},"restart",${hostArg}]'>&#8635;</button>
         </div>`;
       }
     }
@@ -156,8 +162,10 @@ async function loadServices() {
     const ch = lastCh[String(sv.name || '')];
     const chAgo = ch && ch.ts ? _fmtAgo(ch.ts) : '';
     const chTxt = chAgo ? ` · ${chAgo}` : '';
+    const srcInst = String(sv.source_instance || '').trim();
+    const nameTitle = srcInst ? `${sv.name} (${srcInst})` : sv.name;
     return `<tr data-svc-name="${encodeURIComponent(String(sv.name || ''))}" data-svc-host="${encodeURIComponent(String(sv.source_instance || ''))}" data-svc-kind="${encodeURIComponent(String(sv.kind || ''))}">
-    <td><strong title="${_svgTitleAttr(sv.name)}">${esc(sv.name)}</strong></td>
+    <td><strong title="${_svgTitleAttr(nameTitle)}">${esc(sv.name)}</strong>${srcInst ? `<div style="color:var(--muted);font-size:.72rem">${esc(srcInst)}</div>` : ''}</td>
     <td>${esc(sv.kind)}</td>
     <td>${badge(sv.status)}</td>
     <td class="col-compact-hide" style="color:var(--muted);font-size:.8rem" title="${dt}">${esc(sv.detail)}</td>
@@ -166,18 +174,34 @@ async function loadServices() {
     <td>${logCell}</td>
     <td style="text-align:right">${actionBtn}</td>
   </tr>`;
-    }).join('');
+      }).join('');
 
-    if (s.page === 1) swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
-    else tbody.insertAdjacentHTML('beforeend', html);
+      if (s.page === 1) {
+        swapTableContentSmooth(tbody, () => { tbody.innerHTML = html; });
+      } else {
+        tbody.insertAdjacentHTML('beforeend', html);
+      }
 
+      if (incrFirstPage) {
+        s.done = !data.has_more;
+        break;
+      }
+
+      if (!data.has_more) {
+        s.done = true;
+        break;
+      }
+      s.page++;
+      if (typeof yieldToBrowser === 'function') await yieldToBrowser(24);
+    }
+
+    if (s.done && tbodyHasDataRows(tbody)) {
+      try { cacheStaleTableHtml('svcs', tbody); } catch { /* ignore */ }
+    }
     _applyGlobalSearch();
     updateFilterSummary();
-    if (incr) { s.done = true; return; }
-    if (!data.has_more) { s.done = true; return; }
-    s.page++;
-    window.requestAnimationFrame(() => { loadServices(); });
   } finally {
     s.loading = false;
+    if (!s.done) scheduleTablePageChain(s, loadServices, tbody);
   }
 }

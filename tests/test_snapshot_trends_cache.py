@@ -134,6 +134,36 @@ class TestSnapshotCache:
         out = asyncio.run(sc.load_snapshot_async())
         assert isinstance(out, CISnapshot)
 
+    def test_load_snapshot_sync_peeks_memory_during_collect_without_db(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from web.core import snapshot_cache as sc
+        from web.core import config as cfg_mod
+        from web.db import init_db, set_latest_snapshot_json
+        from models.models import TestRecord
+
+        monkeypatch.setattr(
+            cfg_mod,
+            "load_yaml_config",
+            lambda: {"general": {"data_dir": str(tmp_path)}},
+        )
+        init_db(tmp_path)
+        set_latest_snapshot_json(CISnapshot().model_dump_json())
+        live = CISnapshot(tests=[TestRecord(source="x", test_name="t", status="failed")])
+        sc.set_collecting_accessor(lambda: True)
+        sc.set_snapshot_revision_accessor(lambda: 999)
+        sc.prime_snapshot_cache(live, store_seq=None)
+        sc._snapshot_cache_expires_mono = time.monotonic() + 60.0
+        sc._snapshot_cache_rev = -1
+
+        def _boom() -> int:
+            raise AssertionError("SQLite should not be queried during collect when memory cache exists")
+
+        monkeypatch.setattr("web.db.get_latest_snapshot_store_seq", _boom)
+        out = sc.load_snapshot()
+        assert out is not None
+        assert len(getattr(out, "tests", None) or []) == 1
+
     def test_load_snapshot_async_peeks_memory_during_collect_without_thread(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:

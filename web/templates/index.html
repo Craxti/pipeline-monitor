@@ -6,45 +6,49 @@
 <link rel="icon" type="image/png" href="/static/logo-mark.png?v=20260417i" sizes="32x32"/>
 <link rel="apple-touch-icon" href="/static/logo-mark.png?v=20260417i"/>
 <title>CI/CD Monitor</title>
-<link rel="stylesheet" href="/static/app.css?v=20260610i" />
+<link rel="stylesheet" href="/static/app.css?v=20260613a" />
 </head>
 <body data-page="dashboard" class="ui-modern dash-app dash-sidebar-pinned">
 {% include 'partials/i18n_core.html' %}
+<script src="/static/i18n_locales_extra.js?v=20260612a"></script>
 <script src="/static/app.js?v=20260417g" defer></script>
-<script src="/static/dashboard.helpers.formatters.js?v=20260606r" defer></script>
+<script src="/static/dashboard.helpers.formatters.js?v=20260608b" defer></script>
 <script src="/static/dashboard.helpers.charts.js?v=20260419c" defer></script>
 <script src="/static/dashboard.helpers.api.js?v=20260419c" defer></script>
 <script src="/static/dashboard.lazy-libs.js?v=20260610a" defer></script>
 <script src="/static/dashboard.trends.filters.adapter.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.scope.js?v=20260420a" defer></script>
 <script src="/static/dashboard.trends.js?v=20260610c" defer></script>
-<script src="/static/dashboard.helpers.state.js?v=20260609b" defer></script>
-<script src="/static/dashboard.helpers.ui.js?v=20260606l" defer></script>
+<script src="/static/dashboard.helpers.state.js?v=20260608a" defer></script>
+<script src="/static/dashboard.helpers.ui.js?v=20260608a" defer></script>
 <script src="/static/dashboard.fetch.js?v=20260417i" defer></script>
 <script src="/static/dashboard.panel-state.js?v=20260417i" defer></script>
 <script src="/static/dashboard.build-log-cells.js?v=20260606r" defer></script>
-<script src="/static/dashboard.builds.js?v=20260606l" defer></script>
-<script src="/static/dashboard.tests.js?v=20260606l" defer></script>
-<script src="/static/dashboard.failures.js?v=20260606l" defer></script>
-<script src="/static/dashboard.services.js?v=20260606l" defer></script>
-<script src="/static/dashboard.system.js?v=20260423a" defer></script>
-<script src="/static/dashboard.collect-panel.js?v=20260606l" defer></script>
+<script src="/static/dashboard.builds.js?v=20260608a" defer></script>
+<script src="/static/dashboard.failures.js?v=20260616a" defer></script>
+<script src="/static/dashboard.tests.js?v=20260616a" defer></script>
+<script src="/static/dashboard.services.js?v=20260608a" defer></script>
+<script src="/static/dashboard.system.js?v=20260607c" defer></script>
+<script src="/static/dashboard.collect-panel.js?v=20260607f" defer></script>
 <script src="/static/dashboard.status-map.js?v=20260417i" defer></script>
 <script src="/static/dashboard.diff-stages.js?v=20260417i" defer></script>
 <script src="/static/dashboard.incidents.js?v=20260606j" defer></script>
 <script src="/static/dashboard.uptime-sparklines.js?v=20260417i" defer></script>
-<script src="/static/dashboard.load-summary.js?v=20260606l" defer></script>
-<script src="/static/dashboard.collect-bar.js?v=20260606l" defer></script>
+<script src="/static/dashboard.load-summary.js?v=20260607f" defer></script>
+<script src="/static/dashboard.collect-bar.js?v=20260607f" defer></script>
 <script src="/static/dashboard.js?v=20260417i" defer></script>
-<script src="/static/dashboard.actions.js?v=20260608a" defer></script>
+<script src="/static/dashboard.actions.js?v=20260613b" defer></script>
 <script src="/static/dashboard.filters.js?v=20260417i" defer></script>
 <script src="/static/dashboard.sources.js?v=20260610d" defer></script>
 <script src="/static/dashboard.theme-export.js?v=20260417i" defer></script>
 <script src="/static/dashboard.chat.js?v=20260420a" defer></script>
-<script src="/static/dashboard.live.js?v=20260422h" defer></script>
+<script src="/static/dashboard.live.js?v=20260607c" defer></script>
 <script src="/static/dashboard.har.js?v=20260508h" defer></script>
-<script src="/static/dashboard.log-intel.js?v=20260607j" defer></script>
-<script src="/static/dashboard.init.js?v=20260610a" defer></script>
+<script src="/static/dashboard.log-intel.js?v=20260613a" defer></script>
+<script src="/static/dashboard.service-incidents.js?v=20260608a" defer></script>
+<script src="/static/dashboard.select-modern.js?v=20260612b" defer></script>
+<script src="/static/dashboard.export-modern.js?v=20260612b" defer></script>
+<script src="/static/dashboard.init.js?v=20260607c" defer></script>
 
 <div class="dash-shell">
   <div class="dash-sidebar-backdrop" id="dash-sidebar-backdrop" hidden></div>
@@ -121,8 +125,8 @@
     <button type="button" class="dash-nav-item" role="tab" id="tabbtn-log-intel" aria-selected="false" aria-controls="tab-panel-log-intel" data-tab="log-intel">
       <span class="dash-nav-ico dash-nav-ico-log-intel" aria-hidden="true"></span>
       <span class="dash-nav-text">
-        <span class="dash-nav-title" data-i18n="tabNav.log_intel">Log intelligence</span>
-        <span class="dash-nav-desc" data-i18n="tabNav.log_intel_sub">Clusters & correlation</span>
+        <span class="dash-nav-title" data-i18n="tabNav.service_intel">Service analysis</span>
+        <span class="dash-nav-desc" data-i18n="tabNav.service_intel_sub">Graph RCA & models</span>
       </span>
     </button>
     <button type="button" class="dash-nav-item" role="tab" id="tabbtn-har" aria-selected="false" aria-controls="tab-panel-har" data-tab="har">
@@ -169,12 +173,12 @@
         </div>
       </div>
       <div class="dash-topbar-actions">
-        <div id="global-search-wrap" class="header-tool-extra" data-i18n-title="dash.global_search_title" title="">
-          <span class="global-search-ico" aria-hidden="true">&#128269;</span>
+        <div id="global-search-wrap" class="header-search" data-i18n-title="dash.global_search_title" title="">
+          <span class="topbar-ico topbar-ico--search" aria-hidden="true"></span>
           <input type="search" id="global-search" autocomplete="off" spellcheck="false"
             data-i18n-placeholder="dash.global_search_ph" placeholder=""
             aria-label="Global search">
-          <button type="button" id="global-search-clear" class="global-search-clear" data-dash-action="clearGlobalSearch" aria-label="Clear search">&#10005;</button>
+          <button type="button" id="global-search-clear" class="global-search-clear" data-dash-action="clearGlobalSearch" data-i18n-aria-label="common.clear" aria-label="Clear search"><span class="topbar-ico topbar-ico--close-sm" aria-hidden="true"></span></button>
         </div>
         <div class="collect-actions-stack">
           <button class="btn btn-primary" id="btn-collect" data-dash-action="triggerCollect" data-i18n-title="dash.collect_title" title="">
@@ -184,25 +188,10 @@
             <span data-i18n="dash.collect_stop">Stop</span>
           </button>
         </div>
-        <button class="btn btn-ghost btn-header-secondary" data-dash-action="refreshAll" data-i18n-title="dash.refresh" title="">
+        <button class="btn btn-ghost btn-header-secondary topbar-action-btn" data-dash-action="refreshAll" data-i18n-title="dash.refresh" title="">
+          <span class="topbar-ico topbar-ico--refresh" aria-hidden="true"></span>
           <span data-i18n="dash.refresh">Refresh</span>
         </button>
-        <button class="btn btn-ghost btn-toolbar" id="btn-theme" data-dash-action="toggleTheme" data-i18n-title="dash.theme" title=""></button>
-        <div class="lang-toggle" id="lang-toggle" data-i18n-title="dash.lang_title" title="">
-          <button type="button" data-lang="en" data-dash-action="setUILang" data-dash-args='["en"]'>EN</button>
-          <button type="button" data-lang="ru" data-dash-action="setUILang" data-dash-args='["ru"]'>RU</button>
-        </div>
-        <button class="btn btn-ghost btn-toolbar header-tool-extra" id="btn-compact" data-dash-action="toggleCompact" data-i18n-title="dash.compact" title="">&#8801;</button>
-        <button class="btn btn-ghost btn-toolbar header-tool-extra" data-dash-action="exportCSV" data-i18n-title="dash.export_csv_title" title="">
-          <span data-i18n="dash.csv">CSV</span>
-        </button>
-        <div class="export-wrap header-tool-extra" id="ew-incident">
-          <button class="btn btn-ghost btn-toolbar ico-btn ico-btn--doc" data-dash-action="toggleExportMenu" data-dash-args='["ew-incident"]' data-i18n-title="dash.incident_title" title=""></button>
-          <div class="export-menu">
-            <a href="/api/incident.json" target="_blank" rel="noopener">JSON</a>
-            <a href="/api/incident.md" target="_blank" rel="noopener">Markdown</a>
-          </div>
-        </div>
         <button id="notif-btn" class="btn-toolbar ico-btn ico-btn--bell" data-dash-action="toggleNotifPanel" data-i18n-title="dash.notif_btn" title="">
           <span id="notif-badge"></span>
         </button>
@@ -247,9 +236,15 @@
       <div class="notif-head">
         <span data-i18n="notif.title">Notifications</span>
         <span class="notif-sub" id="notif-subtitle" data-i18n="notif.subtitle"></span>
-        <button class="notif-head-clear" data-dash-action="clearNotifications" data-i18n="notif.clear">Clear all</button>
+        <button type="button" class="btn btn-ghost btn-sm notif-head-clear" data-dash-action="clearNotifications" data-i18n="notif.clear">Clear all</button>
       </div>
-      <div id="notif-list"><div class="notif-empty" data-i18n="dash.notif_empty">No state-change events yet</div></div>
+      <div id="notif-list">
+        <div class="notif-empty-state">
+          <div class="notif-empty-ico" aria-hidden="true"></div>
+          <div class="notif-empty-title" data-i18n="dash.notif_empty">No state-change events yet</div>
+          <div class="notif-empty-hint" data-i18n="dash.notif_empty_hint">Status changes appear here after Collect updates builds, tests, or services.</div>
+        </div>
+      </div>
     </div>
 
     <main class="dash-content">
@@ -266,13 +261,13 @@
       <span class="hero-icon hero-icon-builds" aria-hidden="true"></span>
     </div>
     <div class="hero-main">
-      <span class="hero-num c-ok" id="hero-builds-ok">—</span>
+      <span class="hero-num c-ok" id="hero-builds-ok">{% if snap %}{{ builds_ok }}{% else %}—{% endif %}</span>
       <div class="hero-aside">
         <span class="hero-status-label c-ok" data-i18n="hero.status">Status</span>
       </div>
     </div>
     <div class="hero-foot">
-      <span class="hero-sub c-fail"><span id="hero-builds-fail">—</span> <span data-i18n="hero.failed">failed</span></span>
+      <span class="hero-sub c-fail"><span id="hero-builds-fail">{% if snap %}{{ builds_fail }}{% else %}—{% endif %}</span> <span data-i18n="hero.failed">failed</span></span>
     </div>
   </article>
   <article class="hero-card" data-dash-action="filterTests" data-dash-args='["passed"]'>
@@ -281,14 +276,14 @@
       <span class="hero-icon hero-icon-tests" aria-hidden="true"></span>
     </div>
     <div class="hero-main">
-      <span class="hero-num" id="hero-tests-total">—</span>
+      <span class="hero-num" id="hero-tests-total">{% if snap %}{{ tests_total }}{% else %}—{% endif %}</span>
       <div class="hero-aside">
-        <span class="hero-rate c-ok" id="hero-tests-rate">—</span>
+        <span class="hero-rate c-ok" id="hero-tests-rate">{% if snap and tests_pass_rate is not none %}{{ tests_pass_rate }}%{% else %}—{% endif %}</span>
         <span class="hero-status-label c-muted" data-i18n="hero.pass_rate">pass rate</span>
       </div>
     </div>
     <div class="hero-foot">
-      <span class="hero-sub c-fail"><span id="hero-tests-fail">—</span> <span data-i18n="hero.failed">failed</span></span>
+      <span class="hero-sub c-fail"><span id="hero-tests-fail">{% if snap %}{{ tests_fail }}{% else %}—{% endif %}</span> <span data-i18n="hero.failed">failed</span></span>
     </div>
   </article>
   <article class="hero-card" data-dash-action="goToServicesDownFromSituation">
@@ -297,37 +292,19 @@
       <span class="hero-icon hero-icon-services" aria-hidden="true"></span>
     </div>
     <div class="hero-main">
-      <span class="hero-num" id="hero-svcs-total">—</span>
+      <span class="hero-num" id="hero-svcs-total">{% if snap %}{{ svcs_total }}{% else %}—{% endif %}</span>
       <div class="hero-aside">
         <span class="hero-status-label c-muted" data-i18n="hero.monitored">monitored</span>
       </div>
     </div>
     <div class="hero-foot">
-      <span class="hero-sub c-fail"><span id="hero-svcs-down">—</span> <span data-i18n="hero.down">down</span></span>
+      <span class="hero-sub c-fail"><span id="hero-svcs-down">{% if snap %}{{ svc_down }}{% else %}—{% endif %}</span> <span data-i18n="hero.down">down</span></span>
       <div class="hero-svc-list" id="hero-svcs-list"></div>
     </div>
   </article>
 </div>
 
-<!-- ── Secondary stats ── -->
-<div class="stats stats-secondary" id="stats">
-  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["",""]'>
-    <div class="stat-numrow"><div class="n c-info" id="s-builds">—</div><span class="stat-trend" id="tr-builds" aria-hidden="true"></span></div>
-    <div class="l" data-i18n="stat.total_builds">Total builds</div>
-  </div>
-  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["","running"]'>
-    <div class="stat-numrow"><div class="n c-info" id="s-run">—</div><span class="stat-trend" id="tr-run" aria-hidden="true"></span></div>
-    <div class="l" data-i18n="stat.running">Running</div>
-  </div>
-  <div class="stat" data-dash-action="filterBuilds" data-dash-args='["","failure"]'>
-    <div class="stat-numrow"><div class="n c-fail" id="s-fail">—</div><span class="stat-trend" id="tr-fail" aria-hidden="true"></span></div>
-    <div class="l" data-i18n="stat.failed_builds">Failed builds</div>
-  </div>
-  <div class="stat" data-dash-action="filterTests" data-dash-args='["failed"]'>
-    <div class="stat-numrow"><div class="n c-fail" id="s-tfail">—</div><span class="stat-trend" id="tr-tfail" aria-hidden="true"></span></div>
-    <div class="l" data-i18n="stat.test_failures">Failed tests</div>
-  </div>
-</div>
+<!-- ── Secondary stats (removed — metrics live in hero cards above) ── -->
 
 <!-- ── Overview preview: recent builds + services health ── -->
 <div class="overview-grid">
@@ -419,7 +396,6 @@
   <div class="panel-head panel-head-minimal">
     <h2><span class="panel-icon panel-icon--star" aria-hidden="true"></span><span data-i18n="dash.starred_title">Starred Builds</span></h2>
     <span class="panel-count" id="fav-count">0</span>
-    <button class="expand-btn" id="expand-fav" data-dash-action="toggleExpand" data-dash-args='["fav"]' data-i18n="dash.expand_panel">Expand</button>
   </div>
   <div class="tbl-wrap" id="wrap-fav">
       <table class="tbl-mockup data-table" id="tbl-fav">
@@ -445,7 +421,6 @@
     <h2><span class="panel-icon panel-icon--gitlab" aria-hidden="true"></span><span data-i18n="dash.builds_title">Pipelines</span></h2>
     <span class="panel-count" id="builds-count">0</span>
     <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetBuilds" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
-    <button class="expand-btn" id="expand-builds" data-dash-action="toggleExpand" data-dash-args='["builds"]' data-i18n="dash.expand_panel">Expand</button>
   </div>
   <div class="builds-toolbar filter-bar">
     <div class="filters filter-bar__controls">
@@ -508,27 +483,34 @@
 <section id="sec-test-failures" class="dash-section">
 <!-- ── Top Failures Panel ── -->
 <div class="panel" id="panel-failures">
-  <div class="panel-head">
+  <div class="panel-head panel-head-minimal">
     <h2><span class="panel-icon panel-icon--failures" aria-hidden="true"></span><span data-i18n="dash.top_fail_title">Top Failing Tests</span></h2>
     <span class="panel-count" id="failures-count">0</span>
-    <div class="filter-bar filter-bar--inline">
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetFailures" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <div class="export-wrap" id="ew-failures">
+      <button type="button" class="btn btn-ghost btn-export-sm btn-export-trigger"><span data-i18n="dash.export_label">Export</span></button>
+      <div class="export-menu">
+        <a href="api/export/failures?fmt=csv" id="exp-failures-csv" target="_blank" rel="noopener">CSV</a>
+        <a href="api/export/failures?fmt=xlsx" id="exp-failures-xlsx" target="_blank" rel="noopener">XLSX</a>
+      </div>
+    </div>
+  </div>
+  <p class="panel-subhint panel-subhint--below-head" data-i18n="dash.top_fail_data_scope"></p>
+  <div class="panel-toolbar filter-bar filter-bar--sticky">
     <div class="filters filter-bar__controls">
+      <span class="time-filter-group" role="group" data-i18n-aria-label="dash.tf_group" aria-label="Period">
       <button type="button" class="time-filter-btn" id="tf-f-1d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[1]" data-i18n-title="dash.tf_1d" title="">1d</button>
       <button type="button" class="time-filter-btn" id="tf-f-3d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[3]" data-i18n-title="dash.tf_3d" title="">3d</button>
       <button type="button" class="time-filter-btn" id="tf-f-7d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[7]" data-i18n-title="dash.tf_7d" title="">7d</button>
       <button type="button" class="time-filter-btn" id="tf-f-30d" data-dash-action="toggleFailuresDayFilter" data-dash-args="[30]" data-i18n-title="dash.tf_30d" title="">30d</button>
-      <select class="f-select" id="f-fsource" title="Test source">
-        <option value="real" selected data-i18n="dash.test_src_real">Real (no raw Jenkins parsers)</option>
-        <option value="jenkins" data-i18n="dash.test_src_jenkins">Jenkins (merged: build+Allure+console)</option>
+      </span>
+      <select class="f-select f-select--source" id="f-fsource" aria-label="Source">
+        <option value="jenkins" selected data-i18n="dash.builds_source_jenkins">Jenkins</option>
         <option value="gitlab" data-i18n="dash.builds_source_gitlab">GitLab</option>
-        <option value="synthetic" data-i18n="dash.test_src_synthetic">Synthetic (build as test)</option>
-        <option value="" data-i18n="dash.test_src_all">All sources</option>
-        <optgroup data-i18n-label="dash.test_src_raw_group" label="Raw / debug">
-        <option value="jenkins_allure">jenkins_allure</option>
-        <option value="jenkins_console">jenkins_console</option>
-        <option value="jenkins_build">jenkins_build</option>
-        <option value="jenkins_unified">jenkins_unified</option>
-        </optgroup>
+        <option value="github" data-i18n="dash.builds_source_github">GitHub Actions</option>
+      </select>
+      <select class="f-select f-select--instance" id="f-finstance">
+        <option value="" data-i18n="dash.opt_all_instances">All instances</option>
       </select>
       <input class="f-input" id="f-fname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
       <input class="f-input" id="f-fsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
@@ -538,17 +520,6 @@
       <span id="filter-active-failures-txt"></span>
       <button type="button" class="btn btn-ghost filter-reset-btn" data-dash-action="clearFailureFilters">Reset</button>
     </div>
-    </div>
-    <div class="panel-subhint" data-i18n="dash.top_fail_data_scope"></div>
-    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetFailures" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
-    <div class="export-wrap" id="ew-failures">
-      <button class="btn btn-ghost btn-export-sm" data-dash-action="toggleExportMenu" data-dash-args='["ew-failures"]'>&#11015; <span data-i18n="dash.export_label">Export</span></button>
-      <div class="export-menu">
-        <a href="api/export/failures?fmt=csv" id="exp-failures-csv" target="_blank" rel="noopener">CSV</a>
-        <a href="api/export/failures?fmt=xlsx" id="exp-failures-xlsx" target="_blank" rel="noopener">XLSX</a>
-      </div>
-    </div>
-    <button class="expand-btn" id="expand-failures" data-dash-action="toggleExpand" data-dash-args='["failures"]' data-i18n="dash.expand_panel">Expand</button>
   </div>
   <div class="tbl-wrap" id="wrap-failures">
       <table class="tbl-grouped data-table">
@@ -556,13 +527,13 @@
         <tr class="th-groups">
           <th colspan="1" data-i18n="dash.tg_rank">Rank</th>
           <th colspan="2" data-i18n="dash.tg_test_id">Test</th>
-          <th colspan="2" data-i18n="dash.tg_detail">Details</th>
+          <th colspan="3" data-i18n="dash.tg_detail">Details</th>
         </tr>
         <tr class="th-cols">
-        <th data-i18n="dash.th_num">#</th><th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_failures">Failures</th><th data-i18n="dash.th_last_err">Last Error</th></tr>
+        <th data-i18n="dash.th_num">#</th><th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_failures">Failures</th><th data-i18n="dash.th_allure">Allure</th><th class="col-compact-hide" data-i18n="dash.th_last_err">Last Error</th></tr>
         </thead>
       <tbody id="tbody-failures">
-        <tr class="empty-row"><td colspan="5" data-i18n="dash.table_loading">Loading…</td></tr>
+        <tr class="empty-row"><td colspan="6" data-i18n="dash.table_loading">Loading…</td></tr>
         </tbody>
       </table>
     <div class="sentinel" id="sentinel-failures"></div>
@@ -575,29 +546,29 @@
 <section id="sec-test-runs" class="dash-section">
 <!-- ── Test Runs Panel ── -->
 <div class="panel" id="panel-tests">
-  <div class="panel-head">
+  <div class="panel-head panel-head-minimal">
     <h2><span class="panel-icon panel-icon--tests" aria-hidden="true"></span><span data-i18n="dash.tests_runs_title">All Test Runs</span></h2>
     <span class="panel-count" id="tests-count">0</span>
-    <span class="panel-count panel-count--plain">
-      <button type="button" class="log-lvl-btn" id="tsrc-real" data-dash-action="setTestSourceQuick" data-dash-args='["real"]' title="Real: merged Jenkins + other parsers (no raw Allure/console rows)">Real</button>
-      <button type="button" class="log-lvl-btn" id="tsrc-jenkins" data-dash-action="setTestSourceQuick" data-dash-args='["jenkins"]' title="Jenkins only: one row per test (build time + Allure + console)">Jenkins</button>
-      <button type="button" class="log-lvl-btn" id="tsrc-synth" data-dash-action="setTestSourceQuick" data-dash-args='["synthetic"]' title="Job-as-tests (synthetic)">Jobs</button>
-    </span>
     <span class="panel-count panel-count--meta" id="tests-breakdown">—</span>
-    <div class="filter-bar filter-bar--inline">
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetTests" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+    <div class="export-wrap" id="ew-tests">
+      <button type="button" class="btn btn-ghost btn-export-sm btn-export-trigger"><span data-i18n="dash.export_label">Export</span></button>
+      <div class="export-menu">
+        <a id="exp-tests-csv" href="api/export/tests?fmt=csv" target="_blank">CSV</a>
+        <a id="exp-tests-xlsx" href="api/export/tests?fmt=xlsx" target="_blank">XLSX</a>
+        <a id="exp-tests-failed-csv" href="api/export/tests?fmt=csv&status=failed" target="_blank"><span data-i18n="dash.export_csv_failed_only">CSV (failed only)</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="panel-toolbar filter-bar filter-bar--sticky">
     <div class="filters filter-bar__controls">
-      <select class="f-select" id="f-tsource">
-        <option value="real" selected data-i18n="dash.test_src_real">Real (no raw Jenkins parsers)</option>
-        <option value="jenkins" data-i18n="dash.test_src_jenkins">Jenkins (merged: build+Allure+console)</option>
+      <select class="f-select f-select--source" id="f-tsource" aria-label="Source">
+        <option value="jenkins" selected data-i18n="dash.builds_source_jenkins">Jenkins</option>
         <option value="gitlab" data-i18n="dash.builds_source_gitlab">GitLab</option>
-        <option value="synthetic" data-i18n="dash.test_src_synthetic">Synthetic (build as test)</option>
-        <option value="" data-i18n="dash.test_src_all">All sources</option>
-        <optgroup data-i18n-label="dash.test_src_raw_group" label="Raw / debug">
-        <option value="jenkins_allure">jenkins_allure</option>
-        <option value="jenkins_console">jenkins_console</option>
-        <option value="jenkins_build">jenkins_build</option>
-        <option value="jenkins_unified">jenkins_unified</option>
-        </optgroup>
+        <option value="github" data-i18n="dash.builds_source_github">GitHub Actions</option>
+      </select>
+      <select class="f-select f-select--instance" id="f-tinstance">
+        <option value="" data-i18n="dash.opt_all_instances">All instances</option>
       </select>
       <select class="f-select" id="f-tstatus">
         <option value="" data-i18n="dash.opt_all_tstatus">All statuses</option>
@@ -608,26 +579,17 @@
       </select>
       <input class="f-input" id="f-tname" data-i18n-placeholder="dash.filter_test_ph" placeholder="" />
       <input class="f-input" id="f-tsuite" data-i18n-placeholder="dash.filter_suite_ph" placeholder="" />
+      <span class="time-filter-group" role="group" aria-label="Period">
       <button class="time-filter-btn" id="tf-t-6h"  data-dash-action="toggleTestsTimeFilter" data-dash-args="[6]"  title="Last 6 hours">6h</button>
       <button class="time-filter-btn" id="tf-t-24h" data-dash-action="toggleTestsTimeFilter" data-dash-args="[24]" title="Last 24 hours">24h</button>
       <button class="time-filter-btn" id="tf-t-7d"  data-dash-action="toggleTestsTimeFilter" data-dash-args="[168]" title="Last 7 days">7d</button>
+      </span>
       <button class="f-clear" data-dash-action="clearTestFilters">&#10005; <span data-i18n="dash.clear_filters">clear</span></button>
     </div>
     <div class="filter-active-line filter-bar__summary" id="filter-active-tests">
       <span id="filter-active-tests-txt"></span>
       <button type="button" class="btn btn-ghost filter-reset-btn" data-dash-action="clearTestFilters">Reset</button>
     </div>
-    </div>
-    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetTests" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
-    <div class="export-wrap" id="ew-tests">
-      <button class="btn btn-ghost btn-export-sm" data-dash-action="toggleExportMenu" data-dash-args='["ew-tests"]'>&#11015; <span data-i18n="dash.export_label">Export</span></button>
-      <div class="export-menu">
-        <a id="exp-tests-csv" href="api/export/tests?fmt=csv" target="_blank">CSV</a>
-        <a id="exp-tests-xlsx" href="api/export/tests?fmt=xlsx" target="_blank">XLSX</a>
-        <a id="exp-tests-failed-csv" href="api/export/tests?fmt=csv&status=failed" target="_blank"><span data-i18n="dash.export_csv_failed_only">CSV (failed only)</span></a>
-      </div>
-    </div>
-    <button class="expand-btn" id="expand-tests" data-dash-action="toggleExpand" data-dash-args='["tests"]' data-i18n="dash.expand_panel">Expand</button>
   </div>
   <div class="panel-note muted panel-note--tests" id="tests-parse-note"></div>
   <div class="tbl-wrap" id="wrap-tests">
@@ -640,7 +602,7 @@
           <th colspan="2" data-i18n="dash.tg_detail">Details</th>
         </tr>
         <tr class="th-cols">
-        <th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_status">Status</th><th data-i18n="dash.th_duration">Duration</th><th data-i18n="dash.th_timestamp">Timestamp</th><th class="col-compact-hide" data-i18n="dash.th_allure">Allure</th><th class="col-compact-hide" data-i18n="dash.th_error">Error</th></tr>
+        <th data-i18n="dash.th_test_name">Test Name</th><th data-i18n="dash.th_suite">Suite</th><th data-i18n="dash.th_status">Status</th><th data-i18n="dash.th_duration">Duration</th><th data-i18n="dash.th_timestamp">Timestamp</th><th data-i18n="dash.th_allure">Allure</th><th class="col-compact-hide" data-i18n="dash.th_error">Error</th></tr>
         </thead>
       <tbody id="tbody-tests">
         <tr class="empty-row"><td colspan="7" data-i18n="dash.table_loading">Loading…</td></tr>
@@ -656,11 +618,13 @@
 <section id="sec-infra" class="dash-section">
 <!-- ── Services Panel ── -->
 <div class="panel" id="panel-svcs">
-  <div class="panel-head">
+  <div class="panel-head panel-head-minimal">
     <h2><span class="panel-icon panel-icon--services" aria-hidden="true"></span><span data-i18n="dash.svcs_title">Services / Containers</span></h2>
     <span class="panel-count" id="svcs-count">0</span>
     <span class="panel-count panel-count--meta" id="svcs-summary">—</span>
-    <div class="filter-bar filter-bar--inline">
+    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetServices" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
+  </div>
+  <div class="panel-toolbar filter-bar filter-bar--sticky">
     <div class="filters filter-bar__controls">
       <select class="f-select" id="f-svstatus">
         <option value="" data-i18n="dash.svc_all">All statuses</option>
@@ -675,9 +639,6 @@
       <span id="filter-active-svcs-txt"></span>
       <button type="button" class="btn btn-ghost filter-reset-btn" data-dash-action="clearSvcFilters">Reset</button>
     </div>
-    </div>
-    <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="resetServices" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
-    <button class="expand-btn" id="expand-svcs" data-dash-action="toggleExpand" data-dash-args='["svcs"]' data-i18n="dash.expand_panel">Expand</button>
   </div>
   <div class="tbl-wrap" id="wrap-svcs">
     <table class="tbl-grouped data-table">
@@ -765,6 +726,14 @@
           <option value="gitlab">gitlab</option>
           <option value="docker">docker</option>
           <option value="http">http</option>
+          <option value="zabbix">zabbix</option>
+          <option value="prometheus">prometheus</option>
+          <option value="alertmanager">alertmanager</option>
+          <option value="uptime_kuma">uptime_kuma</option>
+          <option value="netdata">netdata</option>
+          <option value="prtg">prtg</option>
+          <option value="checkmk">checkmk</option>
+          <option value="http_json">http_json</option>
         </select>
       </div>
       <div class="trends-filter-group">
@@ -893,6 +862,7 @@
 
 <div id="tab-panel-incidents" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-incidents" hidden>
 <section id="incident-center" class="incident-center" style="display:none" role="region" aria-labelledby="ic-title">
+  <p class="ic-intro" data-i18n="icenter.intro_service_intel">Incidents are created only from service analysis: graph anomalies open an incident; recovery closes it (green) while keeping the correlation graph.</p>
   <div class="ic-header">
     <div class="ic-left">
       <span class="ic-alert-icon" aria-hidden="true">
@@ -909,9 +879,9 @@
     <button type="button" class="btn btn-ghost ic-btn" id="ic-runbook" data-dash-action="openRunbook" data-i18n-title="runbook.checklist_title" title=""><span data-i18n="runbook.title">Runbook</span></button>
   </div>
   <div class="ic-summary" id="ic-summary" style="display:none">
-    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.failed_builds">Failed builds</span><span class="ic-kpi-val c-fail" id="ic-kpi-builds">0</span></div>
-    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.test_failures">Failed tests</span><span class="ic-kpi-val c-fail" id="ic-kpi-tests">0</span></div>
-    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="stat.services_down">Services down</span><span class="ic-kpi-val c-fail" id="ic-kpi-svcs">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="icenter.kpi_open">Open incidents</span><span class="ic-kpi-val c-fail" id="ic-kpi-builds">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="icenter.kpi_resolved">Resolved</span><span class="ic-kpi-val c-ok" id="ic-kpi-tests">0</span></div>
+    <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="icenter.kpi_total">Total</span><span class="ic-kpi-val c-info" id="ic-kpi-svcs">0</span></div>
     <div class="ic-kpi"><span class="ic-kpi-label" data-i18n="fresh.age">Age</span><span class="ic-kpi-val c-info" id="ic-kpi-age">—</span></div>
   </div>
   <p class="ic-meta" id="ic-meta"></p>
@@ -929,25 +899,28 @@
 <section id="sec-log-intel" class="dash-section">
   <div class="panel" id="panel-log-intel-list">
     <div class="panel-head">
-      <h2><span class="panel-icon panel-icon--logs" aria-hidden="true"></span><span data-i18n="dash.log_intel_title">Log intelligence</span></h2>
+      <h2><span class="panel-icon panel-icon--logs" aria-hidden="true"></span><span data-i18n="dash.service_intel_title">Service analysis</span></h2>
       <span class="panel-count" id="log-intel-count">0</span>
+      <button type="button" class="btn btn-primary btn-ui-sm u-ml-auto" data-dash-action="openLogIntelCreateModal" data-i18n="dash.service_intel_create_open">+ Create model</button>
       <button type="button" class="btn btn-ghost panel-refresh-btn" data-dash-action="refreshLogIntelList" data-i18n-title="dash.panel_refresh" title="">&#8635;</button>
     </div>
-    <p class="lintel-intro" data-i18n-html="dash.log_intel_intro">Per-container log analysis: <strong>clustering</strong> groups similar messages, <strong>correlation graph</strong> links events in time. Select a container to explore.</p>
+    <p class="lintel-intro" data-i18n-html="dash.service_intel_intro">Create analysis models for specific services. Only <strong>enabled</strong> models are monitored and can open incidents. View graphs only for created models.</p>
     <div class="tbl-wrap">
       <table id="tbl-log-intel" class="data-table">
         <thead>
           <tr>
-            <th data-i18n="dash.log_intel_col_container">Container</th>
+            <th data-i18n="dash.service_intel_model_name">Model name</th>
+            <th data-i18n="dash.service_intel_col_name">Service</th>
+            <th data-i18n="dash.th_kind">Kind</th>
             <th data-i18n="dash.log_intel_col_status">Status</th>
+            <th data-i18n="dash.service_intel_col_enabled">Enabled</th>
             <th data-i18n="dash.log_intel_col_clusters">Clusters</th>
             <th data-i18n="dash.log_intel_col_events">Events</th>
-            <th data-i18n="dash.log_intel_col_trained">Last trained</th>
             <th class="th-col-actions" data-i18n="dash.th_actions">Actions</th>
           </tr>
         </thead>
         <tbody id="tbody-log-intel">
-          <tr class="empty-row"><td colspan="6" data-i18n="dash.table_loading">Loading…</td></tr>
+          <tr class="empty-row"><td colspan="8" data-i18n="dash.table_loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -955,16 +928,25 @@
 
   <div class="panel lintel-detail-panel" id="panel-log-intel-detail" hidden>
     <div class="panel-head">
-      <button type="button" class="btn btn-ghost btn-ui-sm" data-dash-action="closeLogIntelDetail" data-i18n="dash.log_intel_back">← All containers</button>
+      <button type="button" class="btn btn-ghost btn-ui-sm" data-dash-action="closeLogIntelDetail" data-i18n="dash.service_intel_back">← All models</button>
       <h2 id="log-intel-detail-title" class="log-intel-detail-title">—</h2>
+      <button type="button" class="btn btn-ghost btn-ui-sm" data-dash-action="toggleLogIntelEditMode" id="log-intel-edit-toggle" data-i18n="dash.service_intel_edit">Edit</button>
       <button type="button" class="btn btn-ghost btn-ui-sm u-ml-auto" data-dash-action="trainLogIntelContainer" data-i18n="dash.log_intel_retrain">Retrain now</button>
+    </div>
+    <div id="log-intel-edit-bar" class="lintel-edit-bar" hidden>
+      <label class="lintel-create-field">
+        <span data-i18n="dash.service_intel_model_name">Model name</span>
+        <input type="text" id="log-intel-edit-name" autocomplete="off" />
+      </label>
+      <label class="lintel-create-check">
+        <input type="checkbox" id="log-intel-edit-enabled" />
+        <span data-i18n="dash.service_intel_model_enabled">Enabled (monitor &amp; incidents)</span>
+      </label>
+      <button type="button" class="btn btn-primary btn-ui-sm" data-dash-action="saveLogIntelModel" data-i18n="dash.service_intel_save">Save</button>
+      <button type="button" class="btn btn-ghost btn-ui-sm lintel-delete-btn" data-dash-action="deleteLogIntelModel" data-i18n="dash.service_intel_delete">Delete model</button>
     </div>
     <div id="log-intel-pipeline" class="lintel-pipeline"></div>
     <div id="log-intel-live-bar" class="lintel-live-bar">
-      <label class="lintel-watch-toggle">
-        <input type="checkbox" id="log-intel-watch" />
-        <span data-i18n="dash.log_intel_watch">Save model &amp; keep learning</span>
-      </label>
       <span id="log-intel-live-status" class="lintel-live-status muted"></span>
     </div>
     <div class="lintel-detail-layout">
@@ -1030,12 +1012,19 @@
       <span class="panel-count" data-i18n="dash.har_subtitle">Upload, filter, inspect failed/slow requests</span>
     </div>
     <div class="panel-body-har">
-      <div class="dhar-upload">
-        <input type="file" id="har-file" class="f-input har-file-input" accept=".har,.json">
-        <button type="button" class="btn" id="har-analyze-btn" data-dash-action="analyzeHar" data-i18n="dash.har_analyze_btn">Analyze</button>
-        <button type="button" class="time-filter-btn" id="har-toggle-raw-btn" data-dash-action="toggleHarRawView" data-i18n="dash.har_show_raw">Show file</button>
-        <span id="har-status" class="mono har-status-meta"></span>
+      <div class="dhar-dropzone" id="har-dropzone" role="button" tabindex="0" data-i18n-aria-label="dash.har_drop_aria" aria-label="Upload HAR file">
+        <input type="file" id="har-file" class="har-file-input" accept=".har,.json" hidden>
+        <div class="dhar-dropzone-inner">
+          <span class="dhar-dropzone-ico" aria-hidden="true"></span>
+          <p data-i18n="dash.har_drop_hint">Drop HAR file here or click to browse</p>
+          <span id="har-drop-filename" class="dhar-dropzone-file"></span>
+          <div class="dhar-dropzone-actions">
+            <button type="button" class="btn" id="har-analyze-btn" data-dash-action="analyzeHar" data-i18n="dash.har_analyze_btn">Analyze</button>
+            <button type="button" class="time-filter-btn" id="har-toggle-raw-btn" data-dash-action="toggleHarRawView" data-i18n="dash.har_show_raw">Show file</button>
+          </div>
+        </div>
       </div>
+      <span id="har-status" class="mono har-status-meta"></span>
       <div class="dhar-filters">
         <div class="dhar-filter-col">
           <div class="dhar-filter-lbl" data-i18n="dash.har_filter_status_lbl">Status</div>
@@ -1069,21 +1058,37 @@
       <div id="har-summary" class="dhar-summary" style="display:none"></div>
       <div class="dhar-two-col">
         <div>
-          <div class="dhar-title" data-i18n="dash.har_top_statuses">Top HTTP statuses</div>
+          <div class="dhar-section-title" data-i18n="dash.har_top_statuses">Top HTTP statuses</div>
           <div id="har-statuses" class="dhar-list"></div>
         </div>
         <div>
-          <div class="dhar-title" data-i18n="dash.har_top_hosts">Top hosts</div>
+          <div class="dhar-section-title" data-i18n="dash.har_top_hosts">Top hosts</div>
           <div id="har-hosts" class="dhar-list"></div>
         </div>
       </div>
-      <div>
-        <div class="dhar-title" data-i18n="dash.har_failed_requests">Requests with errors</div>
-        <div id="har-failed" class="dhar-list"></div>
+      <div class="dhar-section-title" data-i18n="dash.har_failed_requests">Requests with errors</div>
+      <div class="dhar-req-table-wrap">
+        <table class="data-table dhar-req-table">
+          <thead><tr>
+            <th data-i18n="dash.har_th_method">Method</th>
+            <th data-i18n="dash.har_th_status">Status</th>
+            <th data-i18n="dash.har_th_url">URL</th>
+            <th data-i18n="dash.har_th_detail">Detail</th>
+          </tr></thead>
+          <tbody id="har-failed"></tbody>
+        </table>
       </div>
-      <div>
-        <div class="dhar-title" data-i18n="dash.har_slow_requests">Slow requests</div>
-        <div id="har-slow" class="dhar-list"></div>
+      <div class="dhar-section-title" data-i18n="dash.har_slow_requests">Slow requests</div>
+      <div class="dhar-req-table-wrap">
+        <table class="data-table dhar-req-table">
+          <thead><tr>
+            <th data-i18n="dash.har_th_method">Method</th>
+            <th data-i18n="dash.har_th_status">Status</th>
+            <th data-i18n="dash.har_th_url">URL</th>
+            <th data-i18n="dash.har_th_time">Time</th>
+          </tr></thead>
+          <tbody id="har-slow"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1209,14 +1214,53 @@
   </div>
 </div>
 
+<!-- Service analysis: create model modal -->
+<div class="modal-overlay" id="log-intel-create-modal" aria-hidden="true" data-dash-overlay-dismiss="closeLogIntelCreateModal">
+  <div class="lintel-create-modal-card dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="log-intel-create-modal-title">
+    <div class="dash-modal-header dash-modal-header--compact">
+      <div class="modal-card-hdr-inline">
+        <div class="lintel-modal-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div>
+          <h2 id="log-intel-create-modal-title" data-i18n="dash.service_intel_create_modal_title">New analysis model</h2>
+          <p class="lintel-modal-sub" data-i18n="dash.service_intel_create_modal_sub">Pick a service from the snapshot, name the model, and choose whether monitoring is active.</p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeLogIntelCreateModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
+    </div>
+    <div class="dash-modal-body lintel-create-modal-body">
+      <label class="lintel-modal-field" for="log-intel-create-name">
+        <span class="lintel-modal-label" data-i18n="dash.service_intel_model_name">Model name</span>
+        <input type="text" id="log-intel-create-name" class="f-input lintel-modal-input" autocomplete="off" data-i18n-placeholder="dash.service_intel_model_name_ph" placeholder="Display name" maxlength="120" />
+      </label>
+      <div class="lintel-svc-section">
+        <span class="lintel-modal-label" data-i18n="dash.service_intel_model_service">Service</span>
+        <input type="search" id="log-intel-create-svc-search" class="f-input lintel-modal-input lintel-svc-search" autocomplete="off" spellcheck="false" data-i18n-placeholder="dash.service_intel_svc_search_ph" placeholder="Search by name, kind or host…" />
+        <div id="log-intel-create-svc-list" class="lintel-svc-pick" role="listbox" aria-label="Services"></div>
+        <p id="log-intel-create-svc-hint" class="lintel-svc-hint muted" hidden data-i18n="dash.service_intel_svc_pick_hint">Click a row to select the service for this model.</p>
+      </div>
+      <label class="lintel-modal-check">
+        <input type="checkbox" id="log-intel-create-enabled" checked />
+        <span class="lintel-modal-check-ui" aria-hidden="true"></span>
+        <span data-i18n="dash.service_intel_model_enabled">Enabled (monitor &amp; incidents)</span>
+      </label>
+    </div>
+    <div class="dash-modal-footer modal-actions lintel-create-modal-footer">
+      <button type="button" class="btn btn-ghost" data-dash-action="closeLogIntelCreateModal" data-i18n="dash.action_cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="log-intel-create-submit" data-dash-action="createLogIntelModel" data-i18n="dash.service_intel_create_btn">Create model</button>
+    </div>
+  </div>
+</div>
+
 <!-- Runbook modal -->
 <div class="modal-overlay" id="runbook-modal" aria-hidden="true" data-dash-overlay-dismiss="closeRunbook">
-  <div class="runbook-modal-card" role="dialog" aria-modal="true" aria-labelledby="runbook-title">
-    <div class="runbook-hdr">
-      <div class="runbook-title" id="runbook-title" data-i18n="runbook.title">Runbook</div>
-      <button type="button" class="btn btn-ghost btn-modal-close" data-dash-action="closeRunbook" data-i18n-title="common.close" title="">&times;</button>
+  <div class="runbook-modal-card dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="runbook-title">
+    <div class="dash-modal-header">
+      <h2 id="runbook-title" data-i18n="runbook.title">Runbook</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeRunbook" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
-    <div class="runbook-body">
+    <div class="runbook-body dash-modal-body">
       <div id="runbook-sub" class="runbook-sub"></div>
       <div class="runbook-grid">
         <div class="runbook-box">
@@ -1252,10 +1296,10 @@
 </div>
 
 <div class="modal-overlay" id="har-raw-modal" aria-hidden="true" data-dash-overlay-dismiss="closeHarRawModal">
-  <div class="log-modal-card log-modal-card--wide" role="dialog" aria-modal="true" aria-labelledby="har-raw-title">
-    <div class="log-modal-header">
-      <h3 id="har-raw-title" data-i18n="dash.har_raw_title">HAR file preview</h3>
-      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeHarRawModal" data-i18n="common.close">Close</button>
+  <div class="log-modal-card log-modal-card--wide dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="har-raw-title">
+    <div class="dash-modal-header">
+      <h2 id="har-raw-title" data-i18n="dash.har_raw_title">HAR file preview</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeHarRawModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
     <div class="log-modal-toolbar log-modal-toolbar--start">
       <select id="har-raw-mode" class="f-select har-raw-mode-select">
@@ -1271,10 +1315,10 @@
 
 <!-- Allure description / screenshots (Jenkins) -->
 <div class="modal-overlay" id="allure-meta-modal" aria-hidden="true" data-dash-overlay-dismiss="closeAllureMetaModal">
-  <div class="log-modal-card log-modal-card--medium" role="dialog" aria-modal="true" aria-labelledby="allure-meta-title">
-    <div class="log-modal-header">
-      <h3 id="allure-meta-title">Allure</h3>
-      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeAllureMetaModal" data-i18n="common.close">Close</button>
+  <div class="log-modal-card log-modal-card--medium dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="allure-meta-title">
+    <div class="dash-modal-header">
+      <h2 id="allure-meta-title" data-i18n="dash.allure_meta_title">Allure</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeAllureMetaModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
     <div class="log-modal-toolbar log-modal-toolbar--start">
       <div id="allure-meta-sub" class="allure-meta-sub"></div>
@@ -1285,14 +1329,18 @@
 
 <!-- Confirm modal for Run / Restart actions -->
 <div class="modal-overlay" id="action-modal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-card-hdr">
-      <div class="modal-icon" id="modal-icon">&#9654;</div>
-      <div class="modal-card-txt">
-        <div class="modal-title" id="modal-title" data-i18n="dash.action_confirm">Confirm</div>
-        <div class="modal-sub" id="modal-sub"></div>
+  <div class="modal-card dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="dash-modal-header dash-modal-header--compact">
+      <div class="modal-card-hdr-inline">
+        <div class="modal-icon" id="modal-icon">&#9654;</div>
+        <div>
+          <h2 class="modal-title" id="modal-title" data-i18n="dash.action_confirm">Confirm</h2>
+          <div class="modal-sub" id="modal-sub"></div>
+        </div>
       </div>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" id="modal-close-x" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
+    <div class="dash-modal-body dash-modal-body--compact">
     <div class="modal-target" id="modal-target-wrap" hidden>
       <strong id="modal-target-label" data-i18n="dash.modal_target">Target</strong>
       <div class="mono-target" id="modal-target-text"></div>
@@ -1302,32 +1350,33 @@
       <label class="modal-branch-label" data-i18n="dash.branch_ref">Branch / Ref</label>
       <input id="modal-branch-input" type="text" class="modal-branch-input">
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions dash-modal-footer">
       <button type="button" class="modal-btn modal-btn-cancel" id="modal-cancel" data-i18n="dash.action_cancel">Cancel</button>
       <button type="button" class="modal-btn modal-btn-ok" id="modal-ok" data-i18n="dash.action_confirm">Confirm</button>
+    </div>
     </div>
   </div>
 </div>
 
 <!-- Log Diff modal -->
 <div class="modal-overlay" id="diff-modal" aria-hidden="true" data-dash-overlay-dismiss="closeDiffModal">
-  <div class="log-modal-card log-modal-card--log" role="dialog" aria-modal="true">
-    <div class="log-modal-header">
-      <h3 id="diff-modal-title" data-i18n="dash.log_diff_title">Log diff</h3>
-      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeDiffModal" data-i18n="common.close">Close</button>
+  <div class="log-modal-card log-modal-card--log dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="diff-modal-title">
+    <div class="dash-modal-header">
+      <h2 id="diff-modal-title" data-i18n="dash.log_diff_title">Log diff</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeDiffModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
-    <pre class="diff-pre" id="diff-pre">Loading…</pre>
+    <pre class="diff-pre dash-modal-body" id="diff-pre">Loading…</pre>
   </div>
 </div>
 
 <!-- Pipeline Stages modal -->
 <div class="modal-overlay" id="stages-modal" aria-hidden="true" data-dash-overlay-dismiss="closeStagesModal">
-  <div class="stages-modal-card" role="dialog" aria-modal="true">
-    <div class="stages-header">
-      <h3 id="stages-modal-title" data-i18n="dash.stages_title">Pipeline Stages</h3>
-      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeStagesModal" data-i18n="common.close">Close</button>
+  <div class="stages-modal-card dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="stages-modal-title">
+    <div class="dash-modal-header">
+      <h2 id="stages-modal-title" data-i18n="dash.stages_title">Pipeline Stages</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeStagesModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
-    <div class="stages-body" id="stages-body">
+    <div class="stages-body dash-modal-body" id="stages-body">
       <div class="text-muted" data-i18n="dash.table_loading">Loading…</div>
     </div>
   </div>
@@ -1335,21 +1384,21 @@
 
 <!-- Log viewer modal -->
 <div class="modal-overlay" id="log-modal" aria-hidden="true" data-dash-overlay-dismiss="closeLogModal">
-  <div class="log-modal-card" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
-    <div class="log-modal-header">
-      <h3 id="log-modal-title" data-i18n="dash.log_title">Logs</h3>
-      <button type="button" class="modal-btn modal-btn-cancel" data-dash-action="closeLogModal" data-i18n="common.close">Close</button>
+  <div class="log-modal-card dash-modal-shell" role="dialog" aria-modal="true" aria-labelledby="log-modal-title">
+    <div class="dash-modal-header">
+      <h2 id="log-modal-title" data-i18n="dash.log_title">Logs</h2>
+      <button type="button" class="btn btn-ghost btn-modal-close dash-modal-close" data-dash-action="closeLogModal" data-i18n-title="common.close" data-i18n-aria-label="common.close" title="">&times;</button>
     </div>
     <div class="log-modal-toolbar">
-      <button type="button" class="btn btn-ghost btn-log-sm" id="log-btn-refresh">&#8635; <span data-i18n="dash.log_refresh">Refresh</span></button>
+      <button type="button" class="btn btn-ghost btn-log-sm" id="log-btn-refresh"><span class="topbar-ico topbar-ico--refresh" aria-hidden="true"></span> <span data-i18n="dash.log_refresh">Refresh</span></button>
       <span id="log-tail-controls" class="log-tail-controls">
         <label id="log-tail-wrap" class="log-tail-wrap">
           <input type="checkbox" id="log-tail-enabled" checked />
-          <span>Tail</span>
+          <span data-i18n="dash.log_tail">Tail</span>
         </label>
         <label id="log-tail-lines-wrap" class="log-tail-lines-wrap">
           <input type="number" id="log-tail-lines" min="100" max="50000" step="100" value="1000" class="log-tail-lines-input" />
-          <span>lines</span>
+          <span data-i18n="dash.log_tail_lines">lines</span>
         </label>
       </span>
       <label id="log-follow-wrap">
@@ -1366,9 +1415,9 @@
       </label>
       <div class="log-lvl-row">
         <button class="log-lvl-btn lv-active" data-level="all" data-dash-action="setLogLevel" data-dash-args='["all"]' data-i18n="common.all">All</button>
-        <button class="log-lvl-btn" data-level="error" data-dash-action="setLogLevel" data-dash-args='["error"]'>ERR</button>
-        <button class="log-lvl-btn" data-level="warn" data-dash-action="setLogLevel" data-dash-args='["warn"]'>WARN</button>
-        <button class="log-lvl-btn" data-level="info" data-dash-action="setLogLevel" data-dash-args='["info"]'>INFO</button>
+        <button class="log-lvl-btn" data-level="error" data-dash-action="setLogLevel" data-dash-args='["error"]' data-i18n="dash.log_lvl_err">ERR</button>
+        <button class="log-lvl-btn" data-level="warn" data-dash-action="setLogLevel" data-dash-args='["warn"]' data-i18n="dash.log_lvl_warn">WARN</button>
+        <button class="log-lvl-btn" data-level="info" data-dash-action="setLogLevel" data-dash-args='["info"]' data-i18n="dash.log_lvl_info">INFO</button>
       </div>
     </div>
     <pre class="log-modal-pre" id="log-modal-pre"></pre>

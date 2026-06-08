@@ -17,8 +17,9 @@ async def api_tests_route(
     name: str = "",
     hours: int = Query(0, ge=0),
     source: str = "",
+    instance: str = "",
 ):
-    """Return paginated tests list (with filtering)."""
+    """Return paginated tests list (snapshot + SQLite history when available)."""
     from models.models import normalize_test_status
     from web.core import runtime as rt
     from web.services import tests_analytics, tests_endpoints
@@ -28,6 +29,7 @@ async def api_tests_route(
         normalize_test_status=normalize_test_status,
         tests_breakdown_real_vs_synth=tests_analytics.tests_breakdown_real_vs_synth,
         filter_tests_by_source=tests_analytics.filter_tests_by_source,
+        filter_tests_by_instance=tests_analytics.filter_tests_by_instance,
         page=page,
         per_page=per_page,
         status=status,
@@ -35,6 +37,7 @@ async def api_tests_route(
         name=name,
         hours=hours,
         source=source,
+        instance=instance,
     )
 
 
@@ -46,6 +49,7 @@ async def api_tests_top_failures_route(
     suite: str = "",
     name: str = "",
     source: str = "",
+    instance: str = "",
     hours: int = Query(0, ge=0),
     days: int = Query(0, ge=0),
 ):
@@ -57,6 +61,7 @@ async def api_tests_top_failures_route(
         load_snapshot_async=rt.load_snapshot_async,
         filter_tests_by_lookback_hours=tests_analytics.filter_tests_by_lookback_hours,
         filter_tests_by_source=tests_analytics.filter_tests_by_source,
+        filter_tests_by_instance=tests_analytics.filter_tests_by_instance,
         aggregate_top_failing_tests=tests_analytics.aggregate_top_failing_tests,
         n=n,
         page=page,
@@ -64,6 +69,7 @@ async def api_tests_top_failures_route(
         suite=suite,
         name=name,
         source=source,
+        instance=instance,
         hours=hours,
         days=days,
     )
@@ -77,6 +83,7 @@ async def export_tests_route(
     name: str = "",
     hours: int = 0,
     source: str = "",
+    instance: str = "",
 ):
     """Export tests as CSV or XLSX."""
     from web.core import runtime as rt
@@ -91,6 +98,7 @@ async def export_tests_route(
         name=name,
         hours=hours,
         source=source,
+        instance=instance,
     )
 
 
@@ -150,6 +158,7 @@ async def export_failures_route(
     suite: str = "",
     name: str = "",
     source: str = "",
+    instance: str = "",
     hours: int = 0,
     days: int = 0,
 ):
@@ -165,6 +174,7 @@ async def export_failures_route(
         suite=suite,
         name=name,
         source=source,
+        instance=instance,
         hours=hours,
         days=days,
     )

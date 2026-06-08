@@ -149,7 +149,10 @@ let _logIntelGraphSimplified = false;
 let _logIntelLegendFilter = 'all';
 let _logIntelGraphSearch = '';
 let _logIntelHoverNodeId = '';
-let _logIntelWatch = false;
+let _logIntelEnabled = false;
+let _logIntelCreateCandidates = [];
+let _logIntelCreateSelectedKey = '';
+let _logIntelCreateModalPrevFocus = null;
 let _logIntelLiveTimer = null;
 let _logIntelLiveSig = '';
 let _logIntelLayoutPositions = null;
@@ -163,10 +166,30 @@ function _liHashJitter(id, amp) {
 }
 
 function initLogIntelBindings() {
-  const watch = document.getElementById('log-intel-watch');
-  if (watch && !watch._liBound) {
-    watch._liBound = true;
-    watch.addEventListener('change', () => toggleLogIntelWatch());
+  const svcList = document.getElementById('log-intel-create-svc-list');
+  if (svcList && !svcList._liBound) {
+    svcList._liBound = true;
+    svcList.addEventListener('click', (ev) => {
+      const row = ev.target.closest('[data-lintel-svc-key]');
+      if (!row) return;
+      _liSelectCreateService(row.getAttribute('data-lintel-svc-key') || '');
+    });
+    svcList.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'Enter' && ev.key !== ' ') return;
+      const row = ev.target.closest('[data-lintel-svc-key]');
+      if (!row) return;
+      ev.preventDefault();
+      _liSelectCreateService(row.getAttribute('data-lintel-svc-key') || '');
+    });
+  }
+  const svcSearch = document.getElementById('log-intel-create-svc-search');
+  if (svcSearch && !svcSearch._liBound) {
+    svcSearch._liBound = true;
+    let searchTimer = null;
+    svcSearch.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => _liRenderCreateServiceList(svcSearch.value || ''), 120);
+    });
   }
   const search = document.getElementById('log-intel-graph-search');
   if (search && !search._liBound) {
@@ -186,6 +209,7 @@ function initLogIntelBindings() {
       _liJumpToGraphSearchMatch();
     });
   }
+  _liSetIntelView('list');
 }
 
 function openLogIntelTab(key) {
@@ -194,15 +218,154 @@ function openLogIntelTab(key) {
   else loadLogIntelList();
 }
 
+async function loadLogIntelCandidates() {
+  const res = await fetch(apiUrl('api/service-intel/candidates')).catch(() => null);
+  if (!res || !res.ok) {
+    _logIntelCreateCandidates = [];
+    return [];
+  }
+  const data = await res.json();
+  _logIntelCreateCandidates = data.items || [];
+  return _logIntelCreateCandidates;
+}
+
+function _liCompactStatusPill(status) {
+  const s = String(status || 'unknown').toLowerCase();
+  const cls = ['success', 'passed', 'up'].includes(s) ? 'lintel-st-ok'
+    : ['failure', 'failed', 'error', 'down'].includes(s) ? 'lintel-st-fail'
+    : ['unstable', 'degraded', 'skipped'].includes(s) ? 'lintel-st-warn'
+    : 'lintel-st-dim';
+  const label = ['success', 'passed', 'up'].includes(s) ? _liT('dash.service_intel_st_up', 'Up')
+    : ['failure', 'failed', 'error', 'down'].includes(s) ? _liT('dash.service_intel_st_down', 'Down')
+    : ['unstable', 'degraded'].includes(s) ? _liT('dash.service_intel_st_degraded', 'Degraded')
+    : ['running', 'pending'].includes(s) ? _liT('dash.service_intel_st_running', 'Running')
+    : (s || '—');
+  return `<span class="lintel-st-pill ${cls}">${esc(label)}</span>`;
+}
+
+function _liSetIntelView(mode) {
+  const sec = document.getElementById('sec-log-intel');
+  const listPanel = document.getElementById('panel-log-intel-list');
+  const detailPanel = document.getElementById('panel-log-intel-detail');
+  const inDetail = mode === 'detail';
+  if (sec) sec.classList.toggle('lintel-in-detail', inDetail);
+  if (listPanel) listPanel.toggleAttribute('hidden', inDetail);
+  if (detailPanel) detailPanel.toggleAttribute('hidden', !inDetail);
+}
+
+function _liResetCreateModalForm() {
+  const nameEl = document.getElementById('log-intel-create-name');
+  const searchEl = document.getElementById('log-intel-create-svc-search');
+  const enEl = document.getElementById('log-intel-create-enabled');
+  if (nameEl) nameEl.value = '';
+  if (searchEl) searchEl.value = '';
+  if (enEl) enEl.checked = true;
+  _logIntelCreateSelectedKey = '';
+  _liRenderCreateServiceList('');
+}
+
+function _liSelectCreateService(key) {
+  key = String(key || '').trim();
+  if (!key) return;
+  _logIntelCreateSelectedKey = key;
+  const list = document.getElementById('log-intel-create-svc-list');
+  if (!list) return;
+  list.querySelectorAll('[data-lintel-svc-key]').forEach((row) => {
+    const on = row.getAttribute('data-lintel-svc-key') === key;
+    row.classList.toggle('selected', on);
+    row.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const picked = _logIntelCreateCandidates.find((it) => String(it.key || '') === key);
+  const nameEl = document.getElementById('log-intel-create-name');
+  if (nameEl && picked && !String(nameEl.value || '').trim()) {
+    nameEl.value = String(picked.name || picked.label || '').trim();
+  }
+}
+
+function _liRenderCreateServiceList(filter) {
+  const list = document.getElementById('log-intel-create-svc-list');
+  const hint = document.getElementById('log-intel-create-svc-hint');
+  if (!list) return;
+  const q = String(filter || '').trim().toLowerCase();
+  const items = (_logIntelCreateCandidates || []).filter((it) => {
+    if (!q) return true;
+    const hay = [
+      it.name,
+      it.kind,
+      it.source_instance,
+      it.label,
+      it.key,
+    ].map((x) => String(x || '').toLowerCase()).join(' ');
+    return hay.includes(q);
+  });
+  if (!items.length) {
+    list.innerHTML = `<div class="lintel-svc-pick-empty">${esc(_liT(q ? 'dash.service_intel_svc_empty_filter' : 'dash.service_intel_svc_empty', q ? 'No services match your search' : 'No services available — run Collect first'))}</div>`;
+    if (hint) hint.hidden = true;
+    return;
+  }
+  if (hint) hint.hidden = false;
+  list.innerHTML = items.map((it) => {
+    const key = String(it.key || '');
+    const name = String(it.name || it.label || key);
+    const kind = String(it.kind || '');
+    const host = String(it.source_instance || '');
+    const selected = key === _logIntelCreateSelectedKey;
+    const meta = host ? `${kind} · ${host}` : kind;
+    return `<div class="lintel-svc-pick-row${selected ? ' selected' : ''}" data-lintel-svc-key="${esc(key)}" role="option" tabindex="0" aria-selected="${selected ? 'true' : 'false'}">
+      <div class="lintel-svc-pick-left">
+        <span class="lintel-svc-pick-name">${esc(name)}</span>
+        <span class="lintel-svc-pick-meta">${esc(meta)}</span>
+      </div>
+      <span class="lintel-svc-pick-status">${_liCompactStatusPill(it.status || 'unknown')}</span>
+    </div>`;
+  }).join('');
+}
+
+async function openLogIntelCreateModal() {
+  if (_logIntelSelectedModelId || document.getElementById('sec-log-intel')?.classList.contains('lintel-in-detail')) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_create_list_only', 'Create models from the main list view'), 'warn');
+    }
+    return;
+  }
+  const ov = document.getElementById('log-intel-create-modal');
+  if (!ov) return;
+  _logIntelCreateModalPrevFocus = document.activeElement;
+  _liResetCreateModalForm();
+  const list = document.getElementById('log-intel-create-svc-list');
+  if (list) {
+    list.innerHTML = `<div class="lintel-svc-pick-empty">${esc(_liT('dash.table_loading', 'Loading…'))}</div>`;
+  }
+  ov.setAttribute('aria-hidden', 'false');
+  ov.classList.add('open');
+  await loadLogIntelCandidates();
+  _liRenderCreateServiceList('');
+  requestAnimationFrame(() => document.getElementById('log-intel-create-svc-search')?.focus());
+}
+
+function closeLogIntelCreateModal() {
+  const ov = document.getElementById('log-intel-create-modal');
+  if (!ov) return;
+  ov.classList.remove('open');
+  ov.setAttribute('aria-hidden', 'true');
+  _logIntelCreateSelectedKey = '';
+  try {
+    if (_logIntelCreateModalPrevFocus && typeof _logIntelCreateModalPrevFocus.focus === 'function') {
+      _logIntelCreateModalPrevFocus.focus();
+    }
+  } catch { /* ignore */ }
+  _logIntelCreateModalPrevFocus = null;
+}
+
 async function loadLogIntelList() {
   const now = Date.now();
   if (now - _logIntelPollTs < 2000) return;
   _logIntelPollTs = now;
   const tbody = document.getElementById('tbody-log-intel');
   if (!tbody) return;
-  const res = await fetch(apiUrl('api/log-intel/containers')).catch(() => null);
+  const res = await fetch(apiUrl('api/service-intel/models')).catch(() => null);
   if (!res || !res.ok) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(_liT('dash.table_api_err', 'API error'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(_liT('dash.table_api_err', 'API error'))}</td></tr>`;
     return;
   }
   const data = await res.json();
@@ -210,63 +373,130 @@ async function loadLogIntelList() {
   const cnt = document.getElementById('log-intel-count');
   if (cnt) cnt.textContent = String(items.length);
   if (!items.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${esc(_liT('dash.log_intel_empty', 'No Docker containers in snapshot. Run Collect.'))}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${esc(_liT('dash.service_intel_empty', 'No models yet. Click Create model.'))}</td></tr>`;
     return;
   }
   tbody.innerHTML = items.map((it) => {
-    const itemKey = String(it.key || `${it.docker_host || ''}::${it.container || ''}`);
-    const keyArg = JSON.stringify(itemKey);
-    const trained = it.last_trained_at ? fmt(it.last_trained_at) : '—';
-    const ready = it.model_ready ? '' : ' <span class="muted">(warming)</span>';
-    const pin = it.watched
-      ? `<span class="lintel-pin" title="${esc(_liT('dash.log_intel_watched_badge', 'Saved model'))}"></span>`
-      : '';
+    const modelId = Number(it.id || 0);
+    const idArg = JSON.stringify(modelId);
+    const kind = String(it.service_kind || 'docker');
+    const nm = String(it.service_name || it.container || '');
+    const host = String(it.source_instance || it.docker_host || '');
+    const display = String(it.display_name || nm);
+    const enabledBadge = it.enabled
+      ? `<span class="badge ok">${esc(_liT('dash.service_intel_on', 'On'))}</span>`
+      : `<span class="badge muted">${esc(_liT('dash.service_intel_off', 'Off'))}</span>`;
     return `<tr>
-      <td>${pin}<strong>${esc(it.container)}</strong>${it.docker_host ? `<div class="muted" style="font-size:.72rem">${esc(it.docker_host)}</div>` : ''}</td>
+      <td><strong>${esc(display)}</strong></td>
+      <td>${esc(nm)}${host ? `<div class="muted" style="font-size:.72rem">${esc(host)}</div>` : ''}</td>
+      <td>${esc(kind)}</td>
       <td>${badge(it.status || 'unknown')}</td>
+      <td>${enabledBadge}</td>
       <td class="mono">${esc(String(it.clusters ?? 0))}</td>
       <td class="mono">${esc(String(it.events ?? 0))}</td>
-      <td style="font-size:.78rem">${trained}${ready}</td>
       <td style="text-align:right">
-        <button type="button" class="btn btn-ghost" style="font-size:.76rem" data-dash-action="openLogIntelDetail" data-dash-args='[${keyArg}]'>${_liT('dash.log_intel_open', 'Open')}</button>
+        <button type="button" class="btn btn-ghost" style="font-size:.76rem" data-dash-action="openLogIntelDetailById" data-dash-args='[${idArg}]'>${_liT('dash.service_intel_view', 'View')}</button>
       </td>
     </tr>`;
   }).join('');
 }
 
+async function createLogIntelModel() {
+  const nameEl = document.getElementById('log-intel-create-name');
+  const enEl = document.getElementById('log-intel-create-enabled');
+  const submitBtn = document.getElementById('log-intel-create-submit');
+  const displayName = String(nameEl?.value || '').trim();
+  const serviceKey = String(_logIntelCreateSelectedKey || '').trim();
+  const enabled = !!enEl?.checked;
+  if (!serviceKey) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_create_need_service', 'Select a service from the list'), 'warn');
+    }
+    document.getElementById('log-intel-create-svc-search')?.focus();
+    return;
+  }
+  if (submitBtn) submitBtn.disabled = true;
+  try {
+    const res = await fetch(apiUrl('api/service-intel/models'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        display_name: displayName || undefined,
+        service_key: serviceKey,
+        enabled,
+      }),
+    }).catch(() => null);
+    if (!res || !res.ok) {
+      if (typeof showToast === 'function') {
+        showToast(_liT('dash.service_intel_create_err', 'Could not create model'), 'err');
+      }
+      return;
+    }
+    const data = await res.json();
+    closeLogIntelCreateModal();
+    _logIntelPollTs = 0;
+    await loadLogIntelList();
+    const item = data.item || {};
+    if (item.id && typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_create_ok', 'Model created'), 'ok');
+      openLogIntelDetailById(item.id);
+    }
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
 function refreshLogIntelList() {
   _logIntelPollTs = 0;
-  if (_logIntelSelectedKey) loadLogIntelDetail(_logIntelSelectedKey);
+  if (_logIntelSelectedModelId) loadLogIntelDetail(_logIntelSelectedModelId);
   else loadLogIntelList();
 }
 
-async function openLogIntelDetail(key) {
-  key = String(key || '').trim();
-  if (!key || !key.includes('::')) {
+async function _liResolveModelId(keyOrId) {
+  const raw = String(keyOrId || '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+  if (!raw.includes('::')) return 0;
+  const res = await fetch(apiUrl(`api/service-intel/models/by-key/${encodeURIComponent(raw)}`)).catch(() => null);
+  if (!res || !res.ok) return 0;
+  const data = await res.json();
+  return Number(data.id || 0);
+}
+
+async function openLogIntelDetail(keyOrId) {
+  const modelId = await _liResolveModelId(keyOrId);
+  if (!modelId) {
     if (typeof showToast === 'function') {
-      showToast(_liT('dash.log_intel_open_err', 'Could not open container — missing key'), 'err');
+      showToast(_liT('dash.service_intel_not_found', 'Model not found — create it first'), 'err');
     }
     return;
   }
+  await openLogIntelDetailById(modelId);
+}
+
+async function openLogIntelDetailById(modelId) {
+  modelId = Number(modelId || 0);
+  if (!modelId) return;
+  closeLogIntelCreateModal();
   setDashboardTab('log-intel');
-  _logIntelSelectedKey = key;
+  _logIntelSelectedModelId = modelId;
   _logIntelSelectedNodeId = '';
   _logIntelCorrView = 'graph';
   _logIntelGraphSimplified = false;
   _logIntelLegendFilter = 'all';
   _logIntelGraphSearch = '';
   _logIntelHoverNodeId = '';
-  const listPanel = document.getElementById('panel-log-intel-list');
-  const detailPanel = document.getElementById('panel-log-intel-detail');
-  if (listPanel) listPanel.hidden = true;
-  if (detailPanel) detailPanel.hidden = false;
+  _logIntelEditMode = false;
+  _liSetEditBarVisible(false);
+  _liSetIntelView('detail');
   _liShowDetailLoading(true);
   try {
-    await loadLogIntelDetail(key);
+    await loadLogIntelDetail(modelId);
   } finally {
     _liShowDetailLoading(false);
   }
 }
+
+let _logIntelEditMode = false;
 
 function _liShowDetailLoading(on) {
   const panel = document.getElementById('panel-log-intel-detail');
@@ -276,6 +506,7 @@ function _liShowDetailLoading(on) {
 
 function closeLogIntelDetail() {
   _logIntelSelectedKey = '';
+  _logIntelSelectedModelId = 0;
   _logIntelSelectedNodeId = '';
   _logIntelCorrData = null;
   _logIntelCorrRaw = null;
@@ -283,19 +514,87 @@ function closeLogIntelDetail() {
   _logIntelLegendFilter = 'all';
   _logIntelGraphSearch = '';
   _logIntelHoverNodeId = '';
-  _logIntelWatch = false;
+  _logIntelEnabled = false;
+  _logIntelEditMode = false;
   _logIntelLiveSig = '';
   _liStopLiveRefresh();
-  const listPanel = document.getElementById('panel-log-intel-list');
-  const detailPanel = document.getElementById('panel-log-intel-detail');
-  if (listPanel) listPanel.hidden = false;
-  if (detailPanel) detailPanel.hidden = true;
+  _liSetEditBarVisible(false);
+  closeLogIntelCreateModal();
+  _liSetIntelView('list');
   if (_logIntelGraph) {
     try { _logIntelGraph.destroy(); } catch { /* ignore */ }
     _logIntelGraph = null;
   }
   _liUpdateNodeInspector(null);
+  _logIntelPollTs = 0;
   loadLogIntelList();
+}
+
+function toggleLogIntelEditMode() {
+  _logIntelEditMode = !_logIntelEditMode;
+  _liSetEditBarVisible(_logIntelEditMode);
+}
+
+function _liSetEditBarVisible(on) {
+  const bar = document.getElementById('log-intel-edit-bar');
+  const btn = document.getElementById('log-intel-edit-toggle');
+  if (bar) bar.hidden = !on;
+  if (btn) {
+    btn.textContent = on
+      ? _liT('dash.service_intel_edit_done', 'Done')
+      : _liT('dash.service_intel_edit', 'Edit');
+  }
+}
+
+async function saveLogIntelModel() {
+  const modelId = _logIntelSelectedModelId;
+  if (!modelId) return;
+  const nameEl = document.getElementById('log-intel-edit-name');
+  const enEl = document.getElementById('log-intel-edit-enabled');
+  const displayName = String(nameEl?.value || '').trim();
+  if (!displayName) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_name_required', 'Name is required'), 'warn');
+    }
+    return;
+  }
+  const res = await fetch(apiUrl(`api/service-intel/models/${modelId}`), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ display_name: displayName, enabled: !!enEl?.checked }),
+  }).catch(() => null);
+  if (!res || !res.ok) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_save_err', 'Could not save model'), 'err');
+    }
+    return;
+  }
+  _logIntelEditMode = false;
+  _liSetEditBarVisible(false);
+  await loadLogIntelDetail(modelId, { skipTrain: true });
+  if (typeof showToast === 'function') {
+    showToast(_liT('dash.service_intel_save_ok', 'Model saved'), 'ok');
+  }
+}
+
+async function deleteLogIntelModel() {
+  const modelId = _logIntelSelectedModelId;
+  if (!modelId) return;
+  const msg = _liT('dash.service_intel_delete_confirm', 'Delete this analysis model?');
+  if (typeof confirm === 'function' && !confirm(msg)) return;
+  const res = await fetch(apiUrl(`api/service-intel/models/${modelId}`), {
+    method: 'DELETE',
+  }).catch(() => null);
+  if (!res || !res.ok) {
+    if (typeof showToast === 'function') {
+      showToast(_liT('dash.service_intel_delete_err', 'Could not delete model'), 'err');
+    }
+    return;
+  }
+  closeLogIntelDetail();
+  if (typeof showToast === 'function') {
+    showToast(_liT('dash.service_intel_delete_ok', 'Model deleted'), 'ok');
+  }
 }
 
 function _liFocusGraphNode(id, opts) {
@@ -488,11 +787,12 @@ function _liJumpToGraphSearchMatch() {
   try { _logIntelGraph.selectNodes([match.id]); } catch { /* ignore */ }
 }
 
-async function loadLogIntelDetail(key, opts) {
+async function loadLogIntelDetail(modelId, opts) {
   opts = opts || {};
-  key = String(key || _logIntelSelectedKey || '').trim();
-  if (!key) return;
-  const res = await fetch(apiUrl(`api/log-intel/containers/${encodeURIComponent(key)}`)).catch(() => null);
+  modelId = Number(modelId || _logIntelSelectedModelId || 0);
+  if (!modelId) return;
+  _logIntelSelectedModelId = modelId;
+  const res = await fetch(apiUrl(`api/service-intel/models/${modelId}`)).catch(() => null);
   if (!res || !res.ok) {
     if (typeof showToast === 'function') {
       showToast(_liT('dash.log_intel_load_err', 'Could not load log analysis'), 'err');
@@ -500,9 +800,12 @@ async function loadLogIntelDetail(key, opts) {
     return;
   }
   const data = await res.json();
+  const svcKey = String(data.key || data.service_key || '');
+  if (svcKey) _logIntelSelectedKey = svcKey;
+
   if (!opts.skipTrain && Number(data.lines_ingested || 0) < 1) {
     await trainLogIntelContainer({ silent: true });
-    return loadLogIntelDetail(key, { ...opts, skipTrain: true });
+    return loadLogIntelDetail(modelId, { ...opts, skipTrain: true });
   }
   const sig = _liLiveSignature(data);
   if (opts.soft && sig === _logIntelLiveSig) {
@@ -512,7 +815,15 @@ async function loadLogIntelDetail(key, opts) {
   _logIntelLiveSig = sig;
 
   const title = document.getElementById('log-intel-detail-title');
-  if (title) title.textContent = data.container || key;
+  if (title) {
+    const svc = data.container || svcKey;
+    title.textContent = data.display_name ? `${data.display_name} · ${svc}` : svc;
+  }
+
+  const editName = document.getElementById('log-intel-edit-name');
+  const editEn = document.getElementById('log-intel-edit-enabled');
+  if (editName) editName.value = String(data.display_name || data.container || '');
+  if (editEn) editEn.checked = !!data.enabled;
 
   const pipe = document.getElementById('log-intel-pipeline');
   if (pipe && data.pipeline) {
@@ -528,8 +839,8 @@ async function loadLogIntelDetail(key, opts) {
       </div>`;
   }
 
-  _logIntelWatch = !!data.watched;
-  _liUpdateWatchUi(data);
+  _logIntelEnabled = !!data.enabled;
+  _liUpdateEnabledUi(data);
 
   _logIntelCorrRaw = data.correlation || { nodes: [], edges: [] };
   _logIntelGraphSimplified = _liShouldAutoSimplify(_logIntelCorrRaw);
@@ -597,10 +908,8 @@ function _liLiveSignature(data) {
   ].join('|');
 }
 
-function _liUpdateWatchUi(data) {
-  const cb = document.getElementById('log-intel-watch');
-  if (cb) cb.checked = !!data?.watched;
-  _logIntelWatch = !!data?.watched;
+function _liUpdateEnabledUi(data) {
+  _logIntelEnabled = !!data?.enabled;
   _liStartLiveRefresh();
 }
 
@@ -609,12 +918,12 @@ function _liUpdateLiveStatus(data) {
   if (!el) return;
   const clusters = data?.pipeline?.clustering?.clusters ?? 0;
   const edges = data?.pipeline?.correlation?.edges ?? 0;
-  const events = data?.lines_ingested ?? 0;
+  const events = data?.lines_ingested ?? data?.events ?? 0;
   const trained = data?.last_trained_at ? fmt(data.last_trained_at) : '—';
-  if (_logIntelWatch) {
+  if (_logIntelEnabled) {
     el.textContent = _liT(
-      'dash.log_intel_live_watched',
-      'Saved to disk · live learning · {events} events · {clusters} clusters · {edges} links · updated {trained}',
+      'dash.service_intel_live_on',
+      'Monitoring on · {events} events · {clusters} clusters · {edges} links · updated {trained}',
     )
       .replace('{events}', String(events))
       .replace('{clusters}', String(clusters))
@@ -623,8 +932,8 @@ function _liUpdateLiveStatus(data) {
     el.classList.add('lintel-live-on');
   } else {
     el.textContent = _liT(
-      'dash.log_intel_live_bg',
-      'Background learning from container logs · {events} events · updated {trained}. Enable save to keep the model after restart.',
+      'dash.service_intel_live_off',
+      'Monitoring off — enable model to collect events and open incidents · {events} events · updated {trained}',
     )
       .replace('{events}', String(events))
       .replace('{trained}', trained);
@@ -634,10 +943,10 @@ function _liUpdateLiveStatus(data) {
 
 function _liStartLiveRefresh() {
   _liStopLiveRefresh();
-  if (!_logIntelSelectedKey || !_logIntelWatch) return;
+  if (!_logIntelSelectedModelId || !_logIntelEnabled) return;
   _logIntelLiveTimer = setInterval(() => {
-    if (_logIntelSelectedKey && _logIntelWatch) {
-      loadLogIntelDetail(_logIntelSelectedKey, { soft: true });
+    if (_logIntelSelectedModelId && _logIntelEnabled) {
+      loadLogIntelDetail(_logIntelSelectedModelId, { soft: true });
     }
   }, 20000);
 }
@@ -687,36 +996,26 @@ function _liApplyStoredLayout(net) {
   } catch { /* ignore */ }
 }
 
-async function toggleLogIntelWatch() {
-  const key = _logIntelSelectedKey;
-  const cb = document.getElementById('log-intel-watch');
-  if (!key || !cb) return;
-  const want = !!cb.checked;
-  cb.disabled = true;
+async function trainLogIntelContainer(opts) {
+  opts = opts || {};
+  const modelId = _logIntelSelectedModelId;
+  if (!modelId) return;
+  const btn = document.querySelector('[data-dash-action="trainLogIntelContainer"]');
+  if (btn) btn.disabled = true;
   try {
-    const res = await fetch(apiUrl(`api/log-intel/containers/${encodeURIComponent(key)}/watch`), {
+    const res = await fetch(apiUrl(`api/service-intel/models/${modelId}/train`), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ watch: want }),
     }).catch(() => null);
     if (!res || !res.ok) {
-      cb.checked = !want;
-      if (typeof showToast === 'function') {
-        showToast(_liT('dash.log_intel_watch_err', 'Could not update saved model setting'), 'err');
+      if (!opts.silent && typeof showToast === 'function') {
+        showToast(_liT('dash.log_intel_train_err', 'Could not load container logs'), 'err');
       }
       return;
     }
-    _logIntelWatch = want;
-    _liStartLiveRefresh();
-    await loadLogIntelDetail(key);
-    if (typeof showToast === 'function') {
-      const msg = want
-        ? _liT('dash.log_intel_watch_on', 'Model saved — graph will keep learning from new logs')
-        : _liT('dash.log_intel_watch_off', 'Model no longer saved to disk');
-      showToast(msg, 'ok');
-    }
+    if (!opts.silent) await loadLogIntelDetail(modelId, { skipTrain: true });
+    else return res.json();
   } finally {
-    cb.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -1340,25 +1639,10 @@ function resetLogIntelGraphLayout() {
   _liUpdateSimplifyBtn();
 }
 
-async function trainLogIntelContainer(opts) {
-  opts = opts || {};
-  const key = _logIntelSelectedKey;
-  if (!key) return;
-  const btn = document.querySelector('[data-dash-action="trainLogIntelContainer"]');
-  if (btn) btn.disabled = true;
-  try {
-    const res = await fetch(apiUrl(`api/log-intel/containers/${encodeURIComponent(key)}/train`), {
-      method: 'POST',
-    }).catch(() => null);
-    if (!res || !res.ok) {
-      if (!opts.silent && typeof showToast === 'function') {
-        showToast(_liT('dash.log_intel_train_err', 'Could not load container logs'), 'err');
-      }
-      return;
-    }
-    if (!opts.silent) await loadLogIntelDetail(key, { skipTrain: true });
-    else return res.json();
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
+window.closeLogIntelDetail = closeLogIntelDetail;
+window.openLogIntelCreateModal = openLogIntelCreateModal;
+window.closeLogIntelCreateModal = closeLogIntelCreateModal;
+window.createLogIntelModel = createLogIntelModel;
+window.openLogIntelDetailById = openLogIntelDetailById;
+window.openLogIntelDetail = openLogIntelDetail;
+window.refreshLogIntelList = refreshLogIntelList;

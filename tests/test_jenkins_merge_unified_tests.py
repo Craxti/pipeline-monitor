@@ -155,6 +155,29 @@ def test_aggregate_top_failures_includes_allure_fields_from_latest() -> None:
     assert r["allure_attachments"] and r["allure_attachments"][0]["source"] == "a.png"
 
 
+def test_filter_tests_by_source_github() -> None:
+    from web.services.tests_analytics import filter_tests_by_source
+
+    items = [
+        ModelTestRecord(source="github", suite="ci", test_name="gh", status="failed"),
+        ModelTestRecord(source="jenkins_unified", suite="j", test_name="jn", status="failed"),
+    ]
+    out = filter_tests_by_source(items, "github")
+    assert len(out) == 1 and out[0].test_name == "gh"
+
+
+def test_filter_tests_by_instance() -> None:
+    from web.services.tests_analytics import filter_tests_by_instance
+
+    items = [
+        ModelTestRecord(source="jenkins_unified", source_instance="J1", suite="x", test_name="a", status="failed"),
+        ModelTestRecord(source="jenkins_unified", source_instance="J2", suite="x", test_name="b", status="failed"),
+    ]
+    out = filter_tests_by_instance(items, "J1")
+    assert len(out) == 1 and out[0].test_name == "a"
+    assert len(filter_tests_by_instance(items, "")) == 2
+
+
 def test_filter_tests_by_source_jenkins_unified() -> None:
     from web.services.tests_analytics import filter_tests_by_source
 
@@ -182,6 +205,18 @@ def test_filter_tests_by_source_jenkins_unified() -> None:
     real = filter_tests_by_source(items, "real")
     assert len(real) == 4
     assert {t.test_name for t in real} == {"a", "c_only", "t", "orphan"}
+
+
+def test_filter_jenkins_unified_falls_back_to_raw_during_collect() -> None:
+    from web.services.tests_analytics import filter_tests_by_source
+
+    items = [
+        ModelTestRecord(source="jenkins_allure", suite="j", test_name="live_a", status="failed"),
+        ModelTestRecord(source="jenkins_console", suite="j", test_name="live_b", status="failed"),
+        ModelTestRecord(source="jenkins_build", suite="j", test_name="synth", status="failed"),
+    ]
+    out = filter_tests_by_source(items, "jenkins_unified")
+    assert {t.test_name for t in out} == {"live_a", "live_b"}
 
 
 def test_merge_borrows_allure_meta_for_console_row_same_norm_unmatched() -> None:

@@ -36,6 +36,7 @@ async def export_tests(
     name: str,
     hours: int,
     source: str,
+    instance: str,
 ) -> Any:
     """Export tests to the requested format."""
     return await export_tests_fn(
@@ -46,6 +47,7 @@ async def export_tests(
         name=name,
         hours=hours,
         source=source,
+        instance=instance,
     )
 
 
@@ -58,6 +60,7 @@ async def export_failures(
     suite: str,
     name: str,
     source: str,
+    instance: str,
     hours: int,
     days: int,
 ) -> Any:
@@ -69,6 +72,7 @@ async def export_failures(
         suite=suite,
         name=name,
         source=source,
+        instance=instance,
         hours=hours,
         days=days,
     )

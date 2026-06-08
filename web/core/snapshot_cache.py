@@ -51,11 +51,42 @@ def _cache_ttl_sec() -> float:
     return _SNAPSHOT_CACHE_TTL_SEC
 
 
+def _collecting_now() -> bool:
+    fn = _collecting_accessor
+    if fn is None:
+        return False
+    try:
+        return bool(fn())
+    except Exception:
+        return False
+
+
+def _snapshot_from_collect_memory() -> CISnapshot | None:
+    """Serve the in-progress snapshot from RAM (no SQLite) while collect runs."""
+    if not _collecting_now():
+        return None
+    peeked = peek_snapshot_cache()
+    if peeked is None:
+        return None
+    try:
+        from web.core import runtime as rt
+        from web.services.snapshot_store import _patch_snapshot_for_collect_publish
+
+        return _patch_snapshot_for_collect_publish(peeked, rt.collect_state)
+    except Exception:
+        return peeked
+
+
 def _cached_if_fresh() -> CISnapshot | None:
     """Return in-memory snapshot when TTL + revision still valid (no SQLite)."""
     mon = time.monotonic()
+    if _snapshot_cache_snap is None or mon >= _snapshot_cache_expires_mono:
+        return None
+    # During collect, revision bumps on every partial publish — trust primed memory + TTL.
+    if _collecting_now():
+        return _snapshot_cache_snap
     rev = _current_revision()
-    if _snapshot_cache_snap is not None and _snapshot_cache_rev == rev and mon < _snapshot_cache_expires_mono:
+    if _snapshot_cache_rev == rev:
         return _snapshot_cache_snap
     return None
 
@@ -124,6 +155,10 @@ def load_snapshot() -> CISnapshot | None:
     if cached is not None:
         return cached
 
+    live = _snapshot_from_collect_memory()
+    if live is not None:
+        return live
+
     mon = time.monotonic()
     rev = _current_revision()
     try:
@@ -181,15 +216,9 @@ async def load_snapshot_async() -> CISnapshot | None:
     cached = _cached_if_fresh()
     if cached is not None:
         return cached
-    fn = _collecting_accessor
-    if fn is not None:
-        try:
-            if fn():
-                peeked = peek_snapshot_cache()
-                if peeked is not None:
-                    return peeked
-        except Exception:
-            pass
+    live = _snapshot_from_collect_memory()
+    if live is not None:
+        return live
     try:
         from web.core.api_executor import run_api_thread
 

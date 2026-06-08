@@ -132,17 +132,3 @@ function _resetPanelStateForKey(key) {
   s.done = false;
   s.loading = false;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Expand / collapse
-// ─────────────────────────────────────────────────────────────────────────────
-const _expanded = {};
-function toggleExpand(key) {
-  _expanded[key] = !_expanded[key];
-  const wrap = document.getElementById(`wrap-${key}`);
-  const btn  = document.getElementById(`expand-${key}`);
-  wrap.classList.toggle('expanded', _expanded[key]);
-  btn.textContent = _expanded[key] ? t('dash.collapse') : t('dash.expand_panel');
-  // re-check sentinel visibility after layout change
-  if (_obs[key]) { const s = document.getElementById(`sentinel-${key}`); _obs[key].unobserve(s); _obs[key].observe(s); }
-}

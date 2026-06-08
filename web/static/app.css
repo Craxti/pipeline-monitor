@@ -12,11 +12,16 @@
 
 @import "dashboard.modern.css?v=20260610f";
 
-@import "dashboard.modern-tabs.css?v=20260610i";
+@import "dashboard.modern-tabs.css?v=20260613a";
 
 @import "dashboard.utilities.css?v=20260610b";
 
 @import "dashboard.pages-unified.css?v=20260610i";
 
 @import "dashboard.trends-ui.css?v=20260610e";
+
+@import "dashboard.controls-modern.css?v=20260607h";
+@import "dashboard.topbar-unified.css?v=20260612a";
+@import "dashboard.modal-unified.css?v=20260613a";
+@import "dashboard.ui-polish.css?v=20260612b";
 

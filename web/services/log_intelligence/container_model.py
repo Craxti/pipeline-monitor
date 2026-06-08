@@ -42,7 +42,7 @@ class AnomalyRecord:
 
 
 class ContainerLogModel:
-    """Live-updated model for one Docker container's logs."""
+    """Live-updated clustering/correlation model for one monitored service."""
 
     MAX_EVENTS = 4000
     MAX_ANOMALIES = 200
@@ -50,10 +50,23 @@ class ContainerLogModel:
     MAX_GRAPH_NODES = 500
     MAX_GRAPH_EDGES = 800
 
-    def __init__(self, *, container: str, docker_host: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        container: str,
+        docker_host: str = "",
+        service_kind: str = "docker",
+    ) -> None:
         self.container = container
+        self.service_kind = str(service_kind or "docker").strip().lower() or "docker"
         self.docker_host = docker_host or ""
-        self.key = f"{self.docker_host}::{self.container}"
+        from web.services.log_intelligence.service_keys import make_service_key
+
+        self.key = make_service_key(
+            kind=self.service_kind,
+            name=self.container,
+            source_instance=self.docker_host,
+        )
         self.created_at = _now_iso()
         self.last_trained_at: str | None = None
         self.lines_ingested = 0
@@ -126,7 +139,7 @@ class ContainerLogModel:
             self._push_anomaly(
                 kind="new_pattern",
                 severity="warn",
-                title=f"New log pattern in {self.container}",
+                title=f"New pattern: {self.container}",
                 detail=tpl[:200],
                 template_id=tid,
                 now=now,
@@ -137,7 +150,7 @@ class ContainerLogModel:
                 self._push_anomaly(
                     kind="error_burst",
                     severity="critical",
-                    title=f"Error burst in {self.container}",
+                    title=f"Error burst: {self.container}",
                     detail=f"{recent_err} errors in last 40 events",
                     template_id=tid,
                     now=now,
@@ -150,7 +163,7 @@ class ContainerLogModel:
                     self._push_anomaly(
                         kind="rate_spike",
                         severity="warn",
-                        title=f"High log rate in {self.container}",
+                        title=f"High event rate: {self.container}",
                         detail=f"~{rate:.1f} events/s over {span:.0f}s",
                         template_id=tid,
                         now=now,
@@ -160,7 +173,7 @@ class ContainerLogModel:
             self._push_anomaly(
                 kind="first_error",
                 severity="critical",
-                title=f"First-seen error in {self.container}",
+                title=f"First error: {self.container}",
                 detail=line[:240],
                 template_id=tid,
                 now=now,
@@ -199,7 +212,10 @@ class ContainerLogModel:
         return {
             "key": self.key,
             "container": self.container,
+            "service_name": self.container,
+            "service_kind": self.service_kind,
             "docker_host": self.docker_host,
+            "source_instance": self.docker_host,
             "status": status,
             "clusters": len(self.clusters),
             "events": self.lines_ingested,
@@ -221,7 +237,10 @@ class ContainerLogModel:
         return {
             "key": self.key,
             "container": self.container,
+            "service_name": self.container,
+            "service_kind": self.service_kind,
             "docker_host": self.docker_host,
+            "source_instance": self.docker_host,
             "lines_ingested": self.lines_ingested,
             "last_trained_at": self.last_trained_at,
             "pipeline": {
@@ -345,6 +364,7 @@ class ContainerLogModel:
     def to_storage_dict(self) -> dict[str, Any]:
         return {
             "container": self.container,
+            "service_kind": self.service_kind,
             "docker_host": self.docker_host,
             "created_at": self.created_at,
             "last_trained_at": self.last_trained_at,
@@ -385,8 +405,9 @@ class ContainerLogModel:
     @classmethod
     def from_storage_dict(cls, data: dict[str, Any]) -> ContainerLogModel:
         m = cls(
-            container=str(data.get("container") or ""),
-            docker_host=str(data.get("docker_host") or ""),
+            container=str(data.get("container") or data.get("service_name") or ""),
+            docker_host=str(data.get("docker_host") or data.get("source_instance") or ""),
+            service_kind=str(data.get("service_kind") or "docker"),
         )
         m.created_at = str(data.get("created_at") or m.created_at)
         m.last_trained_at = data.get("last_trained_at")

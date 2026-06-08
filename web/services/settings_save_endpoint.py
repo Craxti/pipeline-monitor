@@ -27,6 +27,9 @@ async def api_save_settings(
     """Save settings and restart collection tasks if needed."""
 
     async def _cancel_collect_task() -> None:
+        if collect_state.get("is_collecting"):
+            collect_state["cancel_requested"] = True
+            collect_state["stop_reason"] = "settings_saved"
         t = collect_loop_task_ref.get("task")
         if t and not t.done():
             t.cancel()
@@ -34,7 +37,7 @@ async def api_save_settings(
                 await t
             except asyncio.CancelledError:
                 pass
-            collect_loop_task_ref["task"] = None
+        collect_loop_task_ref["task"] = None
 
     def _set_collect_state_after_save(merged: dict) -> None:
         from web.services import collect_interval_policy as _cip

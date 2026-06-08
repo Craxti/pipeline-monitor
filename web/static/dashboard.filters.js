@@ -13,9 +13,11 @@ const _FILTER_PARAMS = [
   { id:'f-tname',  key:'tname' },
   { id:'f-tsuite', key:'tsuite' },
   { id:'f-tsource', key:'tsource' },
+  { id:'f-tinstance', key:'tinstance' },
   { id:'f-fname',  key:'fname' },
   { id:'f-fsuite', key:'fsuite' },
   { id:'f-fsource', key:'fsource' },
+  { id:'f-finstance', key:'finstance' },
   { id:'f-svstatus', key:'svstatus' },
 ];
 
@@ -75,11 +77,20 @@ function updateFilterSummary() {
     elb.classList.toggle('is-visible', fb.length > 0);
     if (elbTxt) elbTxt.textContent = fb.length ? `${t('dash.active_filters')}: ${fb.join(' · ')}` : '';
   }
+  const _srcLabel = (v) => {
+    const s = String(v || '').toLowerCase();
+    if (s === 'jenkins') return t('dash.builds_source_jenkins');
+    if (s === 'gitlab') return t('dash.builds_source_gitlab');
+    if (s === 'github') return t('dash.builds_source_github');
+    return v;
+  };
   const ff = [];
   const ffs = document.getElementById('f-fsource');
+  const ffi = document.getElementById('f-finstance');
   const fn = document.getElementById('f-fname');
   const fsu = document.getElementById('f-fsuite');
-  if (ffs && ffs.value) ff.push(`${t('dash.th_source')}: ${ffs.value}`);
+  if (ffs && ffs.value) ff.push(`${t('dash.th_source')}: ${_srcLabel(ffs.value)}`);
+  if (ffi && ffi.value) ff.push(`Instance: ${ffi.value}`);
   if (fn && fn.value) ff.push(`${t('dash.th_test_name')}: ${fn.value}`);
   if (fsu && fsu.value) ff.push(`${t('dash.th_suite')}: ${fsu.value}`);
   if (_failuresDays > 0) ff.push(tf('dash.failures_last_days', { n: _failuresDays }));
@@ -91,10 +102,12 @@ function updateFilterSummary() {
   }
   const ft = [];
   const ftsrc = document.getElementById('f-tsource');
+  const ftinst = document.getElementById('f-tinstance');
   const fts = document.getElementById('f-tstatus');
   const ftn = document.getElementById('f-tname');
   const ftsuite = document.getElementById('f-tsuite');
-  if (ftsrc && ftsrc.value) ft.push(`${t('dash.th_source')}: ${ftsrc.value}`);
+  if (ftsrc && ftsrc.value) ft.push(`${t('dash.th_source')}: ${_srcLabel(ftsrc.value)}`);
+  if (ftinst && ftinst.value) ft.push(`Instance: ${ftinst.value}`);
   if (fts && fts.value) ft.push(`${t('dash.th_status')}: ${fts.value}`);
   if (ftn && ftn.value) ft.push(`${t('dash.filter_test_ph')}: ${ftn.value}`);
   if (ftsuite && ftsuite.value) ft.push(`${t('dash.th_suite')}: ${ftsuite.value}`);

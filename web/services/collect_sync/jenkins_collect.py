@@ -36,10 +36,12 @@ def collect_jenkins(
     check_cancelled,
     incremental_stats: dict | None = None,
     snap_lock: Lock | None = None,
+    prev_snapshot=None,
 ) -> None:
     """Collect Jenkins builds and (optionally) console/Allure tests (parallel per instance)."""
     from clients.jenkins_client import JenkinsClient
     from web.services.collect_sync.exceptions import CollectCancelled
+    from web.services.collect_sync import jenkins_incremental as _jenkins_incr
 
     state_lock = snap_lock
 
@@ -412,6 +414,20 @@ def collect_jenkins(
                     except Exception:
                         return True
 
+                allure_should_parse = None
+                allure_mark_parsed = None
+                if incremental_collect and not force_full and sqlite_available:
+                    allure_should_parse, allure_mark_parsed = _jenkins_incr.make_build_parse_gate(
+                        inst_url=inst.get("url", ""),
+                        inst_key=inst_key,
+                        kind="allure",
+                        prev_snapshot=prev_snapshot,
+                        get_collector_state_int=get_collector_state_int,
+                        set_collector_state_int=set_collector_state_int,
+                        stats=incremental_stats,
+                        stats_key="jenkins_allure_builds_skipped",
+                    )
+
                 allure_parser = JenkinsAllureParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
@@ -440,6 +456,8 @@ def collect_jenkins(
                         }
                     ),
                     should_cancel=_should_cancel,
+                    build_should_parse=allure_should_parse,
+                    build_mark_parsed=allure_mark_parsed,
                 )
                 _ = allure_parser.fetch_tests()
                 check_cancelled()
@@ -528,6 +546,20 @@ def collect_jenkins(
                     except Exception:
                         return True
 
+                console_should_parse = None
+                console_mark_parsed = None
+                if incremental_collect and not force_full and sqlite_available:
+                    console_should_parse, console_mark_parsed = _jenkins_incr.make_build_parse_gate(
+                        inst_url=inst.get("url", ""),
+                        inst_key=inst_key,
+                        kind="console",
+                        prev_snapshot=prev_snapshot,
+                        get_collector_state_int=get_collector_state_int,
+                        set_collector_state_int=set_collector_state_int,
+                        stats=incremental_stats,
+                        stats_key="jenkins_console_builds_skipped",
+                    )
+
                 console_parser = JenkinsConsoleParser(
                     url=inst["url"],
                     username=inst.get("username", ""),
@@ -556,6 +588,8 @@ def collect_jenkins(
                         }
                     ),
                     should_cancel=_should_cancel,
+                    build_should_parse=console_should_parse,
+                    build_mark_parsed=console_mark_parsed,
                 )
                 _ = console_parser.fetch_tests()
                 check_cancelled()

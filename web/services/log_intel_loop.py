@@ -1,4 +1,4 @@
-"""Background loop: ingest Docker container logs and train live models."""
+"""Background loop: ingest service events and maintain analysis models."""
 
 from __future__ import annotations
 
@@ -8,7 +8,10 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable
 
-from web.services.log_intelligence.notifier import emit_anomaly_notifications
+from models.models import normalize_service_status
+from web.services.log_intelligence import incident_store
+from web.services.log_intelligence.notifier import emit_anomaly_notifications, emit_incident_resolved
+from web.services.log_intelligence.service_keys import make_service_key
 from web.services.log_intelligence.store import log_intel_store
 
 logger = logging.getLogger(__name__)
@@ -19,7 +22,7 @@ _DEFAULT_WORKERS = 6
 
 
 class LogIntelLoop:
-    """Poll docker logs for monitored containers and update models."""
+    """Poll services and update clustering/correlation models."""
 
     def __init__(self) -> None:
         self._task: asyncio.Task | None = None
@@ -71,14 +74,19 @@ class LogIntelLoop:
             try:
                 cfg = await asyncio.to_thread(load_cfg)
                 web_cfg = cfg.get("web", {}) if isinstance(cfg.get("web"), dict) else {}
-                enabled = bool(web_cfg.get("log_intel_enabled", True))
-                interval = int(web_cfg.get("log_intel_interval_seconds", _DEFAULT_INTERVAL) or _DEFAULT_INTERVAL)
+                enabled = bool(web_cfg.get("service_intel_enabled", web_cfg.get("log_intel_enabled", True)))
+                interval = int(
+                    web_cfg.get(
+                        "service_intel_interval_seconds", web_cfg.get("log_intel_interval_seconds", _DEFAULT_INTERVAL)
+                    )
+                    or _DEFAULT_INTERVAL
+                )
                 interval = max(20, min(600, interval))
                 tail = int(web_cfg.get("log_intel_tail_lines", _DEFAULT_TAIL) or _DEFAULT_TAIL)
                 tail = max(200, min(10_000, tail))
                 workers = int(web_cfg.get("log_intel_workers", _DEFAULT_WORKERS) or _DEFAULT_WORKERS)
                 workers = max(1, min(16, workers))
-                if enabled and cfg.get("docker_monitor", {}).get("enabled", True):
+                if enabled:
                     await asyncio.to_thread(
                         self._ingest_once,
                         cfg,
@@ -88,7 +96,7 @@ class LogIntelLoop:
                         workers,
                     )
             except Exception:
-                logger.exception("log-intel loop error")
+                logger.exception("service-intel loop error")
 
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=interval)
@@ -107,50 +115,98 @@ class LogIntelLoop:
 
         snap = load_snapshot()
         services = getattr(snap, "services", None) or []
-        docker_svcs = [
-            s for s in services if str(getattr(s, "kind", "") or (isinstance(s, dict) and s.get("kind"))) == "docker"
-        ]
-        if not docker_svcs:
+        if not services:
             return
 
         notify_lock = threading.Lock()
+        enabled_keys = {e["service_key"] for e in log_intel_store.list_registry_summaries(None) if e.get("enabled")}
+        if not enabled_keys:
+            return
 
-        def _ingest_one(sv: object) -> None:
+        def _process_one(sv: object) -> None:
             name = str(getattr(sv, "name", "") or (sv.get("name") if isinstance(sv, dict) else "")).strip()
             if not name:
                 return
+            kind = str(getattr(sv, "kind", "") or (sv.get("kind") if isinstance(sv, dict) else "")).strip().lower()
             host = str(
                 getattr(sv, "source_instance", "") or (sv.get("source_instance") if isinstance(sv, dict) else "")
             )
+            status = normalize_service_status(
+                str(getattr(sv, "status", "") or (sv.get("status") if isinstance(sv, dict) else ""))
+            )
+            detail = str(getattr(sv, "detail", "") or (sv.get("detail") if isinstance(sv, dict) else ""))
+            key = make_service_key(kind=kind, name=name, source_instance=host)
+            if key not in enabled_keys:
+                return
+
             try:
-                res = docker_logs_tail(cfg=cfg, container=name, tail=tail, docker_host=host)
-                text = str(res.get("log") or "")
-                n = log_intel_store.ingest(container=name, docker_host=host, text=text)
-                if n:
-                    model = log_intel_store.get_or_create(container=name, docker_host=host)
-                    new_anom = model.pop_new_anomalies()
-                    if new_anom:
+                if kind == "docker":
+                    res = docker_logs_tail(cfg=cfg, container=name, tail=tail, docker_host=host)
+                    text = str(res.get("log") or "")
+                    log_intel_store.ingest(name=name, kind=kind, source_instance=host, text=text)
+                else:
+                    log_intel_store.note_service_status(
+                        name=name,
+                        kind=kind,
+                        source_instance=host,
+                        status=status,
+                        detail=detail,
+                    )
+
+                if status == "up":
+                    resolved = incident_store.resolve_incidents_for_service(key)
+                    if resolved:
                         with notify_lock:
-                            self._notify_id_seq = emit_anomaly_notifications(
-                                anomalies=new_anom,
-                                container=name,
+                            self._notify_id_seq = emit_incident_resolved(
+                                incident_ids=resolved,
+                                service_name=name,
+                                service_kind=kind,
                                 notify_append=append_event,
                                 notify_id_seq=self._notify_id_seq,
                             )
                             if self._set_notify_id_seq:
                                 self._set_notify_id_seq(self._notify_id_seq)
-            except Exception as exc:
-                logger.debug("log-intel ingest skip %s: %s", name, exc)
 
-        if workers <= 1 or len(docker_svcs) <= 1:
-            for sv in docker_svcs:
-                _ingest_one(sv)
+                model = log_intel_store.get(key)
+                if model is None:
+                    return
+                new_anom = model.pop_new_anomalies()
+                if new_anom:
+                    with notify_lock:
+                        self._notify_id_seq = emit_anomaly_notifications(
+                            anomalies=new_anom,
+                            model=model,
+                            notify_append=append_event,
+                            notify_id_seq=self._notify_id_seq,
+                        )
+                        if self._set_notify_id_seq:
+                            self._set_notify_id_seq(self._notify_id_seq)
+            except Exception as exc:
+                logger.debug("service-intel skip %s: %s", key, exc)
+
+        enabled_services = []
+        for sv in services:
+            name = str(getattr(sv, "name", "") or "").strip()
+            if not name:
+                continue
+            kind = str(getattr(sv, "kind", "") or "").strip().lower()
+            host = str(getattr(sv, "source_instance", "") or "")
+            key = make_service_key(kind=kind, name=name, source_instance=host)
+            if key in enabled_keys:
+                enabled_services.append(sv)
+
+        if not enabled_services:
             return
 
-        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="log-intel") as pool:
-            futures = [pool.submit(_ingest_one, sv) for sv in docker_svcs]
+        if workers <= 1 or len(enabled_services) <= 1:
+            for sv in enabled_services:
+                _process_one(sv)
+            return
+
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="svc-intel") as pool:
+            futures = [pool.submit(_process_one, sv) for sv in enabled_services]
             for fut in as_completed(futures):
                 try:
                     fut.result()
                 except Exception:
-                    logger.debug("log-intel worker failed", exc_info=True)
+                    logger.debug("service-intel worker failed", exc_info=True)

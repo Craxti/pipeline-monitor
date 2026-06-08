@@ -35,10 +35,11 @@ def load_watched_models() -> tuple[set[str], dict[str, ContainerLogModel]]:
     if not isinstance(blob, dict):
         return watched, models
     for key, row in blob.items():
-        if key not in watched or not isinstance(row, dict):
+        if not isinstance(row, dict):
             continue
         try:
-            models[str(key)] = ContainerLogModel.from_storage_dict(row)
+            model = ContainerLogModel.from_storage_dict(row)
+            models[model.key] = model
         except Exception:
             logger.debug("log-intel model restore failed for %s", key, exc_info=True)
     return watched, models

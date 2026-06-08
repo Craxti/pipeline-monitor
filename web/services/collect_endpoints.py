@@ -16,12 +16,14 @@ def collect_status(
     collect_state: dict,
     auto_collect_enabled: bool,
     auto_collect_enabled_at_iso: str | None,
+    data_revision: int | None = None,
 ) -> dict:
     """Return current collection status payload for the UI."""
     return collect_status_payload(
         collect_state=collect_state,
         auto_collect_enabled=auto_collect_enabled,
         auto_collect_enabled_at_iso=auto_collect_enabled_at_iso,
+        data_revision=data_revision,
     )
 
 

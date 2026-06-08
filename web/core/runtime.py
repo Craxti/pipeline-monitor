@@ -53,6 +53,9 @@ prime_snapshot_cache = _snapshot_cache_mod.prime_snapshot_cache
 # ---- Main loop (set at lifespan startup)
 main_loop: asyncio.AbstractEventLoop | None = None
 
+# Shared ref for the background collect-loop asyncio.Task (lifespan + settings save).
+collect_loop_task_ref: dict = {"task": None}
+
 # ---- Auto-collect toggle state (LIVE mode)
 auto_collect_rt = _auto_collect_runtime.AutoCollectRuntime()
 

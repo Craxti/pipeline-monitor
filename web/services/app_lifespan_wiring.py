@@ -54,6 +54,10 @@ def make_app_lifespan(
             init_db=init_db,
             logger=logger,
         )
+        if sqlite_available:
+            from web.services import snapshot_boot
+
+            snapshot_boot.warm_runtime_snapshot_from_db(collect_state=collect_state, logger=logger)
 
     def _start_collect_task(cfg: dict, w_cfg: dict) -> asyncio.Task | None:
         nonlocal collect_task
@@ -64,6 +68,7 @@ def make_app_lifespan(
             collect_loop=collect_loop,
             create_task=asyncio.create_task,
             logger=logger,
+            task_ref=rt.collect_loop_task_ref,
         )
         return collect_task
 
@@ -103,12 +108,19 @@ def make_app_lifespan(
         await self_update_loop.stop()
 
     def _append_log_intel_event(entries: list[dict]) -> None:
-        from web.services import event_feed_api
+        from web.services import event_feed_api, notify_runtime
 
-        return event_feed_api.append(
+        def _feed_append(batch: list[dict]) -> None:
+            event_feed_api.append(
+                batch,
+                path=None,
+                max_entries=rt.EVENT_FEED_MAX,
+            )
+
+        notify_runtime.append_notify_entries(
+            rt.notify_state,
             entries,
-            path=None,
-            max_entries=rt.EVENT_FEED_MAX,
+            feed_append=_feed_append,
         )
 
     async def _startup_log_intel(_: dict) -> None:

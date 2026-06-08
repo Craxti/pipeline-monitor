@@ -6,6 +6,62 @@
 // ─────────────────────────────────────────────────────────────────────────────
 let _lastTopRedCounts = { nFail: 0, nTFail: 0, nDown: 0 };
 
+function _testProblemStatus(raw) {
+  const s = String(raw == null ? '' : raw).trim().toLowerCase();
+  return s === 'failed' || s === 'error';
+}
+
+/** Update overview hero cards from snapshot arrays (full accuracy). */
+function _applyHeroCardsFromData(builds, tests, svcs) {
+  const buildRows = Array.isArray(builds) ? builds : [];
+  const testRows = Array.isArray(tests) ? tests : [];
+  const svcRows = Array.isArray(svcs) ? svcs : [];
+
+  const nOk = buildRows.filter(
+    (b) => normalizeBuildStatus(b.status_normalized || b.status) === 'success',
+  ).length;
+  const nFail = buildRows.filter(
+    (b) => isBuildProblemStatus(b.status_normalized || b.status),
+  ).length;
+  const nTestsTotal = testRows.length;
+  const nTFail = testRows.filter((t) => _testProblemStatus(t.status_normalized || t.status)).length;
+  const nTPass = Math.max(0, nTestsTotal - nTFail);
+  const passRate = nTestsTotal ? Math.round((nTPass / nTestsTotal) * 1000) / 10 : null;
+  const nDown = svcRows.filter(
+    (s) => normalizeServiceStatus(s.status_normalized || s.status) === 'down',
+  ).length;
+
+  _lastTopRedCounts = { nFail, nTFail, nDown };
+
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+  set('hero-builds-ok', nOk);
+  set('hero-builds-fail', nFail);
+  set('hero-tests-total', nTestsTotal);
+  set('hero-tests-fail', nTFail);
+  const heroTestsRate = document.getElementById('hero-tests-rate');
+  if (heroTestsRate) heroTestsRate.textContent = passRate != null ? `${passRate}%` : '—';
+  set('hero-svcs-total', svcRows.length);
+  set('hero-svcs-down', nDown);
+  const heroSvcsList = document.getElementById('hero-svcs-list');
+  if (heroSvcsList) {
+    const downNames = svcRows
+      .filter((s) => normalizeServiceStatus(s.status_normalized || s.status) === 'down')
+      .slice(0, 3)
+      .map((s) => s.name);
+    heroSvcsList.textContent = downNames.length ? downNames.join(', ') : '';
+  }
+
+  try { updateSituationStrip(nFail, nTFail, nDown); } catch { /* ignore */ }
+}
+
+function _summaryCountsHaveData(summaryObj) {
+  const c = summaryObj && summaryObj.counts;
+  if (!c || typeof c !== 'object') return false;
+  return Number(c.builds || 0) > 0
+    || Number(c.tests_total || 0) > 0
+    || Number(c.services_total || 0) > 0;
+}
+
 /** Update hero + stat cards from /api/dashboard/summary counts (cheap during collect). */
 function _applySummaryCountsLight(counts) {
   if (!counts || typeof counts !== 'object') return;
@@ -14,18 +70,23 @@ function _applySummaryCountsLight(counts) {
   const nDown = Number(counts.services_down || 0);
   const nBuilds = Number(counts.builds || 0);
   const nTestsTotal = Number(counts.tests_total || 0);
+  const nOk = Number.isFinite(Number(counts.successful_builds))
+    ? Number(counts.successful_builds)
+    : Math.max(0, nBuilds - nFail);
+  const nSvcsTotal = Number(counts.services_total || 0);
+  const nTPass = Math.max(0, nTestsTotal - nTFail);
+  const passRate = nTestsTotal ? Math.round((nTPass / nTestsTotal) * 1000) / 10 : null;
   _lastTopRedCounts = { nFail, nTFail, nDown };
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
-  set('s-builds', nBuilds);
-  set('s-fail', nFail);
-  set('s-tfail', nTFail);
-  const heroTestsTotal = document.getElementById('hero-tests-total');
-  const heroTestsFail = document.getElementById('hero-tests-fail');
-  const heroSvcsDown = document.getElementById('hero-svcs-down');
-  if (heroTestsTotal) heroTestsTotal.textContent = nTestsTotal;
-  if (heroTestsFail) heroTestsFail.textContent = nTFail;
-  if (heroSvcsDown) heroSvcsDown.textContent = nDown;
+  set('hero-builds-ok', nOk);
+  set('hero-builds-fail', nFail);
+  set('hero-tests-total', nTestsTotal);
+  set('hero-tests-fail', nTFail);
+  const heroTestsRate = document.getElementById('hero-tests-rate');
+  if (heroTestsRate) heroTestsRate.textContent = passRate != null ? `${passRate}%` : '—';
+  if (nSvcsTotal > 0) set('hero-svcs-total', nSvcsTotal);
+  set('hero-svcs-down', nDown);
 
   try { updateSituationStrip(nFail, nTFail, nDown); } catch { /* ignore */ }
 }
@@ -36,15 +97,15 @@ async function loadSummary() {
   const fetches = [
     fetchKeyed('summary.meta', apiUrl('api/meta')).catch(() => null),
     fetchKeyed('summary.summary', apiUrl('api/dashboard/summary')).catch(() => null),
+    fetchKeyed(lightCollect ? 'summary.status.live' : 'summary.status', apiUrl('api/status')).catch(() => null),
   ];
   if (!lightCollect) {
-    fetches.push(fetchKeyed('summary.status', apiUrl('api/status')).catch(() => null));
     fetches.push(fetchKeyed('summary.events', apiUrl('api/events/persisted?limit=300')).catch(() => null));
   }
   const results = await Promise.all(fetches);
   const metaRes = results[0];
   const sumRes = results[1];
-  const res = lightCollect ? null : results[2];
+  const res = results[2];
   const pres = lightCollect ? null : results[3];
 
   if (res === FETCH_ABORTED || pres === FETCH_ABORTED || metaRes === FETCH_ABORTED || sumRes === FETCH_ABORTED) {
@@ -99,10 +160,40 @@ async function loadSummary() {
         );
       } catch { /* ignore */ }
     }
+    if (res && res.ok) {
+      try {
+        const snap = await res.json();
+        if (snap && !snap.error) {
+          _lastSnap = snap;
+          const builds = snap.builds || [];
+          const tests = snap.tests || [];
+          const svcs = snap.services || [];
+          try { _applyHeroCardsFromData(builds, tests, svcs); } catch { /* ignore */ }
+          try { renderOverviewPreview(builds, svcs); } catch { /* ignore */ }
+          try { renderStatusMap(builds, svcs); } catch { /* ignore */ }
+          try { renderIncidentCenter(snap, summaryObj, metaObj); } catch { /* ignore */ }
+          try { _buildSparkData(builds); } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    }
     return;
   }
 
   if (!res || !res.ok) {
+    if (_summaryCountsHaveData(summaryObj)) {
+      if (banner) banner.classList.remove('visible');
+      try { _applySummaryCountsLight(summaryObj.counts); } catch { /* ignore */ }
+      try {
+        updateTopStatusBar(
+          metaObj,
+          summaryObj,
+          _lastTopRedCounts.nFail,
+          _lastTopRedCounts.nTFail,
+          _lastTopRedCounts.nDown,
+        );
+      } catch { /* ignore */ }
+      return;
+    }
     if (banner) {
       banner.classList.add('visible');
       banner.innerHTML =
@@ -123,6 +214,20 @@ async function loadSummary() {
   const snap = await res.json();
   _lastSnap = snap;
   if (snap.error) {
+    if (_summaryCountsHaveData(summaryObj)) {
+      if (banner) banner.classList.remove('visible');
+      try { _applySummaryCountsLight(summaryObj.counts); } catch { /* ignore */ }
+      try {
+        updateTopStatusBar(
+          metaObj,
+          summaryObj,
+          _lastTopRedCounts.nFail,
+          _lastTopRedCounts.nTFail,
+          _lastTopRedCounts.nDown,
+        );
+      } catch { /* ignore */ }
+      return;
+    }
     if (banner) {
       banner.classList.add('visible');
       banner.innerHTML =
@@ -150,43 +255,9 @@ async function loadSummary() {
 
   renderIncidentCenter(snap, summaryObj, metaObj);
 
-  const nOk = builds.filter((b) => b.status === 'success').length;
-  const nFail = builds.filter((b) => b.status === 'failure').length;
-  const nTFail = tests.filter((t) => ['failed', 'error'].includes(t.status)).length;
-  const nTPass = tests.filter((t) => t.status === 'passed').length;
-  const nTestsTotal = tests.length;
-  const nDown = svcs.filter((s) => s.status === 'down').length;
-  _lastTopRedCounts = { nFail, nTFail, nDown };
-  const passRate = nTestsTotal ? Math.round((nTPass / nTestsTotal) * 1000) / 10 : null;
+  _applyHeroCardsFromData(builds, tests, svcs);
+  const { nFail, nTFail, nDown } = _lastTopRedCounts;
 
-  document.getElementById('s-builds').textContent = builds.length;
-  document.getElementById('s-fail').textContent = nFail;
-  document.getElementById('s-run').textContent = builds.filter((b) => b.status === 'running').length;
-  document.getElementById('s-tfail').textContent = nTFail;
-
-  const heroOk = document.getElementById('hero-builds-ok');
-  const heroFail = document.getElementById('hero-builds-fail');
-  if (heroOk) heroOk.textContent = nOk;
-  if (heroFail) heroFail.textContent = nFail;
-
-  const heroTestsTotal = document.getElementById('hero-tests-total');
-  const heroTestsFail = document.getElementById('hero-tests-fail');
-  const heroTestsRate = document.getElementById('hero-tests-rate');
-  if (heroTestsTotal) heroTestsTotal.textContent = nTestsTotal;
-  if (heroTestsFail) heroTestsFail.textContent = nTFail;
-  if (heroTestsRate) heroTestsRate.textContent = passRate != null ? `${passRate}%` : '—';
-
-  const heroSvcsTotal = document.getElementById('hero-svcs-total');
-  const heroSvcsDown = document.getElementById('hero-svcs-down');
-  const heroSvcsList = document.getElementById('hero-svcs-list');
-  if (heroSvcsTotal) heroSvcsTotal.textContent = svcs.length;
-  if (heroSvcsDown) heroSvcsDown.textContent = nDown;
-  if (heroSvcsList) {
-    const downNames = svcs.filter((s) => s.status === 'down').slice(0, 3).map((s) => s.name);
-    heroSvcsList.textContent = downNames.length ? downNames.join(', ') : '';
-  }
-
-  updateSituationStrip(nFail, nTFail, nDown);
   try { updateTopStatusBar(metaObj, summaryObj, nFail, nTFail, nDown); } catch (e) { /* ignore */ }
 
   renderOverviewPreview(builds, svcs);

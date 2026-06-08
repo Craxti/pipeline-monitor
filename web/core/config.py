@@ -106,7 +106,8 @@ def load_yaml_config() -> dict:
     from web import db
 
     data_dir = data_dir_bootstrap()
-    db.init_db(data_dir)
+    if db._DB_PATH is None:
+        db.init_db(data_dir)
 
     cfg = db.get_app_config_from_db()
     if isinstance(cfg, dict) and cfg:

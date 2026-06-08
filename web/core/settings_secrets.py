@@ -10,7 +10,7 @@ SETTINGS_SECRET_MASK = "••••••••"
 def is_secret_settings_key(key: str) -> bool:
     """Return True if config key likely contains a secret."""
     lk = key.lower()
-    if lk in ("token", "password", "api_key", "bot_token", "private_token", "secret"):
+    if lk in ("token", "password", "api_key", "bot_token", "private_token", "secret", "passhash"):
         return True
     if lk == "username":
         return False

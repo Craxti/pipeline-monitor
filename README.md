@@ -15,6 +15,10 @@ A practical Python tool for DevOps and QA engineers that collects CI/CD pipeline
 - **Users (install/run/configure/use UI)**: `docs/USER_GUIDE.md`
 - **Developers (architecture/extension points)**: `docs/DEVELOPER_GUIDE.md`
 - **Workflow (Issues/PRs)**: `docs/WORKFLOW.md`
+- **Dashboard filters (URL → API)**: `docs/HOW_FILTERS_WORK_END_TO_END.md`
+- **Trends KPI semantics**: `docs/KPI_FAQ.md`
+- **Operational runbook**: `docs/RUNBOOK_INCIDENTS.md`
+- **Quality gates ADR**: `docs/adr/0001-quality-gates-and-mock-first-testing.md`
 
 ## Project links
 
@@ -31,29 +35,28 @@ MIT License (2026). See `LICENSE`.
 
 ```text
 ./
-├── clients/            # Jenkins / GitLab API clients
-├── parsers/            # JUnit, Allure, console parsers
-├── docker_monitor/     # Container + HTTP checks
-├── models/             # Shared domain models (snapshot, tests, …)
+├── clients/            # Jenkins / GitLab / GitHub API clients
+├── parsers/            # JUnit, Allure, Jenkins console/Allure parsers
+├── service_monitors/   # Zabbix, Prometheus, Alertmanager, DB probes, …
+├── docker_monitor/     # Local/remote Docker + HTTP checks
+├── models/             # Shared domain models (snapshot, tests, services, …)
 ├── notifications/      # Telegram notifications
 ├── reports/            # Rich / CSV / HTML reports
-├── tools/              # Small maintenance scripts
-├── scripts/            # Helper scripts (ops / install)
-├── tests/              # Unit/integration tests
+├── tests/              # Unit/integration/contract tests
 ├── web/
-│   ├── app.py          # FastAPI app bootstrap (router wiring, lifespan)
-│   ├── schemas.py      # Pydantic schemas (API IO)
-│   ├── db.py           # SQLite persistence helpers (optional)
+│   ├── app.py          # FastAPI app (thin wrapper → app_composer)
+│   ├── db.py           # SQLite: settings, snapshot, history, incidents
 │   ├── core/           # auth, config, runtime, snapshot/trends, notifications
-│   ├── routes/         # HTTP routers (ops, dashboard, collect, logs, chat, ...)
-│   ├── services/       # Endpoint implementations + collect runtime + exports + AI wiring
+│   ├── routes/         # HTTP routers (dashboard, collect, settings, chat, …)
+│   ├── services/       # Endpoints, collect_sync, log intelligence, exports
 │   ├── static/         # Dashboard JS/CSS/assets
-│   └── templates/      # Jinja2 pages/partials
+│   └── templates/      # Jinja2 pages/partials (dashboard, settings)
 ├── ci_monitor.py       # CLI entrypoint
-├── config.example.yaml # Example defaults (first seed into DB)
+├── config.example.yaml # Seed defaults (imported into DB on first start)
+├── compose.yml         # Docker Compose (port 8020)
 ├── pyproject.toml      # Tooling config (ruff/pytest/etc.)
 ├── requirements.txt    # Runtime dependencies
-└── data/               # Runtime/generated (monitor.db, reports, ...)
+└── data/               # Runtime (monitor.db, reports, …)
 ```
 
 ---
@@ -62,12 +65,13 @@ MIT License (2026). See `LICENSE`.
 
 | Module | Description |
 |---|---|
-| `clients/` | Jenkins & GitLab REST API adapters |
-| `parsers/` | pytest JUnit XML + Allure JSON parsers |
+| `clients/` | Jenkins, GitLab, and GitHub REST API adapters |
+| `parsers/` | pytest JUnit XML, Allure JSON, Jenkins console/Allure parsers |
+| `service_monitors/` | External monitoring: Zabbix, Prometheus, Alertmanager, Uptime Kuma, Netdata, PRTG, Checkmk, HTTP JSON, Postgres/Redis/MongoDB/MySQL/Elasticsearch/Kafka |
 | `reports/` | Console (Rich), CSV, HTML (Jinja2) |
 | `notifications/` | Telegram alerts for critical job failures |
-| `docker_monitor/` | Docker container state + HTTP health checks |
-| `web/` | FastAPI REST API + live dashboard |
+| `docker_monitor/` | Local/remote Docker containers + HTTP health checks |
+| `web/` | FastAPI REST API, SSE live updates, dashboard UI, log intelligence, service incidents |
 
 ---
 
@@ -167,7 +171,7 @@ py -m pip install -r requirements.txt
 ### 2. Configure
 
 Use **Settings** in the web UI (or seed/migrate: optional local `config.yaml` is read once to populate the DB on first start if the DB is empty; primary store is `data/monitor.db`). At minimum, enable the systems you use in Settings.
-The current config supports **multiple Jenkins and GitLab instances**.
+The current config supports **multiple Jenkins, GitLab, and GitHub instances**, plus **external service monitors** (Zabbix, Prometheus, …).
 
 ```yaml
 jenkins_instances:
@@ -194,6 +198,24 @@ gitlab_instances:
         critical: true
     max_pipelines: 10
     show_all_projects: false
+
+github_instances:
+  - name: "GitHub"
+    enabled: false
+    url: "https://github.com"
+    token: ""
+    repos: []
+    max_runs: 10
+    show_all_repos: false
+
+service_monitors:
+  enabled: false
+  timeout_seconds: 15
+  instances:
+    - type: prometheus
+      name: prod-prometheus
+      enabled: false
+      url: http://prometheus:9090
 
 docker_monitor:
   enabled: false
@@ -239,10 +261,16 @@ py ci_monitor.py web
 If the page never finishes loading while `web.live_reload` is `true`, set it to `false` in **Settings** (saved in `data/monitor.db`). Uvicorn’s `--reload` restarts the worker when files under `web/` change; rapid restarts (IDE, formatters) can interrupt the browser. Reload mode watches only the `web/` tree, not the whole repo.
 
 The dashboard shows:
-- Builds / pipelines (Jenkins & GitLab)
-- Tests (from CI console / Allure, plus local parsers)
-- Services (Docker + HTTP checks)
-- Trends, incident center, and collect logs
+- **Overview** — summary cards, favorites, recent activity
+- **Builds / pipelines** (Jenkins, GitLab, GitHub)
+- **Tests** — runs, failures, Jenkins Allure drill-down
+- **Services** — Docker, HTTP checks, external monitors (Zabbix, Prometheus, …)
+- **System** — host metrics (CPU/RAM/disk when procfs is available)
+- **Trends / uptime** — historical charts and KPI cards
+- **Incidents** — service incidents from log intelligence
+- **Log intelligence** — container log anomaly detection and correlation
+- **HAR analyzer** — upload and inspect network traces
+- **Collect panel** — background collect state, logs, manual trigger
 
 #### Protecting sensitive endpoints (shared token)
 
@@ -312,6 +340,10 @@ collect options:
 general:
   project_name: "CI/CD Monitor"
   default_lookback_days: 7
+  incremental_collect: true          # reuse SQLite watermarks (web collect)
+  parallel_collect_sources: true     # Jenkins/GitLab/GitHub/Docker/monitors in parallel
+  parallel_collect_instances: true
+  parallel_collect_instance_workers: 6
   data_dir: "data"
   log_level: "INFO"
 
@@ -323,17 +355,16 @@ jenkins_instances:
     token: ""
     jobs:
       - name: "backend-build"
-        critical: true        # alerts + incident signals
-        parse_console: true   # parse tests from console (if enabled)
+        critical: true
+        parse_console: true
     max_builds: 10
-    show_all_jobs: false      # if true, pulls job list from Jenkins and uses limits below
+    show_all_jobs: false
     show_all_limit_jobs: 25
+    show_all_history_builds: 0       # extra history when show_all_jobs
+    show_all_history_jobs_cap: 45
     parse_console: false
-    console_jobs_limit: 25
     console_builds: 5
     parse_allure: false
-    allure_jobs_limit: 25
-    allure_builds: 5
     verify_ssl: true
 
 gitlab_instances:
@@ -347,38 +378,55 @@ gitlab_instances:
     max_pipelines: 10
     show_all_projects: false
 
+github_instances:
+  - name: "GitHub"
+    enabled: false
+    url: "https://github.com"
+    token: ""
+    repos: []
+    max_runs: 10
+    show_all_repos: false
+    verify_ssl: true
+
 parsers:
-  pytest_xml_dirs:
-    - "sample_logs"        # scanned recursively for *.xml
-  allure_json_dirs:
-    - "sample_logs"        # scanned for *-result.json
-  top_failures: 5
+  pytest_xml_dirs: []
+  allure_json_dirs: []
+  top_failures: 100
 
 reports:
   output_dir: "data"
   csv_filename: "ci_report.csv"
   html_filename: "ci_report.html"
-  console_mode: "detailed" # or "short"
+  console_mode: "detailed"
 
 notifications:
   telegram:
     enabled: false
-    # New format: multiple bots (preferred)
-    bots:
-      - enabled: true
-        bot_token: ""
-        chat_id: ""
-        critical_only: true
-        api_base_url: ""    # optional self-hosted Bot API base (SSRF-guarded)
-    # Legacy flat format is still supported:
-    # bot_token: ""
-    # chat_id: ""
-    # critical_only: true
+    bots: []                         # preferred multi-bot format
+
+service_monitors:
+  enabled: false
+  timeout_seconds: 15
+  instances:
+    - type: zabbix                   # zabbix | prometheus | alertmanager | uptime_kuma |
+      name: prod-zabbix              # netdata | prtg | checkmk | http_json | postgres |
+      enabled: false                 # redis | mongodb | mysql | elasticsearch | kafka
+      url: https://zabbix.example.com
+      token: ""
+      mode: problems
+      min_severity: 2
 
 docker_monitor:
   enabled: false
+  include_local_host: true
+  docker_hosts:                    # optional remote Docker API hosts
+    - name: prod-docker-1
+      enabled: false
+      host: 10.10.10.15
+      username: ""
+      password: ""
   show_all_containers: true
-  containers: []           # empty = watch all running containers
+  containers: []
   http_checks:
     - name: "api"
       url: "http://localhost:8000/health"
@@ -390,15 +438,21 @@ web:
   live_reload: true
   auto_collect: false
   collect_interval_seconds: 300
-  api_token: ""            # optional shared token (see above)
+  live_dashboard_poll_seconds: 20   # UI refresh when LIVE is on
+  live_collect_interval_seconds: 90 # background collect when LIVE is on
+  api_token: ""
 
-# AI / LLM settings used by the dashboard chat endpoint.
-# Despite the key name, this block supports multiple providers (incl. Ollama).
 openai:
-  provider: "ollama"        # ollama | openai | gemini | openrouter | cursor | ...
-  api_key: ""               # often empty for local ollama
+  provider: "ollama"                 # ollama | openai | gemini | openrouter | cursor | …
+  api_key: ""
   model: "llama3.1:8b"
   base_url: "http://127.0.0.1:11434/v1"
+  cursor_proxy_autostart: false
+  proxy:
+    enabled: false
+    type: socks5
+    host: ""
+    port: 0
 ```
 
 ---
@@ -443,30 +497,40 @@ pipeline-monitor/
 ├── ci_monitor.py          # Main CLI entry point
 ├── config.example.yaml    # Example seed (imported into DB on first start)
 ├── config_migrations.py   # Config migrations/helpers
+├── compose.yml            # Docker Compose (port 8020)
 ├── requirements.txt       # Runtime dependencies
 ├── pyproject.toml         # Tooling config (ruff/pytest/etc.)
 │
-├── clients/               # Jenkins/GitLab adapters
-├── parsers/               # JUnit/Allure/console parsers
-├── reports/               # Console/CSV/HTML reports
+├── clients/               # Jenkins / GitLab / GitHub adapters
+├── parsers/               # JUnit / Allure / Jenkins console parsers
+├── service_monitors/      # External monitoring adapters
+├── reports/               # Console / CSV / HTML reports
 ├── notifications/         # Telegram notifier(s)
 ├── docker_monitor/        # Docker + HTTP checks
 ├── web/                   # FastAPI app + dashboard UI
 │   ├── routes/            # Routers
-│   ├── services/          # Endpoint implementations + runtime
+│   ├── services/          # Endpoints, collect_sync, log intelligence
 │   ├── static/            # JS/CSS/assets
 │   └── templates/         # Jinja2 pages/partials
 │
-└── data/                  # Runtime/generated (monitor.db, reports, ...)
+└── data/                  # Runtime (monitor.db, reports, …)
 ```
 
 ---
 
 ## Adding New CI Systems
 
-1. Create `clients/bitbucket_client.py` inheriting from `BaseCIClient`
+1. Create `clients/<provider>_client.py` inheriting from `BaseCIClient`
 2. Implement `fetch_builds()` returning `list[BuildRecord]`
-3. Import and call it in `ci_monitor.py` inside the `collect` command
+3. Add a collect phase in `web/services/collect_sync/` and wire it in `run_collect_sync.py`
+4. Optionally wire CLI collection in `ci_monitor.py`
+
+## Adding New Service Monitors
+
+1. Create `service_monitors/<type>.py` using helpers from `service_monitors/base.py`
+2. Register the type in `MONITOR_KINDS` in `service_monitors/base.py`
+3. Wire connection test in `web/services/settings_connection_test.py`
+4. Add an example instance block to `config.example.yaml`
 
 ## Adding New Report Parsers
 
@@ -478,23 +542,79 @@ pipeline-monitor/
 
 ## REST API Endpoints
 
+Token-protected routes require `X-API-Token` or `Authorization: Bearer` when `web.api_token` / `CICD_MON_API_TOKEN` is set.
+
+### Dashboard & snapshot
+
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/` | Live web dashboard |
 | `GET` | `/health` | Health check |
+| `GET` | `/ready` | Readiness check |
 | `GET` | `/api/status` | Full snapshot JSON |
-| `GET` | `/api/builds` | Build records list |
-| `GET` | `/api/tests` | Test records list |
-| `GET` | `/api/tests/top-failures?n=10` | Top N failing tests |
+| `GET` | `/api/dashboard/summary` | Compact dashboard summary |
+| `GET` | `/api/meta` | Snapshot metadata (age, revision, …) |
+| `GET` | `/api/stream/events` | SSE event stream |
+| `GET` | `/api/sources` | Configured CI/monitor sources |
+| `GET` | `/api/instances` | Instance list |
+| `GET` | `/api/instances/health` | Per-instance connectivity health |
+| `GET` | `/api/notifications` | Recent UI notification events |
+| `GET` | `/api/events/persisted` | Persisted event feed |
+
+### Builds, tests, services
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/builds` | Build records (filterable) |
+| `GET` | `/api/builds/history` | Historical builds from SQLite |
+| `GET` | `/api/tests` | Test records (filterable) |
+| `GET` | `/api/tests/top-failures` | Top N failing tests |
+| `GET` | `/api/tests/jenkins-allure-details` | Jenkins Allure case details |
 | `GET` | `/api/services` | Service health list |
+| `GET` | `/api/export/builds` | CSV export |
+| `GET` | `/api/export/tests` | CSV export |
+| `GET` | `/api/export/failures` | Failures CSV export |
+
+### Trends & analytics
+
+| Method | Path | Description |
+|---|---|---|
 | `GET` | `/api/trends` | Trends time series |
-| `GET` | `/api/incident.json` | Incident export (JSON) |
-| `GET` | `/api/incident.md` | Incident export (Markdown) |
+| `GET` | `/api/trends/history-summary` | KPI cards (recovery, crash frequency, …) |
+| `GET` | `/api/uptime` | Uptime aggregates |
+| `GET` | `/api/analytics/sparklines` | Sparkline data |
+| `GET` | `/api/analytics/flaky` | Flaky test analysis |
+| `GET` | `/api/db/stats` | SQLite diagnostics |
+
+### Collect & actions
+
+| Method | Path | Description |
+|---|---|---|
 | `GET` | `/api/collect/status` | Background collect state |
-| `GET` | `/api/collect/logs` | Live collect logs for UI |
-| `GET` | `/api/collect/slow` | Top slow operations during collect |
-| `POST` | `/api/collect` | Trigger manual collect (token-protected if enabled) |
-| `POST` | `/webhook/build-complete` | Receive build events (token-protected if enabled) |
+| `GET` | `/api/collect/logs` | Live collect logs |
+| `GET` | `/api/collect/slow` | Slow collect steps |
+| `POST` | `/api/collect` | Trigger manual collect (token) |
+| `POST` | `/api/collect/stop` | Cancel running collect (token) |
+| `POST` | `/api/collect/auto` | Toggle auto-collect (token) |
+| `POST` | `/api/action/jenkins/build` | Trigger Jenkins job (token) |
+| `POST` | `/api/action/gitlab/pipeline` | Trigger GitLab pipeline (token) |
+| `POST` | `/api/action/docker/container` | Docker container action (token) |
+| `POST` | `/webhook/build-complete` | CI webhook ingest (token) |
+
+### Incidents, log intelligence, settings
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/incident`, `/api/incident.json`, `/api/incident.md` | CI incident bundle |
+| `GET` | `/api/service-incidents` | Service incidents from log intelligence |
+| `GET` | `/api/service-intel/*`, `/api/log-intel/*` | Log intelligence models & services |
+| `GET` | `/api/settings/public` | Public settings for UI |
+| `GET` | `/api/settings` | Full settings (token) |
+| `POST` | `/api/settings` | Save settings to DB (token) |
+| `POST` | `/api/settings/test-connection` | Test CI/monitor credentials (token) |
+| `POST` | `/api/har/analyze` | Analyze uploaded HAR file (token) |
+| `POST` | `/api/chat` | AI chat (token) |
+| `GET` | `/settings` | Settings page |
 
 ---
 

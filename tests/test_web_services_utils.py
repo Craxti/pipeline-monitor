@@ -79,8 +79,14 @@ class TestBuildFilters:
 
         cfg = {"jenkins_instances": [{"enabled": True, "url": "https://j.example.com"}]}
         b_ok = self._B(source="jenkins", url="https://j.example.com/job/a/1/")
+        b_collected = self._B(
+            source="jenkins",
+            url="https://other/job/a/1/",
+            source_instance="Other Jenkins",
+        )
         b_bad = self._B(source="jenkins", url="https://other/job/a/1/")
         assert is_snapshot_build_enabled(b_ok, cfg) is True
+        assert is_snapshot_build_enabled(b_collected, cfg) is True
         assert is_snapshot_build_enabled(b_bad, cfg) is False
 
     def test_inst_label_prefers_stored_source_instance(self) -> None:
@@ -204,6 +210,61 @@ class TestStatusEndpoints:
         assert isinstance(out, dict)
         assert len(out["builds"]) == 1
         assert out["builds"][0]["job_name"] == "a"
+
+    def test_is_snapshot_build_enabled_shows_collected_rows_from_disabled_instances(self) -> None:
+        from models.models import CISnapshot, BuildRecord, BuildStatus
+        from web.services import builds_endpoints
+        from web.services.build_filters import is_snapshot_build_enabled, inst_label_for_build_with_cfg
+        from models.models import normalize_build_status
+
+        cfg = {
+            "jenkins_instances": [
+                {"enabled": False, "name": "DIT", "url": "https://dit.example.com"},
+                {"enabled": True, "name": "Prod", "url": "https://j.example.com"},
+            ]
+        }
+        snap = CISnapshot(
+            builds=[
+                BuildRecord(
+                    source="jenkins",
+                    job_name="legacy",
+                    build_number=1,
+                    status=BuildStatus.SUCCESS,
+                    url="https://dit.example.com/job/legacy/1/",
+                    source_instance="DIT",
+                ),
+                BuildRecord(
+                    source="jenkins",
+                    job_name="live",
+                    build_number=2,
+                    status=BuildStatus.SUCCESS,
+                    url="https://j.example.com/job/live/2/",
+                    source_instance="Prod",
+                ),
+            ]
+        )
+
+        async def _load_snapshot_async():
+            return snap
+
+        out = asyncio.run(
+            builds_endpoints.api_builds(
+                load_snapshot_async=_load_snapshot_async,
+                load_yaml_config=lambda: cfg,
+                is_snapshot_build_enabled=is_snapshot_build_enabled,
+                inst_label_for_build_with_cfg=lambda b, c: (inst_label_for_build_with_cfg(b, c) or ""),
+                normalize_build_status=normalize_build_status,
+                job_build_analytics=lambda s: {},
+                page=1,
+                per_page=50,
+                source="",
+                instance="",
+                status="",
+                job="",
+                hours=0,
+            )
+        )
+        assert out["total"] == 2
 
 
 class TestBuildsEndpoints:
